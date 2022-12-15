@@ -1,5 +1,9 @@
 # intone_app
 
+This is an iOS application designed to teach and train Japanese pitch accent.
+
+
+
 Native recordings provided as part of the JSUT corpus of Saruwatari-lab, University of Tokyo.
 https://sites.google.com/site/shinnosuketakamichi/publication/jsut
 
