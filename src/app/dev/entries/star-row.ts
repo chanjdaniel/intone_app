@@ -195,7 +195,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
                     h.Type('button'),
                     h.OnClick(Message.ClickedStartAgain()),
                     h.Class(
-                      `inline-flex min-h-11 items-center rounded-md px-4 text-base font-semibold text-accent underline underline-offset-4 ${buttonFocusClass}`,
+                      `inline-flex min-h-11 items-center rounded-sm text-base font-semibold text-accent underline underline-offset-4 ${buttonFocusClass}`,
                     ),
                   ],
                   ['Start again'],

@@ -98,6 +98,19 @@ The tempo deviation (mean absolute log2 of the take's local tempo against its ow
 | `timingDeviationTop` | Median tempo deviation of the clean right takes: no more scores 100% | 0.188 | 0.190 |
 | `timingDeviationZero` | Median tempo deviation of a take of other words (106 pairs whose lengths allow a score): this much scores 0% | 0.662 | 0.660 |
 
+## Stars
+
+A guided take reaches the clip's threshold at 75% and beats it at 90% (src/score/constants.ts, `starReachShare`, `starBeatShare`, of the provisional top); a blind take reaches it at 75%. The share of each kind of take, as a guided take, that earns one star or more and two, by the app's own rules (src/score/stars.ts); a take that could not be compared earns none.
+
+| Takes | Pairs | One star or more | Two stars |
+| - | - | - | - |
+| Clean right takes | 168 | 88.7% | 60.1% |
+| Right takes, every variant and condition | 2016 | 80.9% | 51.6% |
+| Wrong takes, every condition | 1008 | 3.0% | 0.0% |
+| Wrong takes of ame-ga-suki (5 morae) | 336 | 0.0% | 0.0% |
+| Wrong takes of hashi-o-watarimasu (8 morae) | 336 | 0.0% | 0.0% |
+| Wrong takes of kyou-wa-eki-de (19 morae) | 336 | 8.9% | 0.0% |
+
 ## The aligner's failure gate
 
 The mean distance between paired frames along the DTW path, the takes of the same words against takes of other words (each phrase's clean right takes against the other phrases' natives, where their lengths allow a score). Unrelated frames of unit variance in 24 bands stand about 6.9 apart (the square root of 48).

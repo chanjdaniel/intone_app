@@ -138,7 +138,7 @@ test('a CC0 clip is cut into lines, kept, and one practised with a scored take, 
       await expect(
         page.getByRole('heading', { name: 'Line 1', level: 1 }),
       ).toBeVisible()
-      await page.getByRole('button', { name: 'Record' }).click()
+      await page.getByRole('button', { name: 'Record', exact: true }).click()
       await expect(
         page.getByRole('heading', { name: 'Recording' }),
       ).toBeVisible({ timeout: 30_000 })

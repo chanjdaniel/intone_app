@@ -72,6 +72,11 @@ export const starsOfLine = (
 export const lengthText = (seconds: number): string =>
   seconds < 60 ? `${seconds.toFixed(1)} s` : clockText(seconds)
 
+// A line's length in tenths of a second, read down as its times are, so
+// a line shown from 0:00.0 to 0:01.2 is 1.2 s long, never 1.3.
+const tenthsText = (seconds: number): string =>
+  (Math.floor(seconds * 10 + 1e-6) / 10).toFixed(1)
+
 // Where a line is: its file in a local pack, its times and its length;
 // and its name too when its text is its title.
 const lineDetail = (line: LevelLine): string =>
@@ -79,7 +84,7 @@ const lineDetail = (line: LevelLine): string =>
     ...(Option.isSome(line.maybeText) ? [levelLineTitle(line)] : []),
     ...Option.toArray(line.maybeFile),
     `${clockText(line.from, true)} to ${clockText(line.to, true)}`,
-    `${(line.to - line.from).toFixed(1)} s`,
+    `${tenthsText(line.to - line.from)} s`,
   ].join(' · ')
 
 // Why a line cannot be copied, if it cannot.

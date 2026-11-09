@@ -203,7 +203,7 @@ const delaysOf = (watched: Watched) => {
 }
 
 const recordFor = async (page: Page, seconds: number): Promise<void> => {
-  await page.getByRole('button', { name: 'Record' }).click()
+  await page.getByRole('button', { name: 'Record', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Recording' })).toBeVisible({
     timeout: 30_000,
   })

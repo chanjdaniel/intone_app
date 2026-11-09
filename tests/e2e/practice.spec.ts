@@ -101,7 +101,7 @@ const copyLine = async (
       const native = await countColours(lineCanvas(page), [nativeColour])
       expect(native[0]).toBeGreaterThan(2000)
 
-      await page.getByRole('button', { name: 'Record' }).click()
+      await page.getByRole('button', { name: 'Record', exact: true }).click()
       // The line plays first; the microphone is not open while it does.
       await expect(
         page.getByRole('heading', { name: 'Listen to the line' }),
@@ -319,7 +319,7 @@ test('the native curve is tracked once, kept on the device, and tracked again if
       // A take keeps its curves and score in the history (docs/history.md),
       // the native it was scored against once, and its audio nowhere: it
       // stays in memory until the learner turns kept audio on.
-      await page.getByRole('button', { name: 'Record' }).click()
+      await page.getByRole('button', { name: 'Record', exact: true }).click()
       await expect(page.getByRole('timer')).toHaveText(/^0:01 of 0:30$/, {
         timeout: 30_000,
       })
@@ -419,7 +419,7 @@ test('the line plays again slowed with its pitch kept, and the take plays from m
       await expect(
         page.getByRole('button', { name: 'Hear your take', exact: true }),
       ).toBeDisabled()
-      await page.getByRole('button', { name: 'Record' }).click()
+      await page.getByRole('button', { name: 'Record', exact: true }).click()
       await expect(page.getByRole('timer')).toHaveText(/^0:02 of 0:30$/, {
         timeout: 30_000,
       })
@@ -514,7 +514,7 @@ test('the worst stretch plays from the line by keyboard and from the take by tou
           }
         })
         await openLine(page)
-        await page.getByRole('button', { name: 'Record' }).click()
+        await page.getByRole('button', { name: 'Record', exact: true }).click()
         await expect(page.getByRole('timer')).toHaveText(/^0:02 of 0:30$/, {
           timeout: 30_000,
         })

@@ -103,11 +103,9 @@ export const timingDeviationZero = 0.66
 // top, the match a take copying the clip as well as the fixture voices
 // copy each other scores; until ticket 22 measures a native speaker's
 // own second take of a clip, every clip's top is the provisional top of
-// the scale, a match of 1. The fixtures' clean right takes have a median
-// match of 0.93, their wrong ones 0.40 to 0.58 by phrase
-// (docs/score-study.md, "The score, by length and condition"), so
-// reaching sits between the two and beating near the right takes'
-// median (docs/score-study.md, "Stars").
+// the scale, a match of 1. On the fixtures, 89% of the clean right takes
+// reach the threshold and 60% beat it, against 3% of the wrong takes
+// reaching it and none beating it (docs/score-study.md, "Stars").
 export const provisionalClipTop = 1
 export const starReachShare = 0.75
 export const starBeatShare = 0.9

@@ -143,6 +143,14 @@ The timing part's scale is anchored the same way, with a take of other words, wh
 The score says `provisional: true` until then.
 `npm run score:study` fails while an anchor in `src/score/constants.ts` differs from what it measures by more than 0.005.
 
+## Stars
+
+A line earns stars from its takes (`src/score/stars.ts`): one for a guided take that reaches the clip's threshold, two for one that beats it, three for a blind take that reaches it; it keeps the most any take earned, and a take that could not be compared earns none and costs none.
+The thresholds are shares of the clip's top, in `src/score/constants.ts`: reached at 0.75 and beaten at 0.9 of it, read at the whole percent the app shows.
+Every clip's top is the provisional top of the scale, a match of 1, until ticket 22 measures a clip's from a native speaker's own second take.
+On the fixtures 89% of the clean right takes reach the threshold as guided takes and 60% beat it, while 3% of the wrong takes reach it, all of them in the 19-mora phrase, and none beats it ("Stars").
+Stars are not part of the score, so changing a threshold bumps no `SCORE_VERSION`; a line's stars are worked out from its kept takes each time they are shown, so a threshold tuned or a take scored again moves them.
+
 ## Time to score
 
 Scoring the study's 3,528 takes of 5 to 19 morae takes 0.23 to 0.48 ms a take in Node 24.22.1 on Daniel's machine (11 cores, at load averages of 2 to 9), and two 29 s readings against each other 36 to 60 ms (`npm run score:study -- --time`).

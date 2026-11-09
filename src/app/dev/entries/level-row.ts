@@ -4,6 +4,7 @@ import { Html, HtmlBuilder } from 'foldkit/html'
 
 import { LevelStars, levelClipOfBundled } from '../../level/level'
 import { levelRow, starsOfLine } from '../../level/levelView'
+import { starsText } from '../../level/starRow'
 import { bundledClips } from '../../line/lines'
 import { lineRouter } from '../../route'
 import { type DevEntry, entryFrame } from '../entry'
@@ -42,7 +43,7 @@ export const readOut = (): string =>
   shownLines
     .map(
       line =>
-        `Line ${line.number}: ${starsOfLine(studyStars, line.id) ?? 0} stars${line.native === 'Tracked' ? `, links to ${lineRouter({ clipId: cutStudyClip.id, lineId: line.id })}` : ''}`,
+        `Line ${line.number}: ${starsText(starsOfLine(studyStars, line.id) ?? 0)}${line.native === 'Tracked' ? `, links to ${lineRouter({ clipId: cutStudyClip.id, lineId: line.id })}` : ''}`,
     )
     .join('; ')
 

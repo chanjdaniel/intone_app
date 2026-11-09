@@ -125,7 +125,7 @@ test('the example pack is imported as one level, its lines practised and importe
       await expect(
         page.getByText('From your local pack, kept on this device.'),
       ).toBeVisible()
-      await page.getByRole('button', { name: 'Record' }).click()
+      await page.getByRole('button', { name: 'Record', exact: true }).click()
       await expect(
         page.getByRole('heading', { name: 'Recording' }),
       ).toBeVisible({ timeout: 30_000 })

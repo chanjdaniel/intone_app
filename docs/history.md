@@ -17,6 +17,7 @@ A take that was tracked is kept when `AnalyseTake` has scored it, whether the sc
 
 The screens read only `takes`; a take's recording and native are read to draw it on its line's page or to score it again.
 A take keeps the id of the native it was scored against, so a line of the learner's clip whose start or end has changed since, and so has a new curve, keeps its earlier takes apart on its page, with a trend of their own.
+A take's entry says whether it was guided or blind, and a line's stars and best are worked out from its entries whenever a level or a line is shown, never kept apart (`docs/score.md`, "Stars"): a backup, a restore, a deletion or a re-score needs nothing more to keep them right.
 The native's recording is kept with the history, not only in the native-curve cache, because a take is scored against the native it was scored against, which a new tracker or a new recording of the line would change.
 
 Every record is decoded by its Schema (`src/services/history-records.ts`) on every read.

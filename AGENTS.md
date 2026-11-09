@@ -156,6 +156,16 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
   Both scripts run the app's own source under Node through `scripts/source-imports.ts`, which lets Node resolve its extensionless imports.
   `tests/scripts/` remakes both and fails on any difference; `tests/score/` holds the score to the fixtures, and `src/score/*.test.ts` proves its properties on the synthetic takes of `src/score/synthetic-take.ts`.
 
+## The practice loop
+
+- A line's practice screen runs the loop (report section 5): hear the line, a guided take, the curves and the match, again as often as wanted, a blind take, and on to the next line; there are no leaderboards, coins, shops, lives or streaks, and `src/app/wording.scene.test.ts` reads every screen for them.
+- A take's `mode` (`TakeMode`, `Guided | Blind`) goes with it from `PlayingNative` to `ShowingResult` (`src/app/take/take.ts`), and `AnalyseTake` keeps it in the history; `isBlindUnderWay` is what the view reads to put a cover in the curves' place and leave out the level meter, from the record button until the result, which shows everything.
+- Stars follow `src/score/stars.ts` with the thresholds in `src/score/constants.ts` (`docs/score.md`, "Stars"); a line's stars and best (`LineProgress`, `src/app/level/progress.ts`) are worked out from its kept takes of the line as it is now (`lineProgressOf` in `src/app/history/history.ts`), never stored apart, so a re-score or a tuned threshold moves them.
+- The open line's place in its level (`LinePlace`, `src/app/line/place.ts`: the level's name, the line's progress, the next line that can be copied) is read by `LoadLinePlace` each time the line opens; `succeededAnalyseTake` moves it by a kept take and gives the result its `TakeOutcome` (stars before and after, a personal best), so the rules are Story tests (`src/app/take/loop.story.test.ts`).
+- `/level/:clipId` shows any level, the bundled clips of `bundledClips` (`src/app/line/lines.ts`) among them, `LevelClip.origin` saying which (`Bundled | Upload | Pack`); its stars (`LevelStars`) are read by `LoadLevelStars` when it opens, again when it is opened while shown, and after a line is changed.
+- The star row (`starRow.ts`), a take's outcome (`outcomeView.ts`) and the level row (`levelRow` in `levelView.ts`) have `/dev` entries, `star-row` and `level-row`, the level's stars made from seeded takes (`src/app/dev/sampleStars.ts`).
+- `tests/e2e/levels.spec.ts` plays the bundled line to three stars with the fake microphone: the level, a guided take, another, a blind take with no canvas and no meter until it ends, the stars kept across a reload, and nothing sent.
+
 ## History on the device
 
 - `src/services/history-store.ts` (`HistoryStore`, with `layer` and `layerTest(factory, files)`) keeps every scored take in IndexedDB: its entry (line, guided or blind, date and the learner's day, score with its version, kept audio's file) in `takes`, its curve, features and aligned pitch in `takeRecordings`, and the native it was scored against in `natives`, once per recording by its content (`recordingId`).
@@ -182,7 +192,7 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 - `HistoryStore` keeps clips (`src/services/history-clips.ts`, the `clips` store of database version 3): the file in the clip store at `clips/<id>.<extension>`, the lines with their times, and each line's curve in `natives`, as a take's native is.
   Deleting a clip (`removeClip`) takes its lines, their curves where nothing else uses them, its takes, their kept audio and its file.
   The backup carries clips and their lines, their files only when the learner includes the recordings, and a restore keeps a file the device already has.
-- `/level/:clipId` (`src/app/level/`) lists a clip's lines in the large-list frame, found by number or time, with `?find=` in the address; `/` lists the clips (`ClipsPage`, read each time home opens).
+- `/level/:clipId` (`src/app/level/`) lists a clip's lines with their stars in the large-list frame, found by number or time, with `?find=` in the address; `/` lists the clips (`ClipsPage`, read each time home opens).
   A line of a clip opens the same practice screen as the bundled line: `LoadNativeCurve` reads it from the history, `NativeCurve.Ready` carries its `PracticeLine` (`src/app/line/lines.ts`), and it plays its stretch of the file from a `blob:` URL of the clip store (`ClipStore.url`), which is why the Content Security Policy allows `media-src blob:`.
 - `docs/uploads.md` says which formats decode in which browser, the peak memory at the cap and how long a cut takes; `docs/cut-study.md` (`npm run cut:study`) the CC0 clips' lines; `fixtures/formats/` (`npm run fixtures:formats`, needs the ffmpeg it names) one CC0 stretch in each format.
 - A clip's lines are fixed on its level by the line editor (`src/app/level/editor.ts`, `editorUpdate.ts`, `editorCommands.ts`, `lineEditorView.ts`): an edge dragged (`editorPointer.ts`, a Mount following the pointer) or stepped by key, a split at the playhead, a merge, a delete, and one undo.

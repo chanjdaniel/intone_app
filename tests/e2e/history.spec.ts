@@ -31,7 +31,10 @@ const rightTake = join(voices, 'ame-ga-suki', 'kurono-takehiro', 'right.wav')
 // Records one take of the bundled line, to its score.
 const recordTake = async (page: Page, first: boolean) => {
   await page
-    .getByRole('button', { name: first ? 'Record' : 'Record again' })
+    .getByRole('button', {
+      name: first ? 'Record' : 'Record again',
+      exact: true,
+    })
     .click()
   await expect(page.getByRole('heading', { name: 'Recording' })).toBeVisible({
     timeout: 30_000,

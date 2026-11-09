@@ -243,7 +243,7 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         await expect(
           page.getByRole('heading', { name: 'Line 1', level: 1 }),
         ).toBeVisible()
-        await page.getByRole('button', { name: 'Record' }).click()
+        await page.getByRole('button', { name: 'Record', exact: true }).click()
         await expect(
           page.getByRole('heading', { name: 'Recording' }),
         ).toBeVisible({

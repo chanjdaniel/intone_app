@@ -51,7 +51,7 @@ const labelsOf = (name: VoiceName): SyntheticVoiceLabels =>
 
 // Records until the clock shows `seconds`, still recording.
 const recordFor = async (page: Page, seconds: number): Promise<void> => {
-  await page.getByRole('button', { name: 'Record' }).click()
+  await page.getByRole('button', { name: 'Record', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Recording' })).toBeVisible({
     timeout: 30_000,
   })
@@ -265,7 +265,7 @@ test('leaving the screen mid-take releases the microphone', async ({
     await withPage(browser, async ({ page, problems }) => {
       await page.goto('/')
       await page.getByRole('link', { name: /^Copy 雨が好き/ }).click()
-      await page.getByRole('button', { name: 'Record' }).click()
+      await page.getByRole('button', { name: 'Record', exact: true }).click()
       await expect(
         page.getByRole('heading', { name: 'Recording' }),
       ).toBeVisible({ timeout: 30_000 })
@@ -276,7 +276,9 @@ test('leaving the screen mid-take releases the microphone', async ({
       ).toBeVisible()
       await expect.poll(() => trackStates(page)).toStrictEqual(['ended'])
       await page.goForward()
-      await expect(page.getByRole('button', { name: 'Record' })).toBeVisible()
+      await expect(
+        page.getByRole('button', { name: 'Record', exact: true }),
+      ).toBeVisible()
       expect(problems).toStrictEqual([])
     })
   } finally {
@@ -290,7 +292,7 @@ test('a refused microphone says how to allow it', async ({ playwright }) => {
   try {
     await withPage(browser, async ({ page }) => {
       await openLine(page)
-      await page.getByRole('button', { name: 'Record' }).click()
+      await page.getByRole('button', { name: 'Record', exact: true }).click()
       await expect(
         page.getByRole('heading', { name: 'The microphone is blocked' }),
       ).toBeVisible({ timeout: 30_000 })

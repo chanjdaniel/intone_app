@@ -19,6 +19,7 @@ import {
   timingDeviationZero,
 } from '../src/score/constants.ts'
 import { scoreTake } from '../src/score/score.ts'
+import { starThresholds, starsOfTake } from '../src/score/stars.ts'
 import {
   type StudyPair,
   boundaryErrors,
@@ -580,6 +581,55 @@ out.push(
         three(measuredTimingZero),
         three(timingDeviationZero),
       ],
+    ],
+  ),
+  '',
+)
+
+out.push('## Stars', '')
+const thresholds = starThresholds()
+out.push(
+  `A guided take reaches the clip's threshold at ${whole(100 * thresholds.reach)}% and beats it at ${whole(100 * thresholds.beat)}% (src/score/constants.ts, \`starReachShare\`, \`starBeatShare\`, of the provisional top); a blind take reaches it at ${whole(100 * thresholds.reach)}%. The share of each kind of take, as a guided take, that earns one star or more and two, by the app's own rules (src/score/stars.ts); a take that could not be compared earns none.`,
+  '',
+)
+const starsAs = (pair: StudyPair): number => {
+  const score = details.get(pair)?.score
+  return score === undefined
+    ? 0
+    : starsOfTake({ mode: 'Guided', score }, thresholds)
+}
+const starRow = (name: string, group: ReadonlyArray<StudyPair>) => [
+  name,
+  String(group.length),
+  percent(group.filter(pair => starsAs(pair) >= 1).length / group.length),
+  percent(group.filter(pair => starsAs(pair) >= 2).length / group.length),
+]
+out.push(
+  table(
+    ['Takes', 'Pairs', 'One star or more', 'Two stars'],
+    [
+      starRow(
+        'Clean right takes',
+        pairs.filter(
+          pair => pair.variant === 'right' && pair.condition === 'clean',
+        ),
+      ),
+      starRow(
+        'Right takes, every variant and condition',
+        pairs.filter(isRight),
+      ),
+      starRow(
+        'Wrong takes, every condition',
+        pairs.filter(pair => isWrong(pair.variant)),
+      ),
+      ...phrases.map(phrase =>
+        starRow(
+          `Wrong takes of ${phrase.id} (${lengthOf(phrase.id)} morae)`,
+          pairs.filter(
+            pair => pair.phrase === phrase.id && isWrong(pair.variant),
+          ),
+        ),
+      ),
     ],
   ),
   '',

@@ -4,7 +4,7 @@ Every screen, test, doc and name in the code uses these words with these meaning
 
 - **Clip:** one recording: a bundled starter recording, an upload, or a local-pack file.
 - **Line:** a stretch of a clip, with a start and end, to copy; optionally with text and kana.
-- **Level:** a clip's lines in order, with their stars; the starter set is several levels by accent pattern.
+- **Level:** a clip's lines in order, with their stars, at `/level/:clipId`: a bundled clip's, an upload's or the local pack's; the starter set will be several levels by accent pattern.
 - **Take:** one recording of the learner copying a line.
   A **guided** take shows the native curve and the live curve; a **blind** take hides both until it ends.
 - **Curve:** the tracker's output for a recording: pitch, confidence and level per 16 ms frame, and the onset.
@@ -12,7 +12,7 @@ Every screen, test, doc and name in the code uses these words with these meaning
 - **Live curve:** the learner curve drawn during the take, frame by frame as the tracker finds them, about a quarter second behind the voice, over the native curve; when the take ends it takes the finished curve's shape.
 - **Closeness:** how near each moment of the learner curve is to the native curve within about 150 ms either way, each around its own speaker's median, shown only as the line's colour, from blue for close to orange for far, never as a number.
   During a take it compares the same time since each onset; after a scored take, the learner curve is drawn along the alignment, so it compares the moments the score paired.
-- **Practice screen:** a line's own screen, `/line/:clipId/:lineId`: the line, both curves, listening again, and the take.
+- **Practice screen:** a line's own screen, `/line/:clipId/:lineId`: the line and its stars, both curves, listening again, the take, and the next line.
 - **Features:** what a recording sounds like frame by frame, never its pitch: the bands of its spectrum, which the score lines a take up with the line by.
 - **Alignment:** the pairs of line and take frames that say the same sound, found from their features; the pitch accent part compares along it and the timing part reads its pace.
 - **Match:** the headline, "N% match to this clip".
@@ -27,7 +27,9 @@ Every screen, test, doc and name in the code uses these words with these meaning
 - **Line editor:** an upload's level's tools for fixing its cut: a line's start and end dragged or stepped, a line split at the playhead, merged with a neighbour or deleted, and the last change undone once; the lines a change moves are tracked again.
 - **Marks:** a line's warning that its native curve is weak: low pitch confidence (little of its speech pitched) or likely music (a pitch through most of its pauses).
 - **Cut:** making an upload's lines: its speech found by Silero VAD, cut at pauses of about 300 ms into lines of about 1 to 4 s, and each line's native curve tracked, all in the clip Worker, with its progress shown and a way to stop it.
-- **Stars:** per line, 0 to 3: one for reaching the clip's threshold on a guided take, two for beating it, three for reaching it blind.
+- **Stars:** per line, 0 to 3: one for reaching the clip's threshold on a guided take, two for beating it, three for reaching it blind; worked out from the line's kept takes, so a take that couldn't compare never costs one.
+- **Personal best:** a line's best match; a take that beats it, as the screen shows them in whole percent, is marked as a new one.
+- **Practice loop:** what a line's practice screen runs: hear the line, a guided take, the curves and the match, again as often as wanted, a blind take, and on to the next line of its level.
 - **Starter set:** the bundled, openly licensed lines.
 - **Local pack:** Daniel's untracked `local/` folder and its manifest, `pack.json`, imported from the files chosen as one level kept on the device; its lines may carry text, kana and a **source** link, shown and never fetched.
 - **Fixture:** generated, labelled test audio with its known curve, accent and mora boundaries.

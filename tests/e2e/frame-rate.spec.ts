@@ -37,7 +37,7 @@ test('holds 60 frames a second through a 20 s take at 6x CPU throttle', async ({
       const devTools = await context.newCDPSession(page)
       await devTools.send('Emulation.setCPUThrottlingRate', { rate: 6 })
 
-      await page.getByRole('button', { name: 'Record' }).click()
+      await page.getByRole('button', { name: 'Record', exact: true }).click()
       await expect(
         page.getByRole('heading', { name: 'Recording' }),
       ).toBeVisible({ timeout: 60_000 })
