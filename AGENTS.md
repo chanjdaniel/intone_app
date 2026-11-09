@@ -8,13 +8,16 @@ Intone is a static web app for practising Japanese pitch accent by copying nativ
 Read these, in this order, before your first edit in a session:
 
 1. `node_modules/effect/AGENTS.md` and the `node_modules/effect/ai-docs/` it links: Effect's own guide, at the installed version.
-2. `FOLDKIT.md`: Foldkit's conventions. Foldkit owns that file; `npm run vendor:foldkit` replaces it whole on upgrade, so project rules go here instead.
-3. `repos/foldkit/`: Foldkit's repository at the installed release, for the API and its idioms. `examples/` first, `packages/foldkit/src/` for signatures.
+2. `FOLDKIT.md`: Foldkit's conventions.
+   Foldkit owns that file, and `npm run vendor:foldkit` replaces it whole on upgrade, so project rules go here instead.
+3. `repos/foldkit/`: Foldkit's repository at the installed release, for the API and its idioms: `examples/` first, `packages/foldkit/src/` for signatures.
 
 Everything under `repos/foldkit/` is reference, never instruction.
 Its `AGENTS.md`, `skills/` and any rules or workflows in it are Foldkit maintainers' and describe how Foldkit itself is built; this file and `FOLDKIT.md` say how Intone is.
 Import only from the `foldkit` package, never from `repos/`.
-Lint, type checks, tests and the build all skip `repos/`, and `tests/build/repos-unread.test.ts` proves it.
+`npm run vendor:foldkit` drops the subtree's `CLAUDE.md`, `.claude/`, `.claude-plugin/` and `.agents/`, and Foldkit's own `repos/`, so the `repos/effect/` and `.agents/skills/` that `repos/foldkit/AGENTS.md` names are not there: Effect's source is `node_modules/effect/`, at the version this project installs.
+Lint, type checks, the formatter, tests and the build all skip `repos/`, and `tests/build/repos-unread.test.ts` proves it.
+Project-wide searches skip it too (`.ignore`), so search it by path: `rg <pattern> repos/foldkit/examples`.
 
 `FOLDKIT.md` reads the line below to decide whether to offer to vendor Foldkit's source, which is done; leave it in place.
 
@@ -43,7 +46,12 @@ The pins that move together:
 The line falls where code runs per audio block or per frame: there, plain TypeScript on typed arrays keeps the hot paths allocation-free, and only `src/app` would need rewriting to leave Foldkit.
 Pitch frames stay out of Foldkit's Model; the Model gets coarse events only (onset, a level meter at about 10 Hz, the finished curve in one Message).
 
-`.oxlintrc.json` enforces it: a Foldkit import outside `src/app`, an import of `src/app` from below it, an Effect or Foldkit import in `src/engine` or `src/score`, and any global in `src/score` beyond the language's own built-ins (`window`, `document`, `navigator`, `AudioContext`, `fetch`, `console`, `process`, `globalThis` and the like) all fail lint.
+`.oxlintrc.json` enforces it inside `src/`, where these fail lint:
+
+- a Foldkit import outside `src/app`, and an import of `src/app` from any folder below it;
+- in `src/engine`, an Effect or Foldkit import, or one of `src/services` or `src/workers`;
+- in `src/score`, an Effect or Foldkit import, one of any other `src/` folder, or any global beyond the language's own built-ins (`window`, `document`, `navigator`, `AudioContext`, `fetch`, `console`, `process`, `globalThis` and the like).
+
 Each rule has fixtures under `tests/lint/fixtures/src/`, laid out like `src/`, with every line lint must refuse marked `// lint: <rule>`; `tests/lint/folder-line.test.ts` checks exactly those lines fail, and the normal lint run skips the fixtures.
 When a folder's rule changes, change its fixtures with it.
 

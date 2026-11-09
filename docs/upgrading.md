@@ -15,9 +15,8 @@ Foldkit is pre-1.0 and breaks in minor releases, and Effect's minor releases wai
      Patch releases inside that range move freely; a new Effect minor waits until a Foldkit release takes it.
    - `@effect/tsgo` accepts only some oxlint and oxlint-tsgolint versions, and says which when it refuses one; move them together.
 4. Commit, then re-pin the vendored Foldkit source with `npm run vendor:foldkit`.
-   It needs a clean tree, moves `repos/foldkit/` to the tag `foldkit@<installed version>`, drops the maintainer files again, replaces `FOLDKIT.md` whole with the release's template, and commits.
+   It needs a clean tree, replaces `repos/foldkit/` with the tree of the tag `foldkit@<installed version>`, drops the maintainer files and Foldkit's own `repos/` again, replaces `FOLDKIT.md` whole with the release's template, and commits.
    Read the new `FOLDKIT.md`'s diff: it is how Foldkit's conventions changed.
-   If the script stops on a conflict inside `repos/foldkit/`, take the release's side, since nothing there is the project's own: resolve, commit, and run it again.
 5. Update the version list in `AGENTS.md`.
 6. Run the whole suite, the end-to-end tests included:
 
