@@ -3,7 +3,9 @@ import { Array, Context, Effect, Layer, Option, Random, Schema } from 'effect'
 import { encodeWav } from '../engine/audio/wav'
 import type { Recording } from '../score/score'
 import { ClipStore } from './clip-store'
+import { type ClipOperations, makeClipOperations } from './history-clips'
 import {
+  ClipEntry,
   type HistoryDump,
   NativeEntry,
   Settings,
@@ -78,30 +80,33 @@ export type HistoryReading = Readonly<{
 
 export type Rescored = Readonly<{ id: string; comparison: Comparison }>
 
-export type HistoryStoreShape = Readonly<{
-  readonly keep: (take: NewTake) => Effect.Effect<KeptTake, HistoryError>
-  readonly entries: Effect.Effect<HistoryReading, HistoryError>
-  readonly fullTake: (
-    id: string,
-  ) => Effect.Effect<Option.Option<FullTake>, HistoryError>
-  readonly rescore: (
-    updates: ReadonlyArray<Rescored>,
-  ) => Effect.Effect<void, HistoryError>
-  // Deletes a take, its recording and its kept audio.
-  readonly remove: (id: string) => Effect.Effect<void, HistoryError>
-  readonly settings: Effect.Effect<Settings, HistoryError>
-  readonly setSettings: (
-    settings: Settings,
-  ) => Effect.Effect<void, HistoryError>
-  readonly dump: (
-    withAudio: boolean,
-  ) => Effect.Effect<HistoryDump, HistoryError>
-  // How many takes the backup held.
-  readonly restore: (backup: HistoryDump) => Effect.Effect<number, HistoryError>
-  // Deletes everything the app keeps on the device: the database, with
-  // the history and the native curves, and every kept file.
-  readonly clear: Effect.Effect<void, HistoryError>
-}>
+export type HistoryStoreShape = ClipOperations &
+  Readonly<{
+    readonly keep: (take: NewTake) => Effect.Effect<KeptTake, HistoryError>
+    readonly entries: Effect.Effect<HistoryReading, HistoryError>
+    readonly fullTake: (
+      id: string,
+    ) => Effect.Effect<Option.Option<FullTake>, HistoryError>
+    readonly rescore: (
+      updates: ReadonlyArray<Rescored>,
+    ) => Effect.Effect<void, HistoryError>
+    // Deletes a take, its recording and its kept audio.
+    readonly remove: (id: string) => Effect.Effect<void, HistoryError>
+    readonly settings: Effect.Effect<Settings, HistoryError>
+    readonly setSettings: (
+      settings: Settings,
+    ) => Effect.Effect<void, HistoryError>
+    readonly dump: (
+      withAudio: boolean,
+    ) => Effect.Effect<HistoryDump, HistoryError>
+    // How many takes the backup held.
+    readonly restore: (
+      backup: HistoryDump,
+    ) => Effect.Effect<number, HistoryError>
+    // Deletes everything the app keeps on the device: the database, with
+    // the history and the native curves, and every kept file.
+    readonly clear: Effect.Effect<void, HistoryError>
+  }>
 
 const settingsKey = 'settings'
 
@@ -118,6 +123,7 @@ const decodeEntry = Schema.decodeUnknownOption(TakeEntry)
 const decodeRecording = Schema.decodeUnknownOption(TakeRecording)
 const decodeNative = Schema.decodeUnknownOption(NativeEntry)
 const decodeSettings = Schema.decodeUnknownOption(Settings)
+const decodeClip = Schema.decodeUnknownOption(ClipEntry)
 
 const failWith =
   (lead: string) =>
@@ -147,7 +153,7 @@ export const make = (
   factory: IDBFactory,
 ): Effect.Effect<HistoryStoreShape, never, ClipStore> =>
   Effect.gen(function* () {
-    const clips = yield* ClipStore
+    const files = yield* ClipStore
 
     const withDatabase = <A>(
       lead: string,
@@ -162,7 +168,8 @@ export const make = (
       store:
         | typeof stores.takes
         | typeof stores.takeRecordings
-        | typeof stores.natives,
+        | typeof stores.natives
+        | typeof stores.clips,
       decode: (value: unknown) => Option.Option<A>,
     ) =>
       transact(database, [store], 'readonly', transaction => {
@@ -192,7 +199,7 @@ export const make = (
         const audioFile = audioPathOf(id)
         const toKeep = Option.filter(newTake.audio, () => keepTakeAudio)
         const audioKept: Option.Option<string> | null = Option.isSome(toKeep)
-          ? yield* clips.write(audioFile, wavOf(toKeep.value)).pipe(
+          ? yield* files.write(audioFile, wavOf(toKeep.value)).pipe(
               Effect.as(Option.none<string>()),
               Effect.catch(error => Effect.succeedSome(error.reason)),
             )
@@ -249,7 +256,7 @@ export const make = (
         ).pipe(
           Effect.tapError(() =>
             hasAudio
-              ? clips.remove(audioFile).pipe(Effect.ignore)
+              ? files.remove(audioFile).pipe(Effect.ignore)
               : Effect.void,
           ),
         )
@@ -369,7 +376,7 @@ export const make = (
           Option.match({
             onNone: () => Effect.void,
             onSome: audio =>
-              clips
+              files
                 .remove(audio.file)
                 .pipe(
                   Effect.mapError(
@@ -401,6 +408,7 @@ export const make = (
                 decodeRecording,
               ),
               natives: readAll(database, stores.natives, decodeNative),
+              clips: readAll(database, stores.clips, decodeClip),
             }),
         )
         const recordingById = new Map(
@@ -416,10 +424,17 @@ export const make = (
           ),
         )
         const audioFiles = withAudio
-          ? filterSome(takes, ({ entry }) => Option.fromNullishOr(entry.audio))
+          ? [
+              ...filterSome(takes, ({ entry }) =>
+                Option.fromNullishOr(entry.audio),
+              ),
+              ...filterSome(read.clips.decoded, clip =>
+                Option.fromNullishOr(clip.audio),
+              ),
+            ]
           : []
         const audio = yield* Effect.forEach(audioFiles, ({ file }) =>
-          clips.read(file).pipe(Effect.map(bytes => [file, bytes] as const)),
+          files.read(file).pipe(Effect.map(bytes => [file, bytes] as const)),
         ).pipe(Effect.mapError(failWith('The kept audio could not be read.')))
         return {
           settings: yield* settings,
@@ -432,6 +447,10 @@ export const make = (
                 entry: { ...take.entry, audio: null },
                 recording: take.recording,
               })),
+          // So does a clip.
+          clips: withAudio
+            ? read.clips.decoded
+            : read.clips.decoded.map(clip => ({ ...clip, audio: null })),
           audio: new Map(
             filterSome(audio, ([file, bytes]) =>
               Option.map(bytes, found => [file, found] as const),
@@ -440,13 +459,15 @@ export const make = (
         } satisfies HistoryDump
       })
 
-    // Adds a backup's takes to the history, all in one transaction, and
-    // then its audio; a take already here (the same id) is replaced.
+    // Adds a backup's takes and clips to the history, all in one
+    // transaction, after their audio; a take or clip already here (the
+    // same id) is replaced, except that a clip the backup brings without
+    // its audio keeps the audio it has here.
     const restore = (backup: HistoryDump) =>
       Effect.gen(function* () {
         yield* Effect.forEach(
           [...backup.audio],
-          ([file, bytes]) => clips.write(file, Uint8Array.from(bytes)),
+          ([file, bytes]) => files.write(file, Uint8Array.from(bytes)),
           { discard: true },
         ).pipe(
           Effect.mapError(failWith('The backup’s audio was not restored.')),
@@ -454,12 +475,35 @@ export const make = (
         yield* withDatabase('The backup was not restored.', database =>
           transact(
             database,
-            [stores.takes, stores.takeRecordings, stores.natives, stores.meta],
+            [
+              stores.takes,
+              stores.takeRecordings,
+              stores.natives,
+              stores.meta,
+              stores.clips,
+            ],
             'readwrite',
             transaction => {
               backup.natives.forEach(native =>
                 transaction.objectStore(stores.natives).put(native),
               )
+              const clipStore = transaction.objectStore(stores.clips)
+              backup.clips.forEach(clip => {
+                if (clip.audio !== null) {
+                  clipStore.put(clip)
+                  return
+                }
+                const here = clipStore.get(clip.id)
+                here.onsuccess = () => {
+                  clipStore.put({
+                    ...clip,
+                    audio: Option.match(decodeClip(here.result), {
+                      onNone: () => null,
+                      onSome: found => found.audio,
+                    }),
+                  })
+                }
+              })
               backup.takes.forEach(({ entry, recording }) => {
                 transaction.objectStore(stores.takes).put(entry)
                 transaction.objectStore(stores.takeRecordings).put(recording)
@@ -479,7 +523,7 @@ export const make = (
         deleteDatabase(factory).pipe(
           Effect.mapError(failWith('The history was not deleted.')),
         ),
-        clips.clear.pipe(
+        files.clear.pipe(
           Effect.mapError(failWith('The kept audio was not deleted.')),
         ),
       ],
@@ -487,6 +531,7 @@ export const make = (
     )
 
     return {
+      ...makeClipOperations(withDatabase, files, failWith),
       keep,
       entries,
       fullTake,

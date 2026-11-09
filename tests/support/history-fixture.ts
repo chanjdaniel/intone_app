@@ -159,6 +159,7 @@ export const generateHistory = (): GeneratedHistory => {
   return {
     dump: {
       settings: { keepTakeAudio: false },
+      clips: [],
       natives: natives.map(({ native, id }) =>
         decodeNative({
           format: historyFormat,

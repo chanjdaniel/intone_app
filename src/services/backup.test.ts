@@ -245,4 +245,79 @@ describe('the backup', () => {
       expect(yield* to.run(store => store.entries)).toEqual(before)
     }),
   )
+
+  it.effect(
+    'carries a clip and its lines, its file only when asked, and refuses a backup missing one',
+    () =>
+      Effect.gen(function* () {
+        const from = yield* historyWith(false)
+        const clipBytes = Uint8Array.from({ length: 300 }, (_, k) => k % 251)
+        const clip = yield* from.run(store =>
+          store.addClip({
+            name: 'reading.m4a',
+            type: 'audio/mp4',
+            addedAt: 3_000,
+            seconds: 9,
+            bytes: Uint8Array.from(clipBytes),
+            lines: [
+              {
+                from: 0.5,
+                to: 2.5,
+                native: { _tag: 'Tracked', recording: native },
+              },
+            ],
+          }),
+        )
+        const clipFile = clip.audio?.file ?? ''
+
+        const without = encodeBackup(
+          yield* from.run(store => store.dump(false)),
+          5_000,
+        )
+        expect(Object.keys(unzipSync(without))).toEqual([historyFile])
+        expect(historyJsonOf(without).clips[0].audio).toBeNull()
+        const restoredWithout = yield* decodeBackup(without)
+        expect(restoredWithout.clips).toEqual([{ ...clip, audio: null }])
+
+        const withAudio = encodeBackup(
+          yield* from.run(store => store.dump(true)),
+          5_000,
+        )
+        const zipped = unzipSync(withAudio)
+        expect(Object.keys(zipped)).toContain(`clips/${clipFile.split('/')[1]}`)
+        const restored = yield* decodeBackup(withAudio)
+        expect(restored.clips).toEqual([clip])
+        expect(restored.audio.get(clipFile)).toEqual(clipBytes)
+
+        const json = historyJsonOf(withAudio)
+        expect(
+          yield* refusal(zipOf({ [historyFile]: JSON.stringify(json) })),
+        ).toBe(
+          `This file is not an Intone backup this app can read: the clip ${clipFile} is missing or damaged.`,
+        )
+        expect(
+          yield* refusal(
+            zipOf({
+              [historyFile]: JSON.stringify({ ...json, natives: [] }),
+            }),
+          ),
+        ).toContain('missing')
+      }),
+  )
+
+  it.effect('reads a backup made before clips, as having none', () =>
+    Effect.gen(function* () {
+      const from = yield* historyWith(false)
+      const backup = encodeBackup(
+        yield* from.run(store => store.dump(false)),
+        5_000,
+      )
+      const { clips: _clips, ...older } = historyJsonOf(backup)
+      const dump = yield* decodeBackup(
+        zipOf({ [historyFile]: JSON.stringify(older) }),
+      )
+      expect(dump.clips).toEqual([])
+      expect(dump.takes).toHaveLength(2)
+    }),
+  )
 })

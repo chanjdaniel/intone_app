@@ -1,4 +1,12 @@
-import { Context, Effect, Exit, Layer, Option, Schema } from 'effect'
+import {
+  Context,
+  Effect,
+  Exit,
+  Layer,
+  Option,
+  Schema,
+  type Scope,
+} from 'effect'
 
 import { FromClipStore, type Write } from '../workers/clip-store-protocol'
 
@@ -59,6 +67,30 @@ const folderOf = async (
     throw error
   }
 }
+
+// The file at `parts` in the origin private file system, if it is there.
+const fileAt = async (parts: ReadonlyArray<string>): Promise<File | null> => {
+  const folder = await folderOf(await navigator.storage.getDirectory(), parts)
+  if (folder === null) {
+    return null
+  }
+  try {
+    const handle = await folder.getFileHandle(parts.at(-1) ?? '')
+    return await handle.getFile()
+  } catch (error) {
+    if (isNotFound(error)) {
+      return null
+    }
+    throw error
+  }
+}
+
+// An object URL of `blob`, revoked when the scope closes.
+const objectUrl = (blob: Blob): Effect.Effect<string, never, Scope.Scope> =>
+  Effect.acquireRelease(
+    Effect.sync(() => URL.createObjectURL(blob)),
+    made => Effect.sync(() => URL.revokeObjectURL(made)),
+  )
 
 // Writes one file through a Worker of its own, ended once it answers.
 const writeInWorker = (message: Write): Effect.Effect<void, ClipStoreError> =>
@@ -122,6 +154,13 @@ export class ClipStore extends Context.Service<
     readonly read: (
       path: string,
     ) => Effect.Effect<Option.Option<Uint8Array>, ClipStoreError>
+    // A URL the page can play the file at `path` from, with the media
+    // type `type`, valid until the scope closes; none when there is no
+    // file. The file is not read into memory for it.
+    readonly url: (
+      path: string,
+      type: string,
+    ) => Effect.Effect<Option.Option<string>, ClipStoreError, Scope.Scope>
     // Deletes the file at `path`; a file not there is already deleted.
     readonly remove: (path: string) => Effect.Effect<void, ClipStoreError>
     // Deletes every file.
@@ -141,24 +180,24 @@ export class ClipStore extends Context.Service<
         partsOf(path).pipe(
           Effect.flatMap(parts =>
             tryFiles(async () => {
-              const folder = await folderOf(
-                await navigator.storage.getDirectory(),
-                parts,
-              )
-              if (folder === null) {
-                return Option.none()
-              }
-              try {
-                const handle = await folder.getFileHandle(parts.at(-1) ?? '')
-                const file = await handle.getFile()
-                return Option.some(new Uint8Array(await file.arrayBuffer()))
-              } catch (error) {
-                if (isNotFound(error)) {
-                  return Option.none()
-                }
-                throw error
-              }
+              const file = await fileAt(parts)
+              return file === null
+                ? Option.none()
+                : Option.some(new Uint8Array(await file.arrayBuffer()))
             }),
+          ),
+        ),
+      url: (path, type) =>
+        partsOf(path).pipe(
+          Effect.flatMap(parts => tryFiles(() => fileAt(parts))),
+          Effect.flatMap(file =>
+            file === null
+              ? Effect.succeedNone
+              : objectUrl(
+                  type === '' || file.type === type
+                    ? file
+                    : new Blob([file], { type }),
+                ).pipe(Effect.asSome),
           ),
         ),
       remove: path =>
@@ -213,6 +252,17 @@ export class ClipStore extends Context.Service<
                 Uint8Array.from(bytes),
               ),
             ),
+          ),
+        url: (path, type) =>
+          partsOf(path).pipe(
+            Effect.flatMap(() => {
+              const bytes = files.get(path)
+              return bytes === undefined
+                ? Effect.succeedNone
+                : objectUrl(new Blob([Uint8Array.from(bytes)], { type })).pipe(
+                    Effect.asSome,
+                  )
+            }),
           ),
         remove: path =>
           partsOf(path).pipe(

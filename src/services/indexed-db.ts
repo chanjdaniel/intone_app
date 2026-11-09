@@ -14,7 +14,7 @@ export class IndexedDbError extends Schema.TaggedError<
 >()('IndexedDbError', { reason: Schema.String }) {}
 
 export const databaseName = 'intone'
-export const databaseVersion = 2
+export const databaseVersion = 3
 
 export const stores = {
   // Each line's native curve, by the line, its audio and the tracker that
@@ -29,6 +29,9 @@ export const stores = {
   takeRecordings: 'takeRecordings',
   natives: 'natives',
   meta: 'meta',
+  // The clips the learner brought and their lines; each line's native
+  // curve is in `natives`, and the clip's audio in the clip store.
+  clips: 'clips',
 } as const
 export type Store = (typeof stores)[keyof typeof stores]
 
@@ -55,6 +58,9 @@ const upgrade = (
     transaction
       .objectStore(stores.meta)
       .put({ format: historyFormat }, formatKey)
+  }
+  if (oldVersion < 3) {
+    database.createObjectStore(stores.clips, { keyPath: 'id' })
   }
 }
 

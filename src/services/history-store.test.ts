@@ -231,7 +231,7 @@ describe('the history store', () => {
           unreadable: 0,
         })
         const curves = yield* readRaw(factory, stores.nativeCurves)
-        expect(curves.version).toBe(2)
+        expect(curves.version).toBe(3)
         expect(curves.values).toEqual([cached])
         expect((yield* readRaw(factory, stores.meta)).values).toEqual([
           { format: 1 },
@@ -246,7 +246,7 @@ describe('the history store', () => {
     () =>
       Effect.gen(function* () {
         const { run, factory } = harness()
-        yield* plantDatabase(factory, 3, () => {})
+        yield* plantDatabase(factory, 4, () => {})
         const error = yield* run(store => store.entries).pipe(Effect.flip)
         expect(error.reason).toContain('newer copy of Intone')
       }),
@@ -309,6 +309,7 @@ describe('the history store', () => {
             write: () =>
               Effect.fail(new ClipStoreError({ reason: 'The disk is full.' })),
             read: () => Effect.succeedNone,
+            url: () => Effect.succeedNone,
             remove: () => Effect.void,
             clear: Effect.void,
           }),

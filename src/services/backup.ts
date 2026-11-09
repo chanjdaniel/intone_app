@@ -3,6 +3,7 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 
 import { decodeWav } from '../engine/audio/wav'
 import {
+  ClipEntry,
   Frames,
   type HistoryDump,
   Settings,
@@ -14,8 +15,9 @@ import {
 
 // The backup: one zip file the learner saves on their own device, with
 // `history.json` (every take, every native it was scored against, the
-// settings) and, only when the learner asks, an `audio/` folder of the
-// takes' kept audio. It is read back through the same Schemas as the
+// clips the learner brought and their lines, the settings) and, only
+// when the learner asks, the audio: an `audio/` folder of the takes'
+// kept audio and a `clips/` folder of the clips' files. It is read back through the same Schemas as the
 // history's own records (./history-records.ts), so a file that is not a
 // backup, or a damaged one, is refused whole and nothing is restored.
 // This module is loaded only when a backup is made or read, with the zip
@@ -69,6 +71,8 @@ export const BackupFile = Schema.Struct({
       recording: takeRecordingOf(FramesFromBase64),
     }),
   ),
+  // A backup made before clips could be brought has none.
+  clips: Schema.optionalKey(Schema.Array(ClipEntry)),
 })
 export type BackupFile = typeof BackupFile.Type
 
@@ -78,10 +82,13 @@ const decodeJson = Schema.decodeUnknownExit(BackupJson)
 
 const audioFolder = 'audio/'
 const audioName = /^[A-Za-z0-9][A-Za-z0-9._-]*\.wav$/
+const clipFolder = 'clips/'
+const clipName = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
-// Where a kept take's audio goes in the zip: its file's own name.
+// Where kept audio goes in the zip: a take's in `audio/`, a clip's in
+// `clips/`, each by its file's own name.
 const zipPathOf = (file: string): string =>
-  `${audioFolder}${file.slice(file.lastIndexOf('/') + 1)}`
+  `${file.startsWith(clipFolder) ? clipFolder : audioFolder}${file.slice(file.lastIndexOf('/') + 1)}`
 
 const earliestZipDate = Date.UTC(1980, 0, 1, 12)
 const latestZipDate = Date.UTC(2099, 11, 31, 12)
@@ -99,6 +106,7 @@ export const encodeBackup = (
     settings: dump.settings,
     natives: dump.natives,
     takes: dump.takes,
+    clips: dump.clips,
   }
   const audio = Object.fromEntries(
     [...dump.audio].map(([path, bytes]) => [zipPathOf(path), bytes] as const),
@@ -135,7 +143,9 @@ const unzipped = (
         filter: file =>
           file.name === historyFile ||
           (file.name.startsWith(audioFolder) &&
-            audioName.test(file.name.slice(audioFolder.length))),
+            audioName.test(file.name.slice(audioFolder.length))) ||
+          (file.name.startsWith(clipFolder) &&
+            clipName.test(file.name.slice(clipFolder.length))),
       }),
     catch: () => refused('it is not a zip file.'),
   })
@@ -193,12 +203,45 @@ export const decodeBackup = (
         `the recording ${missing.file} is missing or damaged.`,
       )
     }
+    const clips = backup.clips ?? []
+    const clipNatives = clips.find(clip =>
+      clip.lines.some(
+        line =>
+          line.native._tag === 'Tracked' &&
+          !nativeIds.has(line.native.nativeId),
+      ),
+    )
+    if (clipNatives !== undefined) {
+      return yield* refused(
+        `the clip ${clipNatives.name} is missing a line's curve.`,
+      )
+    }
+    const clipAudio = clips.flatMap(clip =>
+      clip.audio === null
+        ? []
+        : [
+            {
+              file: clip.audio.file,
+              bytes: clip.audio.bytes,
+              zipped: files[zipPathOf(clip.audio.file)],
+            },
+          ],
+    )
+    const missingClip = clipAudio.find(
+      ({ zipped, bytes }) => zipped === undefined || zipped.length !== bytes,
+    )
+    if (missingClip !== undefined) {
+      return yield* refused(
+        `the clip ${missingClip.file} is missing or damaged.`,
+      )
+    }
     return {
       settings: backup.settings,
       natives: backup.natives,
       takes: backup.takes,
+      clips,
       audio: new Map(
-        audio.flatMap(({ file, zipped }) =>
+        [...audio, ...clipAudio].flatMap(({ file, zipped }) =>
           zipped === undefined ? [] : [[file, zipped] as const],
         ),
       ),

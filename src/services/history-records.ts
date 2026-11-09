@@ -161,6 +161,52 @@ export const nativeEntryOf = <F extends FramesSchema>(frames: F) =>
 export const NativeEntry = nativeEntryOf(Frames)
 export type NativeEntry = typeof NativeEntry.Type
 
+// A clip the learner brought (ticket 13): its file in the clip store, by
+// its own media type, and its lines, each a stretch of it with the native
+// curve tracked from it, kept in the natives store as a take's native is.
+// A line whose audio gave no curve says why, and cannot be copied.
+export const ClipAudio = Schema.Struct({
+  file: Schema.String.check(
+    Schema.isPattern(/^clips\/[A-Za-z0-9][A-Za-z0-9._-]*$/),
+  ),
+  // The file's media type, as the browser named it, so it plays as it
+  // came; empty when the browser did not know.
+  type: Schema.String,
+  bytes: Schema.Finite,
+})
+export type ClipAudio = typeof ClipAudio.Type
+
+export const LineNative = Schema.Union([
+  Schema.TaggedStruct('Tracked', { nativeId: Schema.String }),
+  Schema.TaggedStruct('TooQuiet', {}),
+  Schema.TaggedStruct('TooNoisy', {}),
+])
+export type LineNative = typeof LineNative.Type
+
+export const ClipLine = Schema.Struct({
+  // Unique in its clip: the line's number when the clip was cut.
+  id: Schema.String,
+  // Seconds from the clip's start.
+  from: Schema.Finite,
+  to: Schema.Finite,
+  native: LineNative,
+})
+export type ClipLine = typeof ClipLine.Type
+
+export const ClipEntry = Schema.Struct({
+  format: Format,
+  id: Schema.String,
+  // The file's own name.
+  name: Schema.String,
+  // Milliseconds since 1970.
+  addedAt: Schema.Finite,
+  seconds: Schema.Finite,
+  // Null when the clip came from a backup that left its audio out.
+  audio: Schema.NullOr(ClipAudio),
+  lines: Schema.Array(ClipLine),
+})
+export type ClipEntry = typeof ClipEntry.Type
+
 export const Settings = Schema.Struct({
   // Whether each take's audio is kept with it; off until the learner
   // turns it on.
@@ -207,11 +253,12 @@ export type DumpedTake = Readonly<{
   recording: TakeRecording
 }>
 
-// Everything kept, for the backup (./backup.ts): the kept audio by its
-// file's path, when asked for.
+// Everything kept, for the backup (./backup.ts): the kept audio of the
+// takes and the clips by its file's path, when asked for.
 export type HistoryDump = Readonly<{
   settings: Settings
   natives: ReadonlyArray<NativeEntry>
   takes: ReadonlyArray<DumpedTake>
+  clips: ReadonlyArray<ClipEntry>
   audio: ReadonlyMap<string, Uint8Array>
 }>
