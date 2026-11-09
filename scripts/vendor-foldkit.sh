@@ -7,10 +7,9 @@
 #
 #   scripts/vendor-foldkit.sh
 #
-# It fetches the release tag, adds the subtree with `git subtree add --squash`
-# the first time and `git subtree merge --squash` after (what `git subtree
-# pull` does, skipped when the subtree is already at the release), then
-# drops two things from the subtree:
+# It fetches the release tag and adds it with `git subtree add --squash` the
+# first time; after that it replaces repos/foldkit/ with the release's tree.
+# Then it drops two things from the subtree:
 #
 # - the files that would load as instructions in an agent session: every
 #   CLAUDE.md, .claude/, .claude-plugin/ and .agents/ (Foldkit maintainers'
@@ -55,39 +54,28 @@ release="$(git rev-parse 'FETCH_HEAD^{commit}')"
 if [ ! -d "$prefix" ]; then
   git subtree add --prefix="$prefix" "$release" --squash \
     --message "build: vendor Foldkit at repos/foldkit, pinned to $tag"
+  subject="build: keep repos/foldkit at $tag as reading only"
 else
-  # The release the subtree was last squashed from, from git subtree's own
-  # trailer on that commit.
-  pinned="$(git log -1 --format=%B --grep="^git-subtree-dir: $prefix/*\$" |
-    sed -n 's/^git-subtree-split: //p')"
-  if [ "$pinned" != "$release" ] &&
-    ! git subtree merge --prefix="$prefix" "$release" --squash \
-      --message "build: re-pin repos/foldkit to $tag"; then
-    # A dropped path changed upstream after this project dropped it: keep it
-    # dropped. Any other conflict is a real one, left for a person.
-    conflicts="$(git diff --name-only --diff-filter=U)"
-    [ -n "$conflicts" ] || fail "git subtree merge of $tag failed"
-    if grep -Ev "$dropped" <<<"$conflicts" >/dev/null; then
-      fail "the merge of $tag conflicts outside the dropped files; resolve it and commit, then run this script again"
-    fi
-    xargs git rm --quiet -r -- <<<"$conflicts"
-    while IFS= read -r path; do
-      printf 'vendor-foldkit: kept dropped: %s\n' "$path"
-    done <<<"$conflicts"
-    git commit --quiet --no-edit
-  fi
+  # Re-pin by replacing the directory with the release's tree. For a copy
+  # that is only read, that is the tree `git subtree merge --squash` would
+  # give, with no conflict to resolve, and it needs none of git subtree's
+  # history, which a squash or rebase merge of a pull request flattens.
+  git rm -r --quiet -- "$prefix"
+  git read-tree --prefix="$prefix/" -u "$release"
+  subject="build: re-pin repos/foldkit to $tag"
 fi
 
 git ls-files -z -- "$prefix" |
   { grep -zE "$dropped" || true; } |
-  xargs -0 --no-run-if-empty git rm --quiet -r --
+  xargs -0 --no-run-if-empty git rm --quiet -r -f --
+
 [ -f "$template" ] || fail "$tag has no FOLDKIT.md template at $template"
 cp "$template" FOLDKIT.md
 git add FOLDKIT.md
 
 if ! git diff --cached --quiet; then
-  git commit --quiet --message "build: keep repos/foldkit at $tag as reading only" \
-    --message "Drops the subtree's CLAUDE.md, .claude/, .claude-plugin/ and .agents/, which would load as instructions in an agent session, and Foldkit's own vendored repos/, and replaces FOLDKIT.md with $tag's template."
+  git commit --quiet --message "$subject" \
+    --message "Foldkit commit $release. Drops the subtree's CLAUDE.md, .claude/, .claude-plugin/ and .agents/, which would load as instructions in an agent session, and Foldkit's own vendored repos/, and replaces FOLDKIT.md with $tag's template."
 fi
 
 printf 'vendor-foldkit: repos/foldkit is at %s\n' "$tag"

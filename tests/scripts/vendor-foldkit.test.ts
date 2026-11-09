@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process'
 import {
   existsSync,
   mkdirSync,
@@ -11,17 +10,13 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 
+import { type Run, root, run as runCommand } from '../support/run'
+
 // scripts/vendor-foldkit.sh run against a stand-in for Foldkit's repository:
 // a local git repository with the same maintainer files, tagged the way
 // Foldkit tags its releases.
 
-const script = join(
-  import.meta.dirname,
-  '..',
-  '..',
-  'scripts',
-  'vendor-foldkit.sh',
-)
+const script = join(root, 'scripts', 'vendor-foldkit.sh')
 
 // Git with no user or system config, so the machine's hooks, signing and
 // default branch cannot change what the test sees.
@@ -35,22 +30,13 @@ const gitEnvironment = {
   GIT_COMMITTER_EMAIL: 'test@example.invalid',
 }
 
-type Run = { status: number | null; output: string }
-
 const run = (
   cwd: string,
   command: string,
   args: ReadonlyArray<string>,
   environment: Record<string, string> = {},
-): Run => {
-  const result = spawnSync(command, args, {
-    cwd,
-    encoding: 'utf8',
-    env: { ...gitEnvironment, ...environment },
-  })
-  if (result.error !== undefined) throw result.error
-  return { status: result.status, output: result.stdout + result.stderr }
-}
+): Run =>
+  runCommand(command, args, { cwd, env: { ...gitEnvironment, ...environment } })
 
 const git = (cwd: string, ...args: ReadonlyArray<string>): string => {
   const result = run(cwd, 'git', args)
@@ -185,7 +171,28 @@ describe('vendoring Foldkit', () => {
     expect(git(project, 'log', '--format=%s')).toContain('foldkit@1.1.0')
   })
 
-  test('stops on a conflict outside the dropped files, for a person', () => {
+  test('re-pins after a squash merge flattened the subtree history', () => {
+    expect(vendor().status).toBe(0)
+    // What a squash or rebase merge of the pull request leaves: the same
+    // tree, with none of git subtree's own commits in the history.
+    git(project, 'checkout', '--quiet', '--orphan', 'flattened')
+    git(project, 'commit', '--quiet', '--message', 'feat: squash-merged')
+    release('1.1.0', {
+      'examples/stopwatch/src/main.ts': 'export const elapsed = 0\n',
+      [template]: 'Foldkit conventions, 1.1.0.\n',
+    })
+    install('1.1.0')
+
+    const result = vendor()
+
+    expect(result.status, result.output).toBe(0)
+    expect(dropped(tracked())).toEqual([])
+    expect(tracked()).toContain('repos/foldkit/examples/stopwatch/src/main.ts')
+    expect(read('FOLDKIT.md')).toBe('Foldkit conventions, 1.1.0.\n')
+    expect(git(project, 'status', '--porcelain')).toBe('')
+  })
+
+  test('re-pins over a local edit inside the subtree, which is reading only', () => {
     expect(vendor().status).toBe(0)
     write(project, {
       'repos/foldkit/examples/counter/src/main.ts': 'export const count = 2\n',
@@ -198,8 +205,11 @@ describe('vendoring Foldkit', () => {
 
     const result = vendor()
 
-    expect(result.status).not.toBe(0)
-    expect(result.output).toContain('conflicts outside the dropped files')
+    expect(result.status, result.output).toBe(0)
+    expect(read('repos/foldkit/examples/counter/src/main.ts')).toBe(
+      'export const count = 1\n',
+    )
+    expect(git(project, 'status', '--porcelain')).toBe('')
   })
 
   test('changes nothing when the subtree is already at the installed release', () => {
