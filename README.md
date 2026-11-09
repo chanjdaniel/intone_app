@@ -6,6 +6,35 @@ Everything runs on your device, with no server: no audio, pitch curve or text le
 
 [Slideshow presentation of background, rationale, and design](https://docs.google.com/presentation/d/1wyh0-Kk8HNgJSuamyvwcEfg6f-_GLjgRmvhXkg8kFTo/edit?usp=sharing)
 
+## Running it
+
+Intone needs Node.js 24.22.1, the version in `.nvmrc` (`nvm use` picks it up).
+
+```bash
+npm ci
+npm run dev
+```
+
+`npm run dev` serves the app at http://localhost:5173.
+`npm run build` writes the production build to `dist/`, and `npm run preview` serves that build.
+
+The checks CI runs:
+
+```bash
+npm run format:check
+npm run lint
+npm run typecheck
+npm run check:effect
+npm test
+npx playwright install chromium
+npm run test:e2e
+```
+
+`npm test` runs the unit, Story and Scene tests in Vitest.
+`npm run test:e2e` builds the app and runs the Playwright tests against that build in headless Chromium.
+
+The app is built with [Foldkit](https://foldkit.dev) on [Effect](https://effect.website).
+
 ## The 2023 iOS project
 
 The original Xcode project, its test targets and Swift files are kept on the [`legacy`](https://github.com/chanjdaniel/intone_app/tree/legacy) branch.

@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM"],
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "exactOptionalPropertyTypes": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        // Unstable Effect modules are refused; the spec bans them.
+        "diagnosticSeverity": {
+          "unstableApiUsage": "error"
+        },
+        // Except @effect/vitest, which marks its whole module unstable: the
+        // spec names it as the test runner for Effect code, and only tests
+        // import it.
+        "allowedUnstableApis": ["@effect/vitest"]
+      }
+    ]
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}
