@@ -54,6 +54,9 @@ describe('the generated files', () => {
     expect(notices).toMatch(
       /\| SwiftF0 [^|]+ \| swift-f0\/model\.onnx \| MIT \| https:\/\/github\.com\/lars76\/swift-f0\//,
     )
+    expect(notices).toMatch(
+      /\| Silero VAD [^|]+ \| silero-vad\/silero_vad\.onnx \| MIT \| https:\/\/github\.com\/snakers4\/silero-vad\//,
+    )
     expect(notices).not.toContain('| vitest |')
     expect(notices).not.toContain('| vite |')
   })
@@ -84,6 +87,6 @@ describe('the generated files', () => {
   test('the model ids type the model URL map', () => {
     expect(
       readFileSync(join(root, 'src', 'virtual-modules.d.ts'), 'utf8'),
-    ).toContain("export type ModelId = 'swift-f0'")
+    ).toContain("export type ModelId = 'swift-f0' | 'silero-vad'")
   })
 })

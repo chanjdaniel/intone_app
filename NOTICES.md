@@ -43,3 +43,4 @@ The app ships these third-party packages and model files, each under its own lic
 | Model | File | Licence | Source |
 | - | - | - | - |
 | SwiftF0 0.3.0 | swift-f0/model.onnx | MIT | https://github.com/lars76/swift-f0/tree/v0.3.0 |
+| Silero VAD 6.2.3 | silero-vad/silero_vad.onnx | MIT | https://github.com/snakers4/silero-vad/tree/v6.2.3 |

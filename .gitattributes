@@ -20,3 +20,4 @@ fixtures/noise/** linguist-generated
 # check they are what each writes.
 fixtures/tracked/** linguist-generated binary
 docs/score-study.md linguist-generated
+docs/cut-study.md linguist-generated

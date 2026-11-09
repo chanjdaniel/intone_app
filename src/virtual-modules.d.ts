@@ -2,7 +2,7 @@
 
 // Each model file's URL on the app's own origin, from the build.
 declare module 'virtual:intone/models' {
-  export type ModelId = 'swift-f0'
+  export type ModelId = 'swift-f0' | 'silero-vad'
   export const modelUrls: Readonly<Record<ModelId, string>>
 }
 

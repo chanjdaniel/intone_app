@@ -31,6 +31,7 @@
     "fixtures/real",
     "fixtures/noise",
     "fixtures/tracked",
-    "docs/score-study.md"
+    "docs/score-study.md",
+    "docs/cut-study.md"
   ]
 }

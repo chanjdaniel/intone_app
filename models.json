@@ -9,6 +9,16 @@
       "sha256": "6385e8c2ebc3872e82c9ff5946228de44cd3be77a750ea53698b7dbfe94b0a22",
       "licence": "MIT",
       "source": "https://github.com/lars76/swift-f0/tree/v0.3.0"
+    },
+    {
+      "id": "silero-vad",
+      "name": "Silero VAD 6.2.3",
+      "file": "silero_vad.onnx",
+      "url": "https://raw.githubusercontent.com/snakers4/silero-vad/5cd7945676eb32225748052e2e6a0580e4686a08/src/silero_vad/data/silero_vad.onnx",
+      "bytes": 2327524,
+      "sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
+      "licence": "MIT",
+      "source": "https://github.com/snakers4/silero-vad/tree/v6.2.3"
     }
   ]
 }
