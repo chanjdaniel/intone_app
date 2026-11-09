@@ -34,8 +34,11 @@ import { marksOf } from './lineMarks'
 // (./editorPointer.ts), `events.follow`.
 
 export type LineEditorEvents<ViewMessage> = Readonly<{
-  moveEdge: (lineId: string, edge: Edge, seconds: number) => ViewMessage
-  placePlayhead: (seconds: number) => ViewMessage
+  // A key's step, in seconds: added to where the edge or playhead is
+  // when the Message arrives, so keys pressed faster than the screen
+  // redraws each count.
+  stepEdge: (lineId: string, edge: Edge, step: number) => ViewMessage
+  stepPlayhead: (step: number) => ViewMessage
   select: (lineId: string) => ViewMessage
   play: ViewMessage
   stop: ViewMessage
@@ -108,7 +111,7 @@ const edgeSlider = <ViewMessage>(
       h.OnKeyDownPreventDefault((key, modifiers) =>
         movable
           ? Option.map(keyStep(key, modifiers), step =>
-              events.moveEdge(line.id, edge, seconds + step),
+              events.stepEdge(line.id, edge, step),
             )
           : Option.none(),
       ),
@@ -157,9 +160,7 @@ const playheadSlider = <ViewMessage>(
         ),
       }),
       h.OnKeyDownPreventDefault((key, modifiers) =>
-        Option.map(keyStep(key, modifiers), step =>
-          events.placePlayhead(editor.playhead + step),
-        ),
+        Option.map(keyStep(key, modifiers), step => events.stepPlayhead(step)),
       ),
       h.Class(
         `absolute inset-y-0 z-10 w-6 -translate-x-1/2 ${shown ? '' : 'opacity-0'} rounded-sm ${focusRing}`,

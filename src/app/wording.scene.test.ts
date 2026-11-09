@@ -2,8 +2,19 @@ import { Option } from 'effect'
 import { Mount, expect, given, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
-import { initialEditor } from './level/editor'
-import { ClipsPage, DeleteState, LevelPage } from './level/level'
+import {
+  ClipWaveform,
+  EditSaving,
+  type LineEditor,
+  initialEditor,
+} from './level/editor'
+import { FollowLineEditorPointer } from './level/editorPointer'
+import {
+  ClipsPage,
+  DeleteState,
+  type LevelClip,
+  LevelPage,
+} from './level/level'
 import { sampleClip } from './level/testClips'
 import { NativeCurve } from './line/native'
 import {
@@ -170,6 +181,86 @@ describe('the wording', () => {
         { update, view },
         given(model),
         ...(drawsCurves ? [drawn] : []),
+        expect(text(/accura/i)).toBeAbsent(),
+        expect(text(/\b(in)?correct/i)).toBeAbsent(),
+      )
+    },
+  )
+
+  // The line editor: a clip with its audio, a line marked both ways, an
+  // undo, a change being kept, kept and refused.
+  const marked = sampleClip(4)
+  const editing: LevelClip = {
+    ...marked,
+    lines: marked.lines.map(found =>
+      found.number === 3
+        ? {
+            ...found,
+            maybeQuality: Option.some({
+              speechFrames: 120,
+              confidentShare: 0.2,
+              pauseFrames: 20,
+              pausePitchedShare: 0.9,
+            }),
+          }
+        : found,
+    ),
+    maybeUndo: Option.some({ kind: 'Split', lineNumber: 2 }),
+  }
+  const editorStates: ReadonlyArray<readonly [string, LineEditor]> = [
+    ['opening', initialEditor(editing)],
+    [
+      'held, line 3',
+      {
+        ...initialEditor(editing),
+        waveform: ClipWaveform.Ready({ peaks: new Uint8Array(1500) }),
+        selectedId: '3',
+        maybeNotice: Option.some(
+          'Line 2 is split at 0:04.0, into lines 2 and 3.',
+        ),
+      },
+    ],
+    [
+      'saving',
+      {
+        ...initialEditor(editing),
+        waveform: ClipWaveform.Ready({ peaks: new Uint8Array(1500) }),
+        saving: EditSaving.Saving({
+          maybeSelect: Option.none(),
+          index: 0,
+          notice: '',
+        }),
+      },
+    ],
+    [
+      'failed',
+      {
+        ...initialEditor(editing),
+        waveform: ClipWaveform.Failed({ reason: 'It could not be decoded.' }),
+        saving: EditSaving.Failed({ reason: 'The disk is full.' }),
+      },
+    ],
+  ]
+  test.each(editorStates)(
+    'never says "accuracy" or that a take is correct: the line editor, %s',
+    (_name, editor) => {
+      scene(
+        { update, view },
+        given({
+          ...initialModel(
+            AppRoute.Level({ clipId: 'c1', maybeFind: Option.none() }),
+          ),
+          level: LevelPage.Ready({
+            clip: editing,
+            shownRows: 50,
+            deleting: DeleteState.Idle(),
+            editor,
+          }),
+        }),
+        Mount.resolve(
+          FollowLineEditorPointer,
+          Message.CompletedFollowLineEditorPointer(),
+        ),
         expect(text(/accura/i)).toBeAbsent(),
         expect(text(/\b(in)?correct/i)).toBeAbsent(),
       )

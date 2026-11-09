@@ -281,8 +281,12 @@ export const update = (model: Model, message: Message) =>
       EditorUpdate.failedLevelPlayback(model, playNumber, reason),
     PlacedLevelPlayhead: ({ seconds }) =>
       EditorUpdate.placedLevelPlayhead(model, seconds),
-    MovedLineEdge: ({ lineId, edge, seconds, by }) =>
-      EditorUpdate.movedLineEdge(model, lineId, edge, seconds, by),
+    MovedLineEdge: ({ lineId, edge, seconds }) =>
+      EditorUpdate.movedLineEdge(model, lineId, edge, seconds, 'Pointer'),
+    SteppedLineEdge: ({ lineId, edge, step }) =>
+      EditorUpdate.steppedLineEdge(model, lineId, edge, step),
+    SteppedLevelPlayhead: ({ step }) =>
+      EditorUpdate.steppedLevelPlayhead(model, step),
     ReleasedLineEdge: () => EditorUpdate.releasedLineEdge(model),
     CompletedWaitForKeysToRest: ({ draftNumber }) =>
       EditorUpdate.completedWaitForKeysToRest(model, draftNumber),
@@ -611,9 +615,9 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
           showMore: Message.ClickedShowMoreLevelLines(),
           editLine: lineId => Message.ClickedEditLevelLine({ lineId }),
           editor: {
-            moveEdge: (lineId, edge, seconds) =>
-              Message.MovedLineEdge({ lineId, edge, seconds, by: 'Keyboard' }),
-            placePlayhead: seconds => Message.PlacedLevelPlayhead({ seconds }),
+            stepEdge: (lineId, edge, step) =>
+              Message.SteppedLineEdge({ lineId, edge, step }),
+            stepPlayhead: step => Message.SteppedLevelPlayhead({ step }),
             select: lineId => Message.SelectedLevelLine({ lineId }),
             play: Message.ClickedPlayLevelLine(),
             stop: Message.ClickedStopLevelLine(),

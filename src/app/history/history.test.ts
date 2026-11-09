@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest'
 
 import { monthTotals, weeksOf } from './calendar'
 import { bytesText, dayText } from './format'
-import { lineTakesOf, summarise, trendOf } from './history'
+import { LineAsKept, lineTakesOf, summarise, trendOf } from './history'
 import { couldNotCompare, dayMs, entryOf, nov9, scoredAt } from './testEntries'
 import { describeTrend, trendRuns } from './trend'
 
@@ -113,7 +113,7 @@ describe('a line of the learner’s clip whose span changed', () => {
       ...clipLine,
     }),
   ]
-  const now = { _tag: 'Current' as const, maybeNativeId: Option.some('moved') }
+  const now = LineAsKept.Current({ maybeNativeId: Option.some('moved') })
 
   test('keeps its takes before the change apart, and draws only the takes since', () => {
     const found = Option.getOrThrow(lineTakesOf(takes, 'c1', '4', now))
@@ -142,7 +142,7 @@ describe('a line of the learner’s clip whose span changed', () => {
   })
 
   test('a line moved back to where it was copies the same audio again, so its takes join', () => {
-    const back = { _tag: 'Current' as const, maybeNativeId: Option.some('cut') }
+    const back = LineAsKept.Current({ maybeNativeId: Option.some('cut') })
     const found = Option.getOrThrow(lineTakesOf(takes, 'c1', '4', back))
     expect(found.takes.map(take => take.id)).toEqual(['old-1', 'old-2'])
     expect(found.earlier.map(take => take.id)).toEqual(['new-1'])
@@ -150,7 +150,7 @@ describe('a line of the learner’s clip whose span changed', () => {
 
   test('a line gone from its clip keeps every take, with nothing apart', () => {
     const found = Option.getOrThrow(
-      lineTakesOf(takes, 'c1', '4', { _tag: 'Gone' }),
+      lineTakesOf(takes, 'c1', '4', LineAsKept.Gone()),
     )
     expect(found.lineNow).toBe('Gone')
     expect(found.takes).toHaveLength(3)

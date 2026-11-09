@@ -45,7 +45,26 @@ A take of `gongitsune`'s line 1 in the reader's own voice, through Chromium's fa
 
 These are one reader of literary prose in a quiet room.
 Real uploads will be harder: music under the voice gives a poor native curve, since SwiftF0 tracks any pitched sound, and nothing here separates voices from music (spec, "Out of Scope").
-Ticket 14 marks lines with low pitch confidence and lets the learner fix a cut.
+Each line is marked when its curve is weak, and its cut can be fixed on its level (below).
+
+## Fixing the lines
+
+A clip's level shows its waveform around the line selected, with every line's span over it, and the selected line's start and end as sliders: dragged by mouse, pen or touch, or stepped 10 ms by the arrow keys and 100 ms with Shift or the page keys, each saying its time to a screen reader.
+A playhead, placed by a tap or the keys and moved by a play, is where a line is split; a line can be merged with either neighbour or deleted, and the last change undone once, after a reload too.
+An edge two lines share, as a split leaves it, moves both.
+
+While the level is open with its audio on the device, a ManagedResource holds the clip Worker with the clip decoded once and kept in it (`ClipAnalyser.edit`); it sends back the waveform (a byte per 10 ms) and tracks the lines a change moves, with Silero VAD over half a second before each for its quality, exactly as the cut tracked them: a cut line's own span tracked again gives the same curve and features, byte for byte (`tests/tracker/cut.test.ts`).
+Only the lines a change moves are tracked again; the change is written only if no other tab changed the clip meanwhile.
+Holding the clip costs what decoding it costs at upload, each time the level opens (about 600 MB at its peak for ten minutes, above), and then the 16 kHz clip (38 MB at ten minutes) and the two models while the level is open.
+
+A line's takes stay with it: a take keeps the curve it was scored against, so a line whose span changed keeps its earlier takes apart on its history page, and a line deleted or merged away keeps its takes, its page saying it is gone.
+
+## Weak lines
+
+Each tracked line's quality pairs its curve with Silero VAD's windows over it (`src/engine/cut/quality.ts`): the share of its speech with a confident pitch, and the share of its pauses, where no one speaks, that still have one.
+A line with under 40% of its speech pitched is marked for low pitch confidence; one with a pitch through over half its pauses as likely music.
+Each mark says its number in the line's row, and in the editor what it means for the match.
+`docs/cut-study.md` measures both on the CC0 clips clean, under classroom noise and over a synthetic music bed, which is where the thresholds come from; real music under real speech has not been measured.
 
 ## Formats
 

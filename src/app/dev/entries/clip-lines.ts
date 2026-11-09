@@ -7,10 +7,11 @@ import { modifyFields } from 'foldkit/struct'
 import { LevelClip, levelLinesFound, levelRowsPerPage } from '../../level/level'
 import { levelLineList } from '../../level/levelView'
 import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
-import { cutStudyClip } from '../sampleClips'
+import { cutStudyClip, musicStudyClip } from '../sampleClips'
 
 // A clip's lines in the large-list frame, as /level/:clipId shows them:
-// the LibriVox clip the cut study measured, as its lines came out, or a
+// the LibriVox clip the cut study measured, as its lines came out, the
+// same clip over the study's music bed with its lines marked, or a
 // ten-minute clip of 200 lines to try the find field and "Show N more"
 // on.
 
@@ -26,7 +27,7 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  ClickedClip: { long: Schema.Boolean },
+  ClickedClip: { clip: Schema.Literals(['Study', 'Music', 'Long']) },
   ChangedWords: { words: Schema.String },
   ClickedShowMore: {},
 })
@@ -59,9 +60,14 @@ export const init: Runtime.ElementInit<Model, Message> = () => ({
 
 export const update = (model: Model, message: Message) =>
   Message.match<Update.Return<Model, Message>>(message, {
-    ClickedClip: ({ long }) => ({
+    ClickedClip: ({ clip }) => ({
       model: {
-        clip: long ? longClip() : cutStudyClip,
+        clip:
+          clip === 'Long'
+            ? longClip()
+            : clip === 'Music'
+              ? musicStudyClip
+              : cutStudyClip,
         words: '',
         shownRows: levelRowsPerPage,
       },
@@ -90,17 +96,18 @@ export const choices: ReadonlyArray<string> = [
   'A line has no text until it is transcribed (ticket 16), so it is named by its number and found by its number or its time in the clip. Is that enough to find a line again?',
   'A line too quiet or too noisy to find its pitch stays in the list, marked and not a link, so the clip’s order is kept. Would you rather such lines were left out?',
   'Each row shows the line’s start and end in the clip and its length. Is its length worth the space?',
+  'A line marked for low pitch confidence or likely music says so in its row, with the number behind it; the line editor says what it means for the match. Is the row’s short reason enough to decide which lines to fix?',
 ]
 
 const clipButton = (
-  long: boolean,
+  clip: 'Study' | 'Music' | 'Long',
   text: string,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.button(
     [
       h.Type('button'),
-      h.OnClick(Message.ClickedClip({ long })),
+      h.OnClick(Message.ClickedClip({ clip })),
       h.Class(
         `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm ${buttonFocusClass}`,
       ),
@@ -118,8 +125,9 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
         h.div(
           [h.Class('flex flex-wrap gap-2')],
           [
-            clipButton(false, 'The cut study’s clip', h),
-            clipButton(true, 'A ten-minute clip', h),
+            clipButton('Study', 'The cut study’s clip', h),
+            clipButton('Music', 'The same clip over music', h),
+            clipButton('Long', 'A ten-minute clip', h),
           ],
         ),
         levelLineList(

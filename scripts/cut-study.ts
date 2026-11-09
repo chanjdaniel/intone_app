@@ -122,10 +122,13 @@ const studied = await withSilero(speechModel, speech =>
           lines: await cutOf(underNoise(samples, speechRms)),
         },
       ]
+      const musicSamples: Array<Float32Array> = []
       for (const underDb of musicUnderDb) {
+        const heard = overMusic(samples, speechRms, underDb, clip)
+        musicSamples.push(heard)
         conditions.push({
           name: `Music bed, ${underDb} dB under`,
-          lines: await cutOf(overMusic(samples, speechRms, underDb, clip)),
+          lines: await cutOf(heard),
         })
       }
       results.push({
@@ -134,6 +137,7 @@ const studied = await withSilero(speechModel, speech =>
         seconds: samples.length / rate,
         lines,
         conditions,
+        musicSamples,
         milliseconds,
       })
     }
@@ -259,7 +263,11 @@ writeFileSync(
         waveformPeaks(first?.samples ?? new Float32Array(0), rate),
       ).toString('base64'),
       lines: (first?.lines ?? []).map(jsonLine),
-      // The same clip over the music bed at 15 dB under its speech.
+      // The same clip over the music bed at 15 dB under its speech, and
+      // its waveform.
+      musicPeaks: Buffer.from(
+        waveformPeaks(first?.musicSamples[0] ?? new Float32Array(0), rate),
+      ).toString('base64'),
       musicLines: (first?.conditions[1]?.lines ?? []).map(jsonLine),
     },
     null,

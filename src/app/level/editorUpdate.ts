@@ -4,7 +4,7 @@ import { modifyFields } from 'foldkit/struct'
 
 import { type Edge, onSampleGrid } from '../../engine/cut/edit'
 import { HistoryPage, LineHistoryPage } from '../history/history'
-import { clockText } from '../line/lines'
+import { preciseClockText } from '../line/lines'
 import { NativeCurve } from '../line/native'
 import type { Message } from '../message'
 import type { Model } from '../model'
@@ -17,6 +17,7 @@ import {
   canChange,
   canSplitAtPlayhead,
   clampedEdge,
+  edgeSecondsOf,
   lineNumberOf,
   selectedIndexOf,
   selectedLineOf,
@@ -201,6 +202,15 @@ export const failedLevelPlayback = (
       : editor,
   }))
 
+// A key's step of the playhead, from where it is now.
+export const steppedLevelPlayhead = (
+  model: Model,
+  step: number,
+): EditorUpdate =>
+  model.level._tag === 'Ready'
+    ? placedLevelPlayhead(model, model.level.editor.playhead + step)
+    : unchanged(model)
+
 export const placedLevelPlayhead = (
   model: Model,
   seconds: number,
@@ -270,6 +280,30 @@ export const movedLineEdge = (
     }
   })
 
+// A key's step of an edge, from where it is now: its draft, or where it
+// is kept.
+export const steppedLineEdge = (
+  model: Model,
+  lineId: string,
+  edge: Edge,
+  step: number,
+): EditorUpdate => {
+  if (model.level._tag !== 'Ready') {
+    return unchanged(model)
+  }
+  const { clip, editor } = model.level
+  const line = clip.lines.find(found => found.id === lineId)
+  return line === undefined
+    ? unchanged(model)
+    : movedLineEdge(
+        model,
+        lineId,
+        edge,
+        edgeSecondsOf(clip, editor, line, edge) + step,
+        'Keyboard',
+      )
+}
+
 // Keeps the draft: nothing when it is back where the edge was.
 const keepDraft = (
   editor: LineEditor,
@@ -292,7 +326,7 @@ const keepDraft = (
         editor: saving(
           editor,
           index,
-          `Line ${line.number}’s ${edgeWords(draft.edge)} moved to ${clockText(draft.seconds, true)}.`,
+          `Line ${line.number}’s ${edgeWords(draft.edge)} moved to ${preciseClockText(draft.seconds)}.`,
         ),
         commands: [
           EditClipLines({
@@ -347,7 +381,7 @@ export const clickedSplitLine = (model: Model): EditorUpdate =>
       editor: saving(
         modifyFields(editor, { play: () => LevelPlay.Stopped() }),
         index,
-        `Line ${line.number} is split at ${clockText(editor.playhead, true)}, into lines ${line.number} and ${line.number + 1}.`,
+        `Line ${line.number} is split at ${preciseClockText(editor.playhead)}, into lines ${line.number} and ${line.number + 1}.`,
         Option.some(line.id),
       ),
       commands: [

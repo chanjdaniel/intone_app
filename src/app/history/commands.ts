@@ -14,7 +14,7 @@ import { Message } from '../message'
 import { historyRouter } from '../route'
 import { takeCurveOf, takeScoreOf } from '../take/take'
 import {
-  type LineAsKept,
+  LineAsKept,
   type ShownTake,
   lineTakesOf,
   summarise,
@@ -84,22 +84,24 @@ const lineAsKept = (
   HistoryError
 > =>
   Option.isSome(lineOf(clipId, lineId))
-    ? Effect.succeed({ asKept: { _tag: 'Bundled' }, maybeName: Option.none() })
+    ? Effect.succeed({
+        asKept: LineAsKept.Bundled(),
+        maybeName: Option.none(),
+      })
     : history.clipLine(clipId, lineId).pipe(
         Effect.map(
           Option.match({
             onNone: () => ({
-              asKept: { _tag: 'Gone' } as const,
-              maybeName: Option.none(),
+              asKept: LineAsKept.Gone(),
+              maybeName: Option.none<string>(),
             }),
             onSome: ({ clip, line }) => ({
-              asKept: {
-                _tag: 'Current' as const,
+              asKept: LineAsKept.Current({
                 maybeNativeId:
                   line.native._tag === 'Tracked'
                     ? Option.some(line.native.nativeId)
                     : Option.none(),
-              },
+              }),
               maybeName: Option.some(
                 `${clip.name}, ${clipLineTitle(clip.lines.findIndex(found => found.id === lineId) + 1).toLowerCase()}`,
               ),

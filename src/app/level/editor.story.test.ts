@@ -103,7 +103,6 @@ describe('moving a line’s edge', () => {
           lineId: '1',
           edge: 'to',
           seconds: 3.2,
-          by: 'Pointer',
         }),
       ),
       model(current =>
@@ -115,7 +114,6 @@ describe('moving a line’s edge', () => {
           lineId: '1',
           edge: 'to',
           seconds: 3.2,
-          by: 'Pointer',
         }),
       ),
       model(current =>
@@ -150,7 +148,6 @@ describe('moving a line’s edge', () => {
           lineId: '1',
           edge: 'to',
           seconds: 3.5,
-          by: 'Pointer',
         }),
       ),
       message(
@@ -158,7 +155,6 @@ describe('moving a line’s edge', () => {
           lineId: '1',
           edge: 'to',
           seconds: 5.5,
-          by: 'Pointer',
         }),
       ),
       model(current =>
@@ -187,7 +183,7 @@ describe('moving a line’s edge', () => {
         expect(editorOf(current).maybeDraft).toStrictEqual(Option.none())
         expect(editorOf(current).saving).toStrictEqual(EditSaving.Idle())
         expect(editorOf(current).maybeNotice).toStrictEqual(
-          Option.some('Line 1’s end moved to 0:04.0.'),
+          Option.some('Line 1’s end moved to 0:04.00.'),
         )
         expect(clipOf(current).maybeUndo).toStrictEqual(
           Option.some({ kind: 'Moved', lineNumber: 1 }),
@@ -203,12 +199,7 @@ describe('moving a line’s edge', () => {
       update,
       given(onLevel()),
       message(
-        Message.MovedLineEdge({
-          lineId: '2',
-          edge: 'from',
-          seconds: 3.89,
-          by: 'Keyboard',
-        }),
+        Message.SteppedLineEdge({ lineId: '2', edge: 'from', step: -0.11 }),
       ),
       Command.expectExact(WaitForKeysToRest({ draftNumber: 1 })),
       model(current =>
@@ -241,6 +232,50 @@ describe('moving a line’s edge', () => {
       model(current =>
         expect(clipOf(current).lines[1]).toMatchObject({ from: 3.89, to: 6 }),
       ),
+    )
+  })
+
+  test('each key’s step adds to where the edge is now, so fast keys each count', () => {
+    const stepped = onLevel()
+    story(
+      update,
+      given({
+        ...stepped,
+        level:
+          stepped.level._tag === 'Ready'
+            ? {
+                ...stepped.level,
+                editor: {
+                  ...stepped.level.editor,
+                  maybeDraft: Option.some({
+                    lineId: '1',
+                    edge: 'to' as const,
+                    seconds: 3.02,
+                    draftNumber: 2,
+                    by: 'Keyboard' as const,
+                  }),
+                  draftsMade: 2,
+                },
+              }
+            : stepped.level,
+      }),
+      message(Message.SteppedLineEdge({ lineId: '1', edge: 'to', step: 0.01 })),
+      model(current =>
+        expect(editorOf(current).maybeDraft).toMatchObject(
+          Option.some({ seconds: 3.03, draftNumber: 3 }),
+        ),
+      ),
+      Command.resolve(
+        WaitForKeysToRest,
+        Message.CompletedWaitForKeysToRest({ draftNumber: 3 }),
+      ),
+      Command.resolve(
+        EditClipLines,
+        Message.FailedEditClipLines({ clipId: 'c1', reason: 'Stopped.' }),
+      ),
+      message(Message.SteppedLevelPlayhead({ step: 0.1 })),
+      message(Message.SteppedLevelPlayhead({ step: 0.1 })),
+      model(current => expect(editorOf(current).playhead).toBe(1.2)),
     )
   })
 
@@ -293,7 +328,6 @@ describe('moving a line’s edge', () => {
           lineId: '3',
           edge: 'from',
           seconds: 5,
-          by: 'Pointer',
         }),
       ),
       model(current =>
@@ -306,7 +340,6 @@ describe('moving a line’s edge', () => {
           lineId: '3',
           edge: 'from',
           seconds: 6,
-          by: 'Pointer',
         }),
       ),
       message(Message.ReleasedLineEdge()),
@@ -351,7 +384,7 @@ describe('splitting, merging and deleting', () => {
         ])
         expect(editorOf(current).selectedId).toBe('1')
         expect(editorOf(current).maybeNotice).toStrictEqual(
-          Option.some('Line 1 is split at 0:02.0, into lines 1 and 2.'),
+          Option.some('Line 1 is split at 0:02.00, into lines 1 and 2.'),
         )
       }),
     )
@@ -440,7 +473,6 @@ describe('splitting, merging and deleting', () => {
           lineId: '1',
           edge: 'to',
           seconds: 3.5,
-          by: 'Pointer',
         }),
       ),
       message(Message.ClickedUndoLineChange()),

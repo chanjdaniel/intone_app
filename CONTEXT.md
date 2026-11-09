@@ -24,6 +24,8 @@ Every screen, test, doc and name in the code uses these words with these meaning
 - **Kept audio:** a take's own recording, kept with it only once the learner turns that on, and deleted with it.
 - **Backup:** one zip file the learner saves on their own device, holding the history and the learner's clips and their lines and, only when asked, the kept audio and the clips' own audio; restoring it adds them to the device there.
 - **Upload:** a clip the learner brings from a file, chosen or dropped on `/upload`; it stays on the device.
+- **Line editor:** an upload's level's tools for fixing its cut: a line's start and end dragged or stepped, a line split at the playhead, merged with a neighbour or deleted, and the last change undone once; the lines a change moves are tracked again.
+- **Marks:** a line's warning that its native curve is weak: low pitch confidence (little of its speech pitched) or likely music (a pitch through most of its pauses).
 - **Cut:** making an upload's lines: its speech found by Silero VAD, cut at pauses of about 300 ms into lines of about 1 to 4 s, and each line's native curve tracked, all in the clip Worker, with its progress shown and a way to stop it.
 - **Stars:** per line, 0 to 3: one for reaching the clip's threshold on a guided take, two for beating it, three for reaching it blind.
 - **Starter set:** the bundled, openly licensed lines.

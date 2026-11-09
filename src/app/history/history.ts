@@ -199,10 +199,12 @@ export const summarise = (
 // takes found it; a line of the learner's clip is copied from the native
 // curve `Current` names (none when it has no curve), or is gone from its
 // clip.
-export type LineAsKept =
-  | Readonly<{ _tag: 'Bundled' }>
-  | Readonly<{ _tag: 'Current'; maybeNativeId: Option.Option<string> }>
-  | Readonly<{ _tag: 'Gone' }>
+export const LineAsKept = defineTaggedUnion({
+  Bundled: {},
+  Current: { maybeNativeId: Schema.Option(Schema.String) },
+  Gone: {},
+})
+export type LineAsKept = typeof LineAsKept.Type
 
 // A line's takes, earliest first: those of the line as it is now, and
 // those made before its span changed, told apart by the native curve
@@ -214,7 +216,7 @@ export const lineTakesOf = (
   entries: ReadonlyArray<TakeEntry>,
   clipId: string,
   lineId: string,
-  asKept: LineAsKept = { _tag: 'Bundled' },
+  asKept: LineAsKept = LineAsKept.Bundled(),
 ): Option.Option<
   Readonly<{
     lineNow: LineNow

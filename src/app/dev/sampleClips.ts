@@ -13,46 +13,49 @@ import cutStudy from './cutStudyLines.json'
 
 type StudyLine = (typeof cutStudy.musicLines)[number]
 
-const clipOf = (
+const entryOf = (
   id: string,
   name: string,
   lines: ReadonlyArray<StudyLine>,
-): LevelClip =>
-  levelClipOf(
-    Schema.decodeUnknownSync(ClipEntry)({
-      format: 1,
-      id,
-      name,
-      addedAt: 0,
-      seconds: cutStudy.seconds,
-      audio: { file: `clips/${id}.wav`, type: 'audio/wav', bytes: 1 },
-      lines: lines.map((line, k) => ({
-        id: String(k + 1),
-        from: line.from,
-        to: line.to,
-        native:
-          line.native === 'Tracked'
-            ? { _tag: 'Tracked', nativeId: `${id}-${k + 1}` }
-            : { _tag: line.native },
-        ...('quality' in line ? { quality: line.quality } : {}),
-      })),
-    }),
-  )
+): ClipEntry =>
+  Schema.decodeUnknownSync(ClipEntry)({
+    format: 1,
+    id,
+    name,
+    addedAt: 0,
+    seconds: cutStudy.seconds,
+    audio: { file: `clips/${id}.wav`, type: 'audio/wav', bytes: 1 },
+    lines: lines.map((line, k) => ({
+      id: String(k + 1),
+      from: line.from,
+      to: line.to,
+      native:
+        line.native === 'Tracked'
+          ? { _tag: 'Tracked', nativeId: `${id}-${k + 1}` }
+          : { _tag: line.native },
+      ...('quality' in line ? { quality: line.quality } : {}),
+    })),
+  })
 
-export const cutStudyClip: LevelClip = clipOf(
+export const cutStudyEntry: ClipEntry = entryOf(
   'cut-study',
   `${cutStudy.clip}.wav`,
   cutStudy.lines,
 )
 
-export const musicStudyClip: LevelClip = clipOf(
+export const musicStudyEntry: ClipEntry = entryOf(
   'cut-study-music',
   `${cutStudy.clip}, over the music bed.wav`,
   cutStudy.musicLines,
 )
 
-// The clip's waveform, a byte per 10 ms (src/engine/audio/peaks.ts).
-export const cutStudyPeaks: Uint8Array = Uint8Array.from(
-  atob(cutStudy.peaks),
-  character => character.charCodeAt(0),
-)
+export const cutStudyClip: LevelClip = levelClipOf(cutStudyEntry)
+
+export const musicStudyClip: LevelClip = levelClipOf(musicStudyEntry)
+
+const peaksOf = (base64: string): Uint8Array =>
+  Uint8Array.from(atob(base64), character => character.charCodeAt(0))
+
+// Each clip's waveform, a byte per 10 ms (src/engine/audio/peaks.ts).
+export const cutStudyPeaks: Uint8Array = peaksOf(cutStudy.peaks)
+export const musicStudyPeaks: Uint8Array = peaksOf(cutStudy.musicPeaks)

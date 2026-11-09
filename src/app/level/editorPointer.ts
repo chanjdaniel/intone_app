@@ -179,7 +179,7 @@ export const FollowLineEditorPointer = defineFollowLineEditorPointer(
   ],
   {
     moved: (lineId, edge, seconds) =>
-      Message.MovedLineEdge({ lineId, edge, seconds, by: 'Pointer' }),
+      Message.MovedLineEdge({ lineId, edge, seconds }),
     released: () => Message.ReleasedLineEdge(),
     placed: seconds => Message.PlacedLevelPlayhead({ seconds }),
     selected: lineId => Message.SelectedLevelLine({ lineId }),
