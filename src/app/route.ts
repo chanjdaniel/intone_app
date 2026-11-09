@@ -5,6 +5,10 @@ import { defineRouteUnion, literal, slash, string } from 'foldkit/route'
 export const AppRoute = defineRouteUnion({
   Home: {},
   Line: { clipId: Schema.String, lineId: Schema.String },
+  // Bringing a clip of the learner's own.
+  Upload: {},
+  // A clip's lines, and the words that find among them.
+  Level: { clipId: Schema.String, maybeFind: Schema.Option(Schema.String) },
   // The lines practised, and the words that find among them.
   History: { maybeFind: Schema.Option(Schema.String) },
   LineHistory: { clipId: Schema.String, lineId: Schema.String },
@@ -23,6 +27,22 @@ export const lineRouter = pipe(
   slash(string('clipId')),
   slash(string('lineId')),
   Route.mapTo(AppRoute.Line),
+)
+
+export const uploadRouter = pipe(
+  literal('upload'),
+  Route.mapTo(AppRoute.Upload),
+)
+
+export const levelRouter = pipe(
+  literal('level'),
+  slash(string('clipId')),
+  Route.query(
+    Schema.Struct({
+      maybeFind: Schema.OptionFromOptionalKey(Schema.String),
+    }).pipe(Schema.encodeKeys({ maybeFind: 'find' })),
+  ),
+  Route.mapTo(AppRoute.Level),
 )
 
 export const historyRouter = pipe(
@@ -60,6 +80,8 @@ export const devEntryRouter = pipe(
 
 const appRouters = [
   lineRouter,
+  uploadRouter,
+  levelRouter,
   lineHistoryRouter,
   historyRouter,
   settingsRouter,

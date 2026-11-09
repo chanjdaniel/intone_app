@@ -14,7 +14,7 @@ import {
 import { managedResources } from './resources'
 import { playOf } from './subscriptions'
 import { Take, TakeResult, levelMeterFloorDb } from './take'
-import { sampleCurve, sampleFeatures } from './testCurves'
+import { sampleCurve, sampleFeatures, sampleLine } from './testCurves'
 
 // The native as the take is scored against it.
 const nativeRecording = { curve: sampleCurve, features: sampleFeatures }
@@ -25,6 +25,7 @@ const onLine = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
   native: NativeCurve.Ready({
     clipId: 'ame-ga-suki',
     lineId: '1',
+    line: sampleLine,
     curve: sampleCurve,
     features: sampleFeatures,
   }),

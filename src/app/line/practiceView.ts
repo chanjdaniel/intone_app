@@ -3,7 +3,7 @@ import type { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { swiftF0FrameHz } from '../../engine/pitch/swift-f0'
-import { homeRouter, lineHistoryRouter } from '../route'
+import { homeRouter, levelRouter, lineHistoryRouter } from '../route'
 import { PairLearner, curvePairView, describeCurve } from '../take/curvePair'
 import { type TakePanelEvents, takePanel } from '../take/panel'
 import {
@@ -13,7 +13,7 @@ import {
   type TakeCurve,
   type TakeScore,
 } from '../take/take'
-import { type BundledLine, lineKey } from './lines'
+import { type PracticeLine, lineKey, lineOf } from './lines'
 import { type ListenControls, listenControls } from './listenControls'
 import type { NativeCurve } from './native'
 
@@ -142,7 +142,7 @@ const finishedOf = (take: Take): Option.Option<FinishedTake> =>
 // Under a finished take: that it is kept in the history on this device,
 // with the way there, or why it is not.
 const keptNote = <ViewMessage>(
-  line: BundledLine,
+  line: PracticeLine,
   take: Take,
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
@@ -243,13 +243,65 @@ const nativePending = <ViewMessage>(
         ],
       )
 
+// Where the back link goes: a bundled line's to every line, a line of
+// the learner's clip to the clip's lines.
+const backOf = (clipId: string, lineId: string) =>
+  Option.isSome(lineOf(clipId, lineId))
+    ? { href: homeRouter(), text: 'All lines' }
+    : {
+        href: levelRouter({ clipId, maybeFind: Option.none() }),
+        text: 'This clip’s lines',
+      }
+
+// The screen's heading: the line, once it is known. A bundled line is
+// known at once; a line of the learner's clip once it is read.
+const lineHeader = <ViewMessage>(
+  maybeLine: Option.Option<PracticeLine>,
+  h: HtmlBuilder<ViewMessage>,
+): Html =>
+  Option.match(maybeLine, {
+    onNone: () =>
+      h.header(
+        [h.Class('flex flex-col gap-1')],
+        [
+          h.h1(
+            [h.Class('text-3xl font-bold sm:text-5xl')],
+            ['A line of your clip'],
+          ),
+        ],
+      ),
+    onSome: line =>
+      h.header(
+        [h.Class('flex flex-col gap-1')],
+        [
+          h.h1(
+            [
+              ...(line.titleIsText ? [h.Lang('ja')] : []),
+              h.Class('text-3xl font-bold sm:text-5xl break-words'),
+            ],
+            [line.title],
+          ),
+          h.p(
+            [
+              ...(line.titleIsText ? [h.Lang('ja')] : []),
+              h.Class('text-lg text-muted break-words'),
+            ],
+            [line.detail],
+          ),
+        ],
+      ),
+  })
+
 export const practiceView = <ViewMessage>(
-  line: BundledLine,
+  clipId: string,
+  lineId: string,
+  maybeLine: Option.Option<PracticeLine>,
   state: PracticeState,
   events: PracticeEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
   const native = state.native
+  const back = backOf(clipId, lineId)
   return h.main(
     [h.Class('min-h-screen bg-surface text-ink px-4 py-6 sm:px-6 sm:py-10')],
     [
@@ -261,7 +313,7 @@ export const practiceView = <ViewMessage>(
             [
               h.a(
                 [
-                  h.Href(homeRouter()),
+                  h.Href(back.href),
                   h.Class(
                     `inline-flex min-h-11 items-center gap-1.5 rounded-md text-accent ${focusRing}`,
                   ),
@@ -270,32 +322,21 @@ export const practiceView = <ViewMessage>(
                   h.span([h.AriaHidden(true)], ['←']),
                   h.span(
                     [h.Class('underline underline-offset-4')],
-                    ['All lines'],
+                    [back.text],
                   ),
                 ],
               ),
             ],
           ),
-          h.header(
-            [h.Class('flex flex-col gap-1')],
-            [
-              h.h1(
-                [h.Lang('ja'), h.Class('text-3xl font-bold sm:text-5xl')],
-                [line.text],
-              ),
-              h.p(
-                [h.Lang('ja'), h.Class('text-lg text-muted')],
-                [line.reading],
-              ),
-            ],
-          ),
+          lineHeader(maybeLine, h),
           native._tag === 'Ready'
-            ? readyBody(line, native.curve, state, events, h)
+            ? readyBody(native.line, native.curve, state, events, h)
             : nativePending(native, events, h),
-          h.footer(
-            [h.Class('text-sm text-muted')],
-            [`Voice: ${line.credit}, made with VOICEVOX.`],
-          ),
+          Option.match(maybeLine, {
+            onNone: () => h.empty,
+            onSome: line =>
+              h.footer([h.Class('text-sm text-muted')], [line.credit]),
+          }),
         ],
       ),
     ],
@@ -303,7 +344,7 @@ export const practiceView = <ViewMessage>(
 }
 
 const readyBody = <ViewMessage>(
-  line: BundledLine,
+  line: PracticeLine,
   nativeCurve: TakeCurve,
   state: PracticeState,
   events: PracticeEvents<ViewMessage>,

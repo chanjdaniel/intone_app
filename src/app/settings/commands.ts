@@ -88,12 +88,14 @@ export const LoadSettings = Command.define('LoadSettings', {
     const history = yield* HistoryStore
     const settings = yield* history.settings
     const { entries } = yield* history.entries
+    const { clips } = yield* history.clips
     const storage = yield* readStorageFacts
     return Message.SucceededLoadSettings({
       facts: {
         keepTakeAudio: settings.keepTakeAudio,
         takes: entries.length,
         takesWithAudio: entries.filter(entry => entry.audio !== null).length,
+        clipsWithAudio: clips.filter(clip => clip.audio !== null).length,
         storage,
       },
     })

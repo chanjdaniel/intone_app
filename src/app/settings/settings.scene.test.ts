@@ -59,6 +59,7 @@ const onSettings = (
     keepTakeAudio: false,
     takes: 12,
     takesWithAudio: 0,
+    clipsWithAudio: 0,
     storage: storage(),
     maybeKeepAudioFailure: Option.none(),
     includeAudio: false,
@@ -215,9 +216,7 @@ describe('/settings', () => {
       expect(
         text('Saved intone-history-2026-11-10.zip, with 12 takes.'),
       ).toExist(),
-      click(
-        role('checkbox', { name: 'Include the kept recordings (4 takes)' }),
-      ),
+      click(role('checkbox', { name: 'Include the recordings (4 takes)' })),
       click(role('button', { name: 'Save a backup' })),
       Command.expectExact(SaveBackup({ includeAudio: true })),
       Command.resolve(
@@ -234,7 +233,7 @@ describe('/settings', () => {
       given(onSettings()),
       expect(
         role('checkbox', {
-          name: 'Include the kept recordings (none are kept)',
+          name: 'Include the recordings (none are kept)',
         }),
       ).toBeDisabled(),
     )
@@ -270,6 +269,7 @@ describe('/settings', () => {
             keepTakeAudio: false,
             takes: 17,
             takesWithAudio: 0,
+            clipsWithAudio: 0,
             storage: storage(),
           },
         }),
@@ -317,6 +317,7 @@ describe('/settings', () => {
             keepTakeAudio: false,
             takes: 0,
             takesWithAudio: 0,
+            clipsWithAudio: 0,
             storage: storage(),
           },
         }),

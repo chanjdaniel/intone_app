@@ -27,6 +27,7 @@ import {
   sampleCurve,
   sampleFeatures,
   sampleKept,
+  sampleLine,
   sampleScore,
 } from './testCurves'
 
@@ -37,6 +38,7 @@ const showing = (score: TakeScore): Model => ({
   native: NativeCurve.Ready({
     clipId: 'ame-ga-suki',
     lineId: '1',
+    line: sampleLine,
     curve: sampleCurve,
     features: sampleFeatures,
   }),

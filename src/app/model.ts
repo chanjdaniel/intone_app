@@ -3,10 +3,12 @@ import { Schema } from 'effect'
 import { Dialog } from '@foldkit/ui'
 
 import { HistoryPage, LineHistoryPage } from './history/history'
+import { ClipsPage, LevelPage } from './level/level'
 import { ListenSpeed, NativeCurve } from './line/native'
 import { AppRoute } from './route'
 import { SettingsPage } from './settings/settings'
 import { Take } from './take/take'
+import { UploadPage } from './upload/upload'
 
 export const Model = Schema.Struct({
   route: AppRoute,
@@ -27,5 +29,12 @@ export const Model = Schema.Struct({
   // What the settings screen says once everything has been cleared.
   maybeSettingsNotice: Schema.Option(Schema.String),
   clearDialog: Dialog.Model,
+  // Bringing a clip, the clips on the home screen, and a clip's lines.
+  upload: UploadPage,
+  clips: ClipsPage,
+  level: LevelPage,
+  deleteClipDialog: Dialog.Model,
+  // What the home screen says once a clip has been deleted.
+  maybeHomeNotice: Schema.Option(Schema.String),
 })
 export type Model = typeof Model.Type

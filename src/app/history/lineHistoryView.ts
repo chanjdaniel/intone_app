@@ -134,22 +134,15 @@ const practiseLink = <ViewMessage>(
   clipId: string,
   lineId: string,
   h: HtmlBuilder<ViewMessage>,
-): ReadonlyArray<Html> =>
-  Option.match(lineOf(clipId, lineId), {
-    onNone: () => [],
-    onSome: () => [
-      h.a(
-        [h.Href(lineRouter({ clipId, lineId })), h.Class(linkClass)],
-        [
-          h.span(
-            [h.Class('underline underline-offset-4')],
-            ['Practise this line'],
-          ),
-          h.span([h.AriaHidden(true)], ['→']),
-        ],
-      ),
+): ReadonlyArray<Html> => [
+  h.a(
+    [h.Href(lineRouter({ clipId, lineId })), h.Class(linkClass)],
+    [
+      h.span([h.Class('underline underline-offset-4')], ['Practise this line']),
+      h.span([h.AriaHidden(true)], ['→']),
     ],
-  })
+  ),
+]
 
 export const lineHistoryView = <ViewMessage>(
   page: LineHistoryPage,

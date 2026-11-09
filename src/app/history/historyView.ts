@@ -3,7 +3,7 @@ import { Calendar } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { homeRouter } from '../route'
-import { siteNav } from '../siteNav'
+import { type Place, siteNav } from '../siteNav'
 import { practiceCalendar } from './calendar'
 import { countText } from './format'
 import { HistoryPage, Rescoring } from './history'
@@ -25,7 +25,7 @@ const focusRing =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 export const pageFrame = <ViewMessage>(
-  place: 'History' | 'Settings',
+  place: Place,
   body: ReadonlyArray<Html>,
   h: HtmlBuilder<ViewMessage>,
 ): Html =>

@@ -21,3 +21,4 @@ fixtures/noise/** linguist-generated
 fixtures/tracked/** linguist-generated binary
 docs/score-study.md linguist-generated
 docs/cut-study.md linguist-generated
+src/app/dev/cutStudyLines.json linguist-generated

@@ -3,6 +3,7 @@ import { Mount, expect, given, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import { MountDevLibrary } from './devLibrary'
+import { NativeCurve } from './line/native'
 import {
   AppRoute,
   Message,
@@ -39,10 +40,18 @@ describe('home screen lines', () => {
     )
   })
 
-  test('a line the app does not have is not found', () => {
+  test('a line the device does not have is not found', () => {
     scene(
       { update, view },
-      given(on(AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '9' }))),
+      given({
+        ...on(AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '9' })),
+        native: NativeCurve.Failed({
+          clipId: 'ame-ga-suki',
+          lineId: '9',
+          failure: 'NoSuchLine',
+          reason: 'There is no such line on this device.',
+        }),
+      }),
       expect(text('The app has no page at /line/ame-ga-suki/9.')).toExist(),
     )
   })

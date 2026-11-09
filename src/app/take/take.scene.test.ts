@@ -33,6 +33,7 @@ import {
   sampleCurve,
   sampleFeatures,
   sampleKept,
+  sampleLine,
   sampleScore,
 } from './testCurves'
 
@@ -45,6 +46,7 @@ const onLine = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
   native: NativeCurve.Ready({
     clipId: 'ame-ga-suki',
     lineId: '1',
+    line: sampleLine,
     curve: sampleCurve,
     features: sampleFeatures,
   }),

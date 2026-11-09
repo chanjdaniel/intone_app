@@ -2,6 +2,8 @@ import { Option } from 'effect'
 import { Mount, expect, given, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
+import { ClipsPage, DeleteState, LevelPage } from './level/level'
+import { sampleClip } from './level/testClips'
 import { NativeCurve } from './line/native'
 import {
   AppRoute,
@@ -17,8 +19,10 @@ import {
   sampleCurve,
   sampleFeatures,
   sampleKept,
+  sampleLine,
   sampleScore,
 } from './take/testCurves'
+import { UploadJob, UploadStep } from './upload/upload'
 
 // The app claims only what it compared (report section 3): no screen
 // says "accuracy", or that a take is correct. Every state of every
@@ -69,12 +73,59 @@ const everyTake: ReadonlyArray<Take> = [
 const ready = NativeCurve.Ready({
   clipId: 'ame-ga-suki',
   lineId: '1',
+  line: sampleLine,
   curve: sampleCurve,
   features: sampleFeatures,
 })
 
 const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
   ['home', initialModel(AppRoute.Home()), false],
+  [
+    'home with clips',
+    {
+      ...initialModel(AppRoute.Home()),
+      clips: ClipsPage.Ready({
+        clips: [
+          { id: 'c1', name: 'a.mp3', seconds: 9, lines: 3, hasAudio: false },
+        ],
+      }),
+    },
+    false,
+  ],
+  ['upload', initialModel(AppRoute.Upload()), false],
+  ...[
+    UploadJob.Working({
+      jobNumber: 1,
+      file: new File([new Uint8Array(4)], 'a.mp3'),
+      step: UploadStep.TrackingLines({ done: 1, total: 3 }),
+    }),
+    UploadJob.Refused({ name: 'a.txt', reason: 'It is not an audio file.' }),
+    UploadJob.Cancelled({ name: 'a.mp3' }),
+  ].map(
+    job =>
+      [
+        `upload, ${job._tag}`,
+        {
+          ...initialModel(AppRoute.Upload()),
+          upload: { ...initialModel(AppRoute.Upload()).upload, job },
+        },
+        false,
+      ] as const,
+  ),
+  [
+    'level',
+    {
+      ...initialModel(
+        AppRoute.Level({ clipId: 'c1', maybeFind: Option.none() }),
+      ),
+      level: LevelPage.Ready({
+        clip: sampleClip(20, false),
+        shownRows: 50,
+        deleting: DeleteState.Idle(),
+      }),
+    },
+    false,
+  ],
   ['not found', initialModel(AppRoute.NotFound({ path: '/nope' })), false],
   [
     'line loading',
@@ -91,6 +142,7 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
       native: NativeCurve.Failed({
         clipId: 'ame-ga-suki',
         lineId: '1',
+        failure: 'Failed',
         reason: 'gone',
       }),
     },

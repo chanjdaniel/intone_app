@@ -4,7 +4,9 @@ import type { Plugin } from 'vite'
 // nothing from anywhere else. WebAssembly needs 'wasm-unsafe-eval' to
 // compile; no other script relaxation is allowed. The built page carries it
 // as a <meta>; Vercel adds it as a header too (ticket 05). A <meta> cannot
-// carry frame-ancestors, so that one waits for the header.
+// carry frame-ancestors, so that one waits for the header. Media may also
+// play from a `blob:` URL, which names a file already on the device: a
+// line of the learner's own clip plays from the clip store that way.
 export const contentSecurityPolicyDirectives: Readonly<
   Record<string, ReadonlyArray<string>>
 > = {
@@ -12,7 +14,7 @@ export const contentSecurityPolicyDirectives: Readonly<
   'script-src': ["'self'", "'wasm-unsafe-eval'"],
   'worker-src': ["'self'"],
   'connect-src': ["'self'"],
-  'media-src': ["'self'"],
+  'media-src': ["'self'", 'blob:'],
   'img-src': ["'self'"],
   'style-src': ["'self'"],
   'font-src': ["'self'"],

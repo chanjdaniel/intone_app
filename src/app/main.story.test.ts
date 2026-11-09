@@ -3,6 +3,8 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { fromString } from 'foldkit/url'
 import { describe, expect, test } from 'vitest'
 
+import { LoadClips } from './level/commands'
+import { ClipsPage } from './level/level'
 import { LoadNativeCurve } from './line/commands'
 import { NativeCurve } from './line/native'
 import {
@@ -20,6 +22,7 @@ import {
   sampleCurve,
   sampleFeatures,
   sampleKept,
+  sampleLine,
   sampleScore,
 } from './take/testCurves'
 
@@ -29,11 +32,16 @@ const url = (path: string) =>
 const on = (route: AppRoute): Model => initialModel(route)
 
 describe('init', () => {
-  test('the app starts on the home screen and asks for no work', () => {
+  test('the app starts on the home screen and reads the learner’s clips', () => {
     const start = init(url('/'))
 
-    expect(start.commands ?? []).toStrictEqual([])
-    expect(start.model).toStrictEqual(on(AppRoute.Home()))
+    expect((start.commands ?? []).map(({ name }) => name)).toStrictEqual([
+      LoadClips.name,
+    ])
+    expect(start.model).toStrictEqual({
+      ...on(AppRoute.Home()),
+      clips: ClipsPage.Loading(),
+    })
   })
 
   test('an address the app has no page for opens the not-found screen', () => {
@@ -86,8 +94,12 @@ describe('update', () => {
         )
       }),
       message(Message.ChangedUrl({ url: url('/') })),
+      Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
       model(current => {
-        expect(current).toStrictEqual(on(AppRoute.Home()))
+        expect(current).toStrictEqual({
+          ...on(AppRoute.Home()),
+          clips: ClipsPage.Ready({ clips: [] }),
+        })
       }),
     )
   })
@@ -112,10 +124,34 @@ describe('opening a line', () => {
     ])
   })
 
-  test('a line the app does not have asks for nothing', () => {
-    const start = init(url('/line/ame-ga-suki/9'))
-    expect(start.model.native).toStrictEqual(NativeCurve.NoLine())
-    expect(start.commands ?? []).toStrictEqual([])
+  test('a line the app does not bring is looked for on the device, and may be missing', () => {
+    story(
+      update,
+      given(on(AppRoute.Home())),
+      message(Message.ChangedUrl({ url: url('/line/ame-ga-suki/9') })),
+      Command.expectExact(
+        LoadNativeCurve({ clipId: 'ame-ga-suki', lineId: '9' }),
+      ),
+      Command.resolve(
+        LoadNativeCurve,
+        Message.FailedLoadNativeCurve({
+          clipId: 'ame-ga-suki',
+          lineId: '9',
+          failure: 'NoSuchLine',
+          reason: 'There is no such line on this device.',
+        }),
+      ),
+      model(current =>
+        expect(current.native).toStrictEqual(
+          NativeCurve.Failed({
+            clipId: 'ame-ga-suki',
+            lineId: '9',
+            failure: 'NoSuchLine',
+            reason: 'There is no such line on this device.',
+          }),
+        ),
+      ),
+    )
   })
 
   test('the native curve is asked for once, and again only after a failure', () => {
@@ -128,6 +164,7 @@ describe('opening a line', () => {
         Message.FailedLoadNativeCurve({
           clipId: 'ame-ga-suki',
           lineId: '1',
+          failure: 'Failed',
           reason: 'offline',
         }),
       ),
@@ -137,6 +174,7 @@ describe('opening a line', () => {
         Message.SucceededLoadNativeCurve({
           clipId: 'ame-ga-suki',
           lineId: '1',
+          line: sampleLine,
           curve: sampleCurve,
           features: sampleFeatures,
         }),
@@ -146,6 +184,7 @@ describe('opening a line', () => {
           NativeCurve.Ready({
             clipId: 'ame-ga-suki',
             lineId: '1',
+            line: sampleLine,
             curve: sampleCurve,
             features: sampleFeatures,
           }),
@@ -153,6 +192,7 @@ describe('opening a line', () => {
       ),
       message(Message.ChangedUrl({ url: url('/') })),
       Command.resolve(ForgetTakeAudio, Message.CompletedForgetTakeAudio()),
+      Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
       message(Message.ChangedUrl({ url: url('/line/ame-ga-suki/1') })),
       model(current => expect(current.native._tag).toBe('Ready')),
     )
@@ -173,8 +213,9 @@ describe('opening a line', () => {
         }),
       }),
       message(Message.ChangedUrl({ url: url('/') })),
-      Command.expectExact(ForgetTakeAudio()),
+      Command.expectExact(LoadClips(), ForgetTakeAudio()),
       Command.resolve(ForgetTakeAudio, Message.CompletedForgetTakeAudio()),
+      Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
       model(current => expect(current.take).toStrictEqual(Take.Idle())),
     )
   })

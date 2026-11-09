@@ -3,7 +3,6 @@ import type { Update } from 'foldkit'
 import { modifyFields } from 'foldkit/struct'
 
 import type { MicrophoneFailure } from '../../services/microphone'
-import { lineOf } from '../line/lines'
 import type { Message } from '../message'
 import type { Model } from '../model'
 import { AskToPersistStorage } from '../settings/commands'
@@ -88,16 +87,16 @@ const analyse = (model: Model, takeNumber: number): TakeUpdate => {
       Take.AnalysisFailed({ reason: "The line's curve is not loaded." }),
     )
   }
-  const lineText = Option.match(lineOf(native.clipId, native.lineId), {
-    onNone: () => `${native.clipId} ${native.lineId}`,
-    onSome: line => line.text,
-  })
   return moveTo(
     model,
     Take.Analysing({ takeNumber }),
     AnalyseTake({
       takeNumber,
-      line: { clipId: native.clipId, lineId: native.lineId, lineText },
+      line: {
+        clipId: native.clipId,
+        lineId: native.lineId,
+        lineText: native.line.historyText,
+      },
       native: { curve: native.curve, features: native.features },
     }),
   )

@@ -12,6 +12,7 @@ import {
   sampleCurve,
   sampleFeatures,
   sampleKept,
+  sampleLine,
   sampleScore,
 } from './testCurves'
 
@@ -26,6 +27,7 @@ const onLine = (take: Take = Take.Idle(), takesStarted = 1): Model => ({
   native: NativeCurve.Ready({
     clipId: 'ame-ga-suki',
     lineId: '1',
+    line: sampleLine,
     curve: sampleCurve,
     features: sampleFeatures,
   }),
@@ -187,7 +189,7 @@ describe('listening again', () => {
         expect(playOf(state)).toStrictEqual(
           Option.some({
             _tag: 'Line',
-            audioUrl: expect.stringContaining('right'),
+            audio: { _tag: 'Bundled', url: expect.stringContaining('right') },
             rate: 0.5,
           }),
         )
@@ -290,7 +292,10 @@ describe('the worst stretch', () => {
         )
         expect(Option.getOrThrow(playOf(state))).toStrictEqual({
           _tag: 'LineStretch',
-          audioUrl: expect.stringMatching(/right.*\.wav$/),
+          audio: {
+            _tag: 'Bundled',
+            url: expect.stringMatching(/right.*\.wav$/),
+          },
           rate: 0.5,
           stretch: { from: 0.032, to: 0.064 },
         })

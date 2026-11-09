@@ -2,6 +2,7 @@ import {
   Clock,
   Duration,
   Effect,
+  Layer,
   Match,
   Option,
   Ref,
@@ -13,10 +14,11 @@ import { Subscription } from 'foldkit'
 import { peakOf, toDb } from '../../engine/audio/level'
 import { createOnsetFinder } from '../../engine/pitch/onset'
 import { swiftF0FrameHz } from '../../engine/pitch/swift-f0'
+import { ClipStore } from '../../services/clip-store'
 import type { MicrophoneSession } from '../../services/microphone'
 import { Playback, PlaybackError } from '../../services/playback'
 import type { TrackerSession } from '../../services/tracker'
-import { lineOf } from '../line/lines'
+import { LineAudio } from '../line/lines'
 import { Message } from '../message'
 import type { Model } from '../model'
 import {
@@ -127,21 +129,22 @@ const recordTake = (
 
 // Seconds from a recording's start.
 const Stretch = Schema.Struct({ from: Schema.Finite, to: Schema.Finite })
+type Stretch = typeof Stretch.Type
 
 // What the Model is playing now.
 export const Play = Schema.Union([
   // The line, at its own speed, before take `takeNumber`.
   Schema.TaggedStruct('LineBeforeTake', {
     takeNumber: Schema.Finite,
-    audioUrl: Schema.String,
+    audio: LineAudio,
   }),
   // The line again, `rate` times its speed.
-  Schema.TaggedStruct('Line', { audioUrl: Schema.String, rate: Schema.Finite }),
+  Schema.TaggedStruct('Line', { audio: LineAudio, rate: Schema.Finite }),
   // The learner's take `takeNumber`, from memory.
   Schema.TaggedStruct('Take', { takeNumber: Schema.Finite }),
   // A scored take's worst stretch of the line, `rate` times its speed.
   Schema.TaggedStruct('LineStretch', {
-    audioUrl: Schema.String,
+    audio: LineAudio,
     rate: Schema.Finite,
     stretch: Stretch,
   }),
@@ -154,47 +157,41 @@ export const Play = Schema.Union([
 export type Play = typeof Play.Type
 
 export const playOf = (model: Model): Option.Option<Play> => {
-  if (model.route._tag !== 'Line') {
+  if (model.route._tag !== 'Line' || model.native._tag !== 'Ready') {
     return Option.none()
   }
-  const maybeLine = lineOf(model.route.clipId, model.route.lineId)
+  const audio = model.native.line.audio
   return Match.value(model.take).pipe(
     Match.tag('PlayingNative', ({ takeNumber }) =>
-      Option.map(maybeLine, line => ({
-        _tag: 'LineBeforeTake' as const,
-        takeNumber,
-        audioUrl: line.audioUrl,
-      })),
+      Option.some<Play>({ _tag: 'LineBeforeTake', takeNumber, audio }),
     ),
     Match.tag(
       'Listening',
       ({ voice, extent, maybeTake }): Option.Option<Play> => {
         if (extent === 'WorstStretch') {
           return Option.flatMap(maybeTake, ({ takeNumber, result }) =>
-            Option.flatMap(
-              worstStretchOf(result),
-              (worst): Option.Option<Play> =>
-                voice === 'Line'
-                  ? Option.map(maybeLine, line => ({
-                      _tag: 'LineStretch' as const,
-                      audioUrl: line.audioUrl,
-                      rate: model.listenSpeed,
-                      stretch: { from: worst.nativeFrom, to: worst.nativeTo },
-                    }))
-                  : Option.some({
-                      _tag: 'TakeStretch' as const,
-                      takeNumber,
-                      stretch: { from: worst.takeFrom, to: worst.takeTo },
-                    }),
+            Option.map(worstStretchOf(result), (worst): Play =>
+              voice === 'Line'
+                ? {
+                    _tag: 'LineStretch',
+                    audio,
+                    rate: model.listenSpeed,
+                    stretch: { from: worst.nativeFrom, to: worst.nativeTo },
+                  }
+                : {
+                    _tag: 'TakeStretch',
+                    takeNumber,
+                    stretch: { from: worst.takeFrom, to: worst.takeTo },
+                  },
             ),
           )
         }
         return voice === 'Line'
-          ? Option.map(maybeLine, line => ({
-              _tag: 'Line' as const,
-              audioUrl: line.audioUrl,
+          ? Option.some<Play>({
+              _tag: 'Line',
+              audio,
               rate: model.listenSpeed,
-            }))
+            })
           : Option.map(maybeTake, ({ takeNumber }) => ({
               _tag: 'Take' as const,
               takeNumber,
@@ -205,11 +202,53 @@ export const playOf = (model: Model): Option.Option<Play> => {
   )
 }
 
+// Plays the line's audio once at `rate`: a bundled file from the app's
+// origin, or the line's stretch of the learner's clip from the clip
+// store; `stretch` is a part of the line, in seconds from its start.
+const playLineAudio = (
+  audio: LineAudio,
+  rate: number,
+  stretch?: Stretch,
+): Effect.Effect<void, PlaybackError, Playback | ClipStore> =>
+  Effect.gen(function* () {
+    const playback = yield* Playback
+    if (audio._tag === 'Bundled') {
+      return yield* playback.playLine(audio.url, rate, stretch)
+    }
+    const files = yield* ClipStore
+    return yield* Effect.scoped(
+      Effect.gen(function* () {
+        const maybeUrl = yield* files
+          .url(audio.file, audio.type)
+          .pipe(
+            Effect.mapError(
+              error => new PlaybackError({ reason: error.reason }),
+            ),
+          )
+        if (Option.isNone(maybeUrl)) {
+          return yield* new PlaybackError({
+            reason: 'The clip’s audio is no longer on this device.',
+          })
+        }
+        return yield* playback.playLine(
+          maybeUrl.value,
+          rate,
+          stretch === undefined
+            ? { from: audio.from, to: audio.to }
+            : {
+                from: audio.from + stretch.from,
+                to: Math.min(audio.to, audio.from + stretch.to),
+              },
+        )
+      }),
+    )
+  })
+
 // Plays `play` once: the Message that says it ended, or why it did not
 // play.
 export const playbackEvents = (
   play: Play,
-): Stream.Stream<Message, never, Playback> =>
+): Stream.Stream<Message, never, Playback | ClipStore> =>
   Stream.fromEffect(
     Effect.gen(function* () {
       const playback = yield* Playback
@@ -233,26 +272,24 @@ export const playbackEvents = (
         )
       return yield* Match.value(play).pipe(
         Match.tagsExhaustive({
-          LineBeforeTake: ({ takeNumber, audioUrl }) =>
-            playback
-              .playLine(audioUrl, 1)
-              .pipe(Effect.as(Message.EndedNativeBeforeTake({ takeNumber }))),
-          Line: ({ audioUrl, rate }) =>
-            playback
-              .playLine(audioUrl, rate)
-              .pipe(
-                Effect.as(
-                  Message.EndedListening({ voice: 'Line', extent: 'Whole' }),
-                ),
+          LineBeforeTake: ({ takeNumber, audio }) =>
+            playLineAudio(audio, 1).pipe(
+              Effect.as(Message.EndedNativeBeforeTake({ takeNumber })),
+            ),
+          Line: ({ audio, rate }) =>
+            playLineAudio(audio, rate).pipe(
+              Effect.as(
+                Message.EndedListening({ voice: 'Line', extent: 'Whole' }),
               ),
+            ),
           Take: ({ takeNumber }) =>
             playTake(takeNumber).pipe(
               Effect.as(
                 Message.EndedListening({ voice: 'Take', extent: 'Whole' }),
               ),
             ),
-          LineStretch: ({ audioUrl, rate, stretch }) =>
-            playback.playLine(audioUrl, rate, stretch).pipe(
+          LineStretch: ({ audio, rate, stretch }) =>
+            playLineAudio(audio, rate, stretch).pipe(
               Effect.as(
                 Message.EndedListening({
                   voice: 'Line',
@@ -304,7 +341,9 @@ export const subscriptions = Subscription.make<
         Option.match(maybePlay, {
           onNone: () => Stream.empty,
           onSome: play =>
-            playbackEvents(play).pipe(Stream.provide(Playback.layer)),
+            playbackEvents(play).pipe(
+              Stream.provide(Layer.merge(Playback.layer, ClipStore.layer)),
+            ),
         }),
     },
   ),

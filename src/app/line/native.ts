@@ -2,20 +2,33 @@ import { Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 import { TakeCurve, TakeFeatures } from '../take/take'
+import { PracticeLine } from './lines'
 
-// The practice screen's line: its native curve and features, which are
-// tracked once on the device, then read from it
-// (../../services/native-curves.ts).
+// The practice screen's line: what it is and where its audio is, and its
+// native curve and features, which are tracked once on the device, then
+// read from it (../../services/native-curves.ts), or for a line of the
+// learner's clip read from the history (../../services/history-clips.ts).
 
 const clipId = Schema.String
 const lineId = Schema.String
+
+// Why a line has no native curve: there is no such line on this device,
+// or there is and its curve could not be found or read.
+export const NativeFailure = Schema.Literals(['NoSuchLine', 'Failed'])
+export type NativeFailure = typeof NativeFailure.Type
 
 export const NativeCurve = defineTaggedUnion({
   // No line is open.
   NoLine: {},
   Loading: { clipId, lineId },
-  Ready: { clipId, lineId, curve: TakeCurve, features: TakeFeatures },
-  Failed: { clipId, lineId, reason: Schema.String },
+  Ready: {
+    clipId,
+    lineId,
+    line: PracticeLine,
+    curve: TakeCurve,
+    features: TakeFeatures,
+  },
+  Failed: { clipId, lineId, failure: NativeFailure, reason: Schema.String },
 })
 export type NativeCurve = typeof NativeCurve.Type
 

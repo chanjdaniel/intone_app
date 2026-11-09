@@ -70,7 +70,6 @@ describe('the production build', () => {
       'script-src',
       'worker-src',
       'connect-src',
-      'media-src',
     ]) {
       expect(
         (policy[directive] ?? []).filter(
@@ -81,6 +80,9 @@ describe('the production build', () => {
       ).toStrictEqual([])
     }
     expect(policy['script-src']).toContain("'wasm-unsafe-eval'")
+    // A file on the device, a line of the learner's own clip, plays from
+    // a blob: URL; nothing else is allowed beside the app's own origin.
+    expect(policy['media-src']).toStrictEqual(["'self'", 'blob:'])
   })
 
   test('writes each listed model file, checked, under its versioned path', async () => {

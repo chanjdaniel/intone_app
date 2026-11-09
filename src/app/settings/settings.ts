@@ -55,6 +55,8 @@ export const SettingsFacts = Schema.Struct({
   keepTakeAudio: Schema.Boolean,
   takes: Schema.Finite,
   takesWithAudio: Schema.Finite,
+  // The learner's clips whose audio is on this device.
+  clipsWithAudio: Schema.Finite,
   storage: StorageFacts,
 })
 export type SettingsFacts = typeof SettingsFacts.Type

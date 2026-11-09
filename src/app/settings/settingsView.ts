@@ -243,6 +243,18 @@ const restoreText = (restore: RestoreState): string =>
     Failed: ({ reason }) => `Nothing was restored. ${reason}`,
   })
 
+// What including the recordings brings: the takes' kept audio and the
+// clips' own audio.
+const recordingsLabel = (takes: number, clips: number): string => {
+  const parts = [
+    ...(takes > 0 ? [countText(takes, 'take')] : []),
+    ...(clips > 0 ? [countText(clips, 'clip')] : []),
+  ]
+  return parts.length === 0
+    ? 'Include the recordings (none are kept)'
+    : `Include the recordings (${parts.join(' and ')})`
+}
+
 const backupSection = <ViewMessage>(
   page: Extract<SettingsPage, { _tag: 'Ready' }>,
   events: SettingsEvents<ViewMessage>,
@@ -253,16 +265,14 @@ const backupSection = <ViewMessage>(
     'Backup',
     [
       paragraph(
-        'A backup is one file, saved where you choose, with every take, its curves and its match. Restoring it here or on another device adds its takes to the history there; nothing is sent anywhere.',
+        'A backup is one file, saved where you choose, with every take, its curves and its match, and your clips’ lines. Restoring it here or on another device adds them there; nothing is sent anywhere. Recordings stay out of it unless you include them.',
         h,
       ),
       checkbox(
         'backup-audio',
-        page.takesWithAudio === 0
-          ? 'Include the kept recordings (none are kept)'
-          : `Include the kept recordings (${countText(page.takesWithAudio, 'take')})`,
-        page.includeAudio && page.takesWithAudio > 0,
-        page.takesWithAudio > 0,
+        recordingsLabel(page.takesWithAudio, page.clipsWithAudio),
+        page.includeAudio && page.takesWithAudio + page.clipsWithAudio > 0,
+        page.takesWithAudio + page.clipsWithAudio > 0,
         events.includeAudio,
         h,
       ),
@@ -314,7 +324,7 @@ const clearSection = <ViewMessage>(
     'Clear all data',
     [
       paragraph(
-        'Deletes everything Intone keeps on this device: every take, its curves, match and recording, your settings, and the lines’ curves. It cannot be undone; a backup saved first keeps a copy.',
+        'Deletes everything Intone keeps on this device: every take, its curves, match and recording, your clips and their lines, your settings, and the lines’ curves. It cannot be undone; a backup saved first keeps a copy.',
         h,
       ),
       h.button(
@@ -377,7 +387,7 @@ const clearDialogView = <ViewMessage>(
                     h.p(
                       [...description, h.Class('text-base text-ink')],
                       [
-                        'Every take, its curves, match and recording, your settings and the lines’ curves will be deleted from this device. This cannot be undone.',
+                        'Every take, its curves, match and recording, your clips, your settings and the lines’ curves will be deleted from this device. This cannot be undone.',
                       ],
                     ),
                     h.p(

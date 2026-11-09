@@ -4,13 +4,16 @@ import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest } from 'foldkit/navigation'
 import { Url } from 'foldkit/url'
 
-import { Dialog } from '@foldkit/ui'
+import { Dialog, FileDrop } from '@foldkit/ui'
 
 import { MicrophoneFailure } from '../services/microphone'
 import { DayCount, LineSummary, ShownTake, TrendPoint } from './history/history'
-import { ListenSpeed } from './line/native'
+import { ClipSummary, LevelClip } from './level/level'
+import { PracticeLine } from './line/lines'
+import { ListenSpeed, NativeFailure } from './line/native'
 import { SettingsFacts, StorageFacts } from './settings/settings'
 import { Extent, TakeCurve, TakeFeatures, TakeResult, Voice } from './take/take'
+import { UploadStep } from './upload/upload'
 
 const takeNumber = Schema.Finite
 
@@ -26,12 +29,14 @@ export const Message = defineMessageUnion({
   SucceededLoadNativeCurve: {
     clipId: Schema.String,
     lineId: Schema.String,
+    line: PracticeLine,
     curve: TakeCurve,
     features: TakeFeatures,
   },
   FailedLoadNativeCurve: {
     clipId: Schema.String,
     lineId: Schema.String,
+    failure: NativeFailure,
     reason: Schema.String,
   },
   ClickedRetryNativeCurve: {},
@@ -41,6 +46,35 @@ export const Message = defineMessageUnion({
   SelectedListenSpeed: { speed: ListenSpeed },
   FailedPlayback: { reason: Schema.String },
   CompletedForgetTakeAudio: {},
+
+  // Bringing a clip.
+  GotUploadDropMessage: { message: FileDrop.Message },
+  ProgressedUpload: { jobNumber: Schema.Finite, step: UploadStep },
+  SucceededUpload: { jobNumber: Schema.Finite, clipId: Schema.String },
+  FailedUpload: { jobNumber: Schema.Finite, reason: Schema.String },
+  ClickedCancelUpload: {},
+  CompletedOpenLevel: {},
+  CompletedFocusUploadStatus: {},
+
+  // The clips and a clip's lines.
+  SucceededLoadClips: { clips: Schema.Array(ClipSummary) },
+  FailedLoadClips: { reason: Schema.String },
+  SucceededLoadLevel: {
+    clipId: Schema.String,
+    maybeClip: Schema.Option(LevelClip),
+  },
+  FailedLoadLevel: { clipId: Schema.String, reason: Schema.String },
+  ChangedFindLevelLines: { words: Schema.String },
+  CompletedReplaceLevelFind: {},
+  ClickedShowMoreLevelLines: {},
+  CompletedFocusLevelRow: {},
+  ClickedDeleteClip: {},
+  GotDeleteClipDialogMessage: { message: Dialog.Message },
+  ClickedKeepClip: {},
+  SubmittedDeleteClip: {},
+  SucceededDeleteClip: { clipId: Schema.String, name: Schema.String },
+  FailedDeleteClip: { clipId: Schema.String, reason: Schema.String },
+  CompletedGoHome: {},
 
   // The take.
   ClickedRecord: {},

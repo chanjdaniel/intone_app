@@ -1,8 +1,10 @@
 // Writes docs/cut-study.md: how the clip Worker's own code
 // (src/engine/cut/clip.ts) cuts the LibriVox CC0 clips in fixtures/real/
 // into lines, on the real Silero VAD and SwiftF0 models, and what each
-// line's native curve came to. `npm run cut:study`; `--out <file>` writes
-// elsewhere, and `--time` also prints how long each clip took to cut.
+// line's native curve came to, and src/app/dev/cutStudyLines.json, the
+// first clip's lines for the dev library's demo of a clip. `npm run
+// cut:study`; `--out <file>` and `--lines-out <file>` write elsewhere, and
+// `--time` also prints how long each clip took to cut.
 // Run with `node --import ./scripts/source-imports.ts`, as the npm script
 // does.
 
@@ -21,6 +23,10 @@ const root = join(import.meta.dirname, '..')
 const { values } = parseArgs({
   options: {
     out: { type: 'string', default: join(root, 'docs', 'cut-study.md') },
+    'lines-out': {
+      type: 'string',
+      default: join(root, 'src', 'app', 'dev', 'cutStudyLines.json'),
+    },
     time: { type: 'boolean', default: false },
   },
 })
@@ -113,6 +119,24 @@ const document = [
 ].join('\n')
 
 writeFileSync(values.out, document)
+
+const [first] = studied
+writeFileSync(
+  values['lines-out'],
+  `${JSON.stringify(
+    {
+      clip: first?.clip,
+      seconds: Number((first?.seconds ?? 0).toFixed(3)),
+      lines: (first?.lines ?? []).map(line => ({
+        from: Number((line.from / rate).toFixed(3)),
+        to: Number((line.to / rate).toFixed(3)),
+        native: line.curve._tag,
+      })),
+    },
+    null,
+    1,
+  )}\n`,
+)
 
 if (values.time) {
   studied.forEach(({ clip, seconds, milliseconds }) => {

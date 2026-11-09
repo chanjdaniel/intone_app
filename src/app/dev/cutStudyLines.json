@@ -1,0 +1,111 @@
+{
+ "clip": "romandourou",
+ "seconds": 59.52,
+ "lines": [
+  {
+   "from": 0.394,
+   "to": 2.952,
+   "native": "Tracked"
+  },
+  {
+   "from": 3.21,
+   "to": 6.312,
+   "native": "Tracked"
+  },
+  {
+   "from": 6.666,
+   "to": 9.896,
+   "native": "Tracked"
+  },
+  {
+   "from": 9.962,
+   "to": 12.264,
+   "native": "Tracked"
+  },
+  {
+   "from": 12.586,
+   "to": 15.048,
+   "native": "Tracked"
+  },
+  {
+   "from": 15.178,
+   "to": 17.96,
+   "native": "Tracked"
+  },
+  {
+   "from": 18.538,
+   "to": 21.064,
+   "native": "Tracked"
+  },
+  {
+   "from": 21.29,
+   "to": 23.472,
+   "native": "Tracked"
+  },
+  {
+   "from": 23.472,
+   "to": 25.704,
+   "native": "Tracked"
+  },
+  {
+   "from": 26.314,
+   "to": 28.936,
+   "native": "Tracked"
+  },
+  {
+   "from": 29.13,
+   "to": 30.568,
+   "native": "Tracked"
+  },
+  {
+   "from": 30.666,
+   "to": 33.128,
+   "native": "Tracked"
+  },
+  {
+   "from": 33.386,
+   "to": 35.912,
+   "native": "Tracked"
+  },
+  {
+   "from": 35.978,
+   "to": 39.912,
+   "native": "Tracked"
+  },
+  {
+   "from": 40.618,
+   "to": 41.736,
+   "native": "Tracked"
+  },
+  {
+   "from": 41.802,
+   "to": 45.608,
+   "native": "Tracked"
+  },
+  {
+   "from": 45.706,
+   "to": 49.32,
+   "native": "Tracked"
+  },
+  {
+   "from": 49.578,
+   "to": 51.144,
+   "native": "Tracked"
+  },
+  {
+   "from": 51.274,
+   "to": 53.128,
+   "native": "Tracked"
+  },
+  {
+   "from": 53.322,
+   "to": 56.584,
+   "native": "Tracked"
+  },
+  {
+   "from": 57.226,
+   "to": 59.496,
+   "native": "Tracked"
+  }
+ ]
+}

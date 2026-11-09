@@ -1,5 +1,6 @@
 import { Option } from 'effect'
 
+import { lineOf, practiceLineOfBundled } from '../line/lines'
 import {
   KeptInHistory,
   type TakeCurve,
@@ -44,3 +45,9 @@ export const sampleKept = KeptInHistory.Kept({
   id: 'sample-take',
   maybeAudioFailure: Option.none(),
 })
+
+// The bundled line as its practice screen knows it, for a native curve
+// that is ready.
+export const sampleLine = practiceLineOfBundled(
+  Option.getOrThrow(lineOf('ame-ga-suki', '1')),
+)

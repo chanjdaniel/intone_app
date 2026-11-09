@@ -36,6 +36,8 @@ export const plannedEntries: ReadonlyArray<
   { name: 'score-card', title: 'Score card' },
   { name: 'star-row', title: 'Star row' },
   { name: 'line-row', title: 'Line row' },
+  { name: 'upload-panel', title: 'Upload: choosing a file and the cut' },
+  { name: 'clip-lines', title: 'A clip’s lines' },
   { name: 'practice-calendar', title: 'Practice calendar' },
   { name: 'score-trend', title: 'Score trend' },
   { name: 'history-list', title: 'History list: lines practised' },

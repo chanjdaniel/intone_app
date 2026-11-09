@@ -32,6 +32,7 @@
     "fixtures/noise",
     "fixtures/tracked",
     "docs/score-study.md",
-    "docs/cut-study.md"
+    "docs/cut-study.md",
+    "src/app/dev/cutStudyLines.json"
   ]
 }

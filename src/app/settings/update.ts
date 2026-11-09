@@ -5,6 +5,7 @@ import { modifyFields } from 'foldkit/struct'
 import { Dialog } from '@foldkit/ui'
 
 import { HistoryPage, LineHistoryPage } from '../history/history'
+import { ClipsPage, LevelPage } from '../level/level'
 import { NativeCurve } from '../line/native'
 import { Message } from '../message'
 import type { Model } from '../model'
@@ -35,7 +36,7 @@ type ReadySettings = Extract<SettingsPage, { _tag: 'Ready' }>
 const unchanged = (model: Model): SettingsUpdate => ({ model })
 
 export const clearedNotice =
-  'Everything Intone kept on this device is deleted: your takes, their audio, your settings and the lines’ curves.'
+  'Everything Intone kept on this device is deleted: your takes, their audio, your clips, your settings and the lines’ curves.'
 
 export const openedSettings = (model: Model): SettingsUpdate => ({
   model: modifyFields(model, {
@@ -63,12 +64,14 @@ export const succeededLoadSettings = (
               keepTakeAudio: () => facts.keepTakeAudio,
               takes: () => facts.takes,
               takesWithAudio: () => facts.takesWithAudio,
+              clipsWithAudio: () => facts.clipsWithAudio,
               storage: () => facts.storage,
             })
           : SettingsPage.Ready({
               keepTakeAudio: facts.keepTakeAudio,
               takes: facts.takes,
               takesWithAudio: facts.takesWithAudio,
+              clipsWithAudio: facts.clipsWithAudio,
               storage: facts.storage,
               maybeKeepAudioFailure: Option.none(),
               includeAudio: false,
@@ -283,6 +286,8 @@ export const succeededClearAllData = (model: Model): SettingsUpdate =>
         lineHistory: () => LineHistoryPage.NotLoaded(),
         native: () => NativeCurve.NoLine(),
         take: () => Take.Idle(),
+        clips: () => ClipsPage.NotLoaded(),
+        level: () => LevelPage.NotLoaded(),
       }),
       commands: [LoadSettings()],
     }),

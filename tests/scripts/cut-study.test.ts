@@ -19,7 +19,7 @@ afterEach(() => {
   rmSync(scratch, { recursive: true, force: true })
 })
 
-test('docs/cut-study.md is current', () => {
+test('docs/cut-study.md and the dev library’s clip are current', () => {
   const out = join(scratch, 'cut-study.md')
   const result = run('node', [
     '--import',
@@ -27,10 +27,15 @@ test('docs/cut-study.md is current', () => {
     join(root, 'scripts', 'cut-study.ts'),
     '--out',
     out,
+    '--lines-out',
+    join(scratch, 'lines.json'),
   ])
   expect(result.output).toBe('')
   expect(result.status).toBe(0)
   expect(readFileSync(out, 'utf8')).toBe(
     readFileSync(join(root, 'docs', 'cut-study.md'), 'utf8'),
+  )
+  expect(readFileSync(join(scratch, 'lines.json'), 'utf8')).toBe(
+    readFileSync(join(root, 'src', 'app', 'dev', 'cutStudyLines.json'), 'utf8'),
   )
 })

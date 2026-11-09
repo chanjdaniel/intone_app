@@ -1,5 +1,5 @@
-import { Effect, Option, Schema } from 'effect'
-import { Command, Runtime, Update } from 'foldkit'
+import { Array, Effect, Option, Schema } from 'effect'
+import { Command, Runtime, Subscription, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { modifyFields } from 'foldkit/struct'
@@ -12,14 +12,23 @@ import { HistoryPage, LineHistoryPage } from './history/history'
 import { historyView } from './history/historyView'
 import { lineHistoryView } from './history/lineHistoryView'
 import * as HistoryUpdate from './history/update'
+import { clipRow } from './level/clipRow'
+import { ClipsPage, LevelPage, deleteClipDialogId } from './level/level'
+import { levelView } from './level/levelView'
+import * as LevelUpdate from './level/update'
 import { lineRow } from './line/lineRow'
-import { type BundledLine, bundledLines, lineOf } from './line/lines'
+import {
+  type BundledLine,
+  bundledLines,
+  lineOf,
+  practiceLineOfBundled,
+} from './line/lines'
 import { NativeCurve } from './line/native'
 import { practiceView } from './line/practiceView'
 import * as LineUpdate from './line/update'
 import { Message } from './message'
 import { type Model } from './model'
-import { AppRoute, homeRouter, urlToAppRoute } from './route'
+import { AppRoute, homeRouter, uploadRouter, urlToAppRoute } from './route'
 import { AskToPersistStorage } from './settings/commands'
 import { SettingsPage, clearDialogId } from './settings/settings'
 import { settingsView } from './settings/settingsView'
@@ -28,14 +37,23 @@ import { siteNav } from './siteNav'
 import { ForgetTakeAudio } from './take/commands'
 import { DrawCurvePair } from './take/curvePair'
 import type { TakeResourceServices } from './take/resources'
+import { subscriptions as takeSubscriptions } from './take/subscriptions'
 import { Take } from './take/take'
 import * as TakeUpdate from './take/update'
+import { uploadSubscriptions } from './upload/subscriptions'
+import * as UploadUpdate from './upload/update'
+import { initialUpload } from './upload/upload'
+import { uploadView } from './upload/uploadView'
 
 export { AppRoute } from './route'
 export { Message } from './message'
 export { Model } from './model'
 export { managedResources } from './take/resources'
-export { subscriptions } from './take/subscriptions'
+
+export const subscriptions = Subscription.aggregate(
+  takeSubscriptions,
+  uploadSubscriptions,
+)
 
 // INIT
 
@@ -52,6 +70,11 @@ export const initialModel = (route: AppRoute): Model => ({
   settings: SettingsPage.NotLoaded(),
   maybeSettingsNotice: Option.none(),
   clearDialog: Dialog.init({ id: clearDialogId }),
+  upload: initialUpload,
+  clips: ClipsPage.NotLoaded(),
+  level: LevelPage.NotLoaded(),
+  deleteClipDialog: Dialog.init({ id: deleteClipDialogId }),
+  maybeHomeNotice: Option.none(),
 })
 
 type UpdateReturn = Update.Return<Model, Message, TakeResourceServices>
@@ -66,7 +89,9 @@ const opened = (model: Model, route: AppRoute): UpdateReturn =>
     LineHistory: ({ clipId, lineId }) =>
       HistoryUpdate.openedLineHistory(model, clipId, lineId),
     Settings: () => SettingsUpdate.openedSettings(model),
-    Home: () => ({ model }),
+    Home: () => LevelUpdate.openedHome(model),
+    Upload: () => ({ model }),
+    Level: ({ clipId }) => LevelUpdate.openedLevel(model, clipId),
     DevLibrary: () => ({ model }),
     DevEntry: () => ({ model }),
     NotFound: () => ({ model }),
@@ -102,13 +127,16 @@ export const LoadExternal = Command.define('LoadExternal', {
 
 // UPDATE
 
-// The find words of /history changed in the address, the list's screen
-// staying open.
-const staysOnHistory = (from: AppRoute, to: AppRoute): boolean =>
-  from._tag === 'History' && to._tag === 'History'
+// The find words of /history or of a clip's lines changed in the
+// address, the list's screen staying open.
+const staysOnList = (from: AppRoute, to: AppRoute): boolean =>
+  (from._tag === 'History' && to._tag === 'History') ||
+  (from._tag === 'Level' && to._tag === 'Level' && from.clipId === to.clipId)
 
 const findOf = (route: AppRoute): string =>
-  route._tag === 'History' ? Option.getOrElse(route.maybeFind, () => '') : ''
+  route._tag === 'History' || route._tag === 'Level'
+    ? Option.getOrElse(route.maybeFind, () => '')
+    : ''
 
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
@@ -137,11 +165,21 @@ export const update = (model: Model, message: Message) =>
           route.clipId === model.route.clipId &&
           route.lineId === model.route.lineId
         )
-      const left = leftLine ? TakeUpdate.leftLine(routed) : routed
-      const arrived = staysOnHistory(model.route, route)
+      const leftUpload =
+        model.route._tag === 'Upload' && route._tag !== 'Upload'
+          ? UploadUpdate.leftUpload(routed)
+          : routed
+      const leftHome =
+        route._tag === 'Home'
+          ? leftUpload
+          : modifyFields(leftUpload, { maybeHomeNotice: () => Option.none() })
+      const left = leftLine ? TakeUpdate.leftLine(leftHome) : leftHome
+      const arrived = staysOnList(model.route, route)
         ? findOf(model.route) === findOf(route)
           ? { model: left }
-          : HistoryUpdate.changedFind(left)
+          : route._tag === 'Level'
+            ? LevelUpdate.changedLevelFind(left)
+            : HistoryUpdate.changedFind(left)
         : opened(left, route)
       return leftLine
         ? {
@@ -161,16 +199,17 @@ export const update = (model: Model, message: Message) =>
       }),
     }),
 
-    SucceededLoadNativeCurve: ({ clipId, lineId, curve, features }) =>
+    SucceededLoadNativeCurve: ({ clipId, lineId, line, curve, features }) =>
       LineUpdate.succeededLoadNativeCurve(
         model,
         clipId,
         lineId,
+        line,
         curve,
         features,
       ),
-    FailedLoadNativeCurve: ({ clipId, lineId, reason }) =>
-      LineUpdate.failedLoadNativeCurve(model, clipId, lineId, reason),
+    FailedLoadNativeCurve: ({ clipId, lineId, failure, reason }) =>
+      LineUpdate.failedLoadNativeCurve(model, clipId, lineId, failure, reason),
     ClickedRetryNativeCurve: () => LineUpdate.clickedRetryNativeCurve(model),
     ClickedListen: ({ voice, extent }) =>
       TakeUpdate.clickedListen(model, voice, extent),
@@ -182,6 +221,42 @@ export const update = (model: Model, message: Message) =>
     }),
     FailedPlayback: ({ reason }) => TakeUpdate.failedPlayback(model, reason),
     CompletedForgetTakeAudio: () => ({ model }),
+
+    GotUploadDropMessage: ({ message }) =>
+      UploadUpdate.foldUploadDrop(model, message),
+    ProgressedUpload: ({ jobNumber, step }) =>
+      UploadUpdate.progressedUpload(model, jobNumber, step),
+    SucceededUpload: ({ jobNumber, clipId }) =>
+      UploadUpdate.succeededUpload(model, jobNumber, clipId),
+    FailedUpload: ({ jobNumber, reason }) =>
+      UploadUpdate.failedUpload(model, jobNumber, reason),
+    ClickedCancelUpload: () => UploadUpdate.clickedCancelUpload(model),
+    CompletedOpenLevel: () => ({ model }),
+    CompletedFocusUploadStatus: () => ({ model }),
+
+    SucceededLoadClips: ({ clips }) =>
+      LevelUpdate.succeededLoadClips(model, clips),
+    FailedLoadClips: ({ reason }) => LevelUpdate.failedLoadClips(model, reason),
+    SucceededLoadLevel: ({ clipId, maybeClip }) =>
+      LevelUpdate.succeededLoadLevel(model, clipId, maybeClip),
+    FailedLoadLevel: ({ clipId, reason }) =>
+      LevelUpdate.failedLoadLevel(model, clipId, reason),
+    ChangedFindLevelLines: ({ words }) =>
+      LevelUpdate.changedFindLevelLines(model, words),
+    CompletedReplaceLevelFind: () => ({ model }),
+    ClickedShowMoreLevelLines: () =>
+      LevelUpdate.clickedShowMoreLevelLines(model),
+    CompletedFocusLevelRow: () => ({ model }),
+    ClickedDeleteClip: () => LevelUpdate.clickedDeleteClip(model),
+    GotDeleteClipDialogMessage: ({ message }) =>
+      LevelUpdate.foldDeleteClipDialog(model, message),
+    ClickedKeepClip: () => LevelUpdate.clickedKeepClip(model),
+    SubmittedDeleteClip: () => LevelUpdate.submittedDeleteClip(model),
+    SucceededDeleteClip: ({ clipId, name }) =>
+      LevelUpdate.succeededDeleteClip(model, clipId, name),
+    FailedDeleteClip: ({ clipId, reason }) =>
+      LevelUpdate.failedDeleteClip(model, clipId, reason),
+    CompletedGoHome: () => ({ model }),
 
     ClickedRecord: () => TakeUpdate.clickedRecord(model),
     EndedNativeBeforeTake: ({ takeNumber }) =>
@@ -275,8 +350,61 @@ export const update = (model: Model, message: Message) =>
 export const tagline =
   'Practise Japanese pitch accent by copying native speakers, line by line, on your own device.'
 
+const focusRing =
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
+
+// The learner's own clips on the home screen, newest first, and the way to
+// bring another.
+const clipsSection = (clips: ClipsPage, h: HtmlBuilder<Message>): Html =>
+  h.section(
+    [h.AriaLabelledBy('clips-heading'), h.Class('flex flex-col gap-4')],
+    [
+      h.h2(
+        [h.Id('clips-heading'), h.Class('text-xl font-bold')],
+        ['Your own clips'],
+      ),
+      ClipsPage.match(clips, {
+        NotLoaded: () => h.empty,
+        Loading: () => h.empty,
+        Failed: ({ reason }) =>
+          h.p(
+            [h.Role('alert'), h.Class('text-base text-bad break-words')],
+            [`Your clips could not be read. ${reason}`],
+          ),
+        Ready: ({ clips: ready }) =>
+          Array.match(ready, {
+            onEmpty: () =>
+              h.p(
+                [h.Class('text-base text-muted')],
+                [
+                  'Bring a recording of Japanese speech, and copy it line by line.',
+                ],
+              ),
+            onNonEmpty: some =>
+              h.ul(
+                [h.Class('flex flex-col gap-3')],
+                some.map(clip =>
+                  h.keyed('li')(clip.id, [], [clipRow(clip, h)]),
+                ),
+              ),
+          }),
+      }),
+      h.a(
+        [
+          h.Href(uploadRouter()),
+          h.Class(
+            `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-accent hover:border-accent ${focusRing}`,
+          ),
+        ],
+        ['Bring your own audio'],
+      ),
+    ],
+  )
+
 const homeView = (
   lines: ReadonlyArray<BundledLine>,
+  clips: ClipsPage,
+  maybeNotice: Option.Option<string>,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.main(
@@ -292,6 +420,15 @@ const homeView = (
               h.h1([h.Class('text-5xl font-bold tracking-tight')], ['Intone']),
               h.p([h.Class('mx-auto max-w-md text-lg text-muted')], [tagline]),
             ],
+          ),
+          h.p(
+            [
+              h.Role('status'),
+              h.Class(
+                'rounded-lg border border-good bg-surface p-4 text-base text-ink break-words empty:hidden',
+              ),
+            ],
+            [Option.getOrElse(maybeNotice, () => '')],
           ),
           h.section(
             [h.AriaLabelledBy('lines-heading'), h.Class('flex flex-col gap-4')],
@@ -312,14 +449,26 @@ const homeView = (
               ),
             ],
           ),
+          clipsSection(clips, h),
         ],
       ),
     ],
   )
 
-const lineView = (model: Model, line: BundledLine, h: HtmlBuilder<Message>) =>
+const lineView = (
+  model: Model,
+  clipId: string,
+  lineId: string,
+  h: HtmlBuilder<Message>,
+) =>
   practiceView(
-    line,
+    clipId,
+    lineId,
+    model.native._tag === 'Ready' &&
+      model.native.clipId === clipId &&
+      model.native.lineId === lineId
+      ? Option.some(model.native.line)
+      : Option.map(lineOf(clipId, lineId), practiceLineOfBundled),
     {
       native: model.native,
       take: model.take,
@@ -395,12 +544,38 @@ const devLibraryView = (
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
   title: 'Intone',
   body: AppRoute.match(model.route, {
-    Home: () => homeView(bundledLines, h),
+    Home: () => homeView(bundledLines, model.clips, model.maybeHomeNotice, h),
     Line: ({ clipId, lineId }) =>
-      Option.match(lineOf(clipId, lineId), {
-        onNone: () => notFoundView(`/line/${clipId}/${lineId}`, h),
-        onSome: line => lineView(model, line, h),
-      }),
+      model.native._tag === 'Failed' &&
+      model.native.failure === 'NoSuchLine' &&
+      model.native.clipId === clipId &&
+      model.native.lineId === lineId
+        ? notFoundView(`/line/${clipId}/${lineId}`, h)
+        : lineView(model, clipId, lineId, h),
+    Upload: () =>
+      uploadView(
+        model.upload,
+        {
+          fileDrop: message => Message.GotUploadDropMessage({ message }),
+          cancel: Message.ClickedCancelUpload(),
+        },
+        h,
+      ),
+    Level: ({ maybeFind }) =>
+      levelView(
+        model.level,
+        maybeFind,
+        model.deleteClipDialog,
+        {
+          changedWords: words => Message.ChangedFindLevelLines({ words }),
+          showMore: Message.ClickedShowMoreLevelLines(),
+          deleteClip: Message.ClickedDeleteClip(),
+          keepClip: Message.ClickedKeepClip(),
+          confirmDelete: Message.SubmittedDeleteClip(),
+          dialog: message => Message.GotDeleteClipDialogMessage({ message }),
+        },
+        h,
+      ),
     DevLibrary: () =>
       devLibraryView(Option.none(), model.maybeDevLibraryFailure, h),
     DevEntry: ({ entry }) =>
