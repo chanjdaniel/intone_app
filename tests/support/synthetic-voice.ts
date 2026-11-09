@@ -6,6 +6,8 @@
 // The fake microphone's tests play these (docs/fake-microphone.md), and
 // `npm run fixtures:synthetic` writes them to fixtures/synthetic/.
 
+import { random } from './random.ts'
+
 export const voiceNames = ['low', 'middle', 'high'] as const
 export type VoiceName = (typeof voiceNames)[number]
 
@@ -88,18 +90,6 @@ const phraseAt = (t: number) =>
 
 export const f0At = (name: VoiceName, t: number): number | null =>
   phraseAt(t) === undefined ? null : voices[name].baseHz * contour(t)
-
-// mulberry32: a small seeded generator, uniform in [0, 1).
-const random = (seed: number): (() => number) => {
-  let state = seed >>> 0
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0
-    let x = state
-    x = Math.imul(x ^ (x >>> 15), x | 1)
-    x ^= x + Math.imul(x ^ (x >>> 7), x | 61)
-    return ((x ^ (x >>> 14)) >>> 0) / 4294967296
-  }
-}
 
 // The Rosenberg glottal flow pulse, by phase in the period: opening for
 // 40% of it, closing for 16%, then closed.

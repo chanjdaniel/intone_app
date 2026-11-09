@@ -1,17 +1,14 @@
-import { Effect } from 'effect'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeAll, describe, expect, test } from 'vitest'
 
-import { ensureCached, readModelList } from '../../build/models.ts'
 import { decodeWav } from '../../src/engine/audio/wav.ts'
 import { createLiveTracker } from '../../src/engine/pitch/live.ts'
 import { createResampler, resample } from '../../src/engine/pitch/resample.ts'
-import type { SwiftF0Inference } from '../../src/engine/pitch/swift-f0.ts'
 import { analyseTake } from '../../src/engine/pitch/take.ts'
-import { openSwiftF0 } from '../../src/workers/swift-f0-session.ts'
 import { pitchError } from '../support/pitch.ts'
 import { root } from '../support/run.ts'
+import { loadSwiftF0Model, withSwiftF0 } from '../support/swift-f0.ts'
 import {
   type SyntheticVoiceLabels,
   voiceNames,
@@ -25,36 +22,11 @@ import {
 // Worker; tests/e2e/take.spec.ts checks the curve it draws there.
 
 const fixtures = join(root, 'fixtures', 'synthetic')
-let model = new Uint8Array(0)
+let model: Uint8Array<ArrayBuffer> = new Uint8Array(0)
 
 beforeAll(async () => {
-  const list = await readModelList(join(root, 'models.json'))
-  const swiftF0 = list.find(entry => entry.id === 'swift-f0')
-  if (swiftF0 === undefined) {
-    throw new Error('models.json lists no swift-f0')
-  }
-  model = readFileSync(
-    await ensureCached(swiftF0, join(root, '.cache', 'models')),
-  )
+  model = await loadSwiftF0Model()
 })
-
-// Runs `use` with a SwiftF0 session that is released after it.
-const withSwiftF0 = <A>(
-  use: (infer: SwiftF0Inference) => Promise<A>,
-): Promise<A> =>
-  Effect.runPromise(
-    Effect.scoped(
-      Effect.gen(function* () {
-        const run = yield* openSwiftF0(model)
-        const runPromise = Effect.runPromiseWith(yield* Effect.context())
-        return yield* Effect.promise(() =>
-          use((samples, minHz, maxHz) =>
-            runPromise(run(samples, minHz, maxHz)),
-          ),
-        )
-      }),
-    ),
-  )
 
 const readLabels = (name: string): SyntheticVoiceLabels =>
   JSON.parse(readFileSync(join(fixtures, `${name}.json`), 'utf8'))
@@ -70,7 +42,7 @@ describe('the tracker on SwiftF0', () => {
     async name => {
       const { wav, labels } = readVoice(name)
       const samples = wav.channels[0] ?? new Float32Array(0)
-      const analysis = await withSwiftF0(infer =>
+      const analysis = await withSwiftF0(model, infer =>
         analyseTake(resample(samples, wav.sampleRate, 16_000), infer),
       )
 
@@ -106,7 +78,7 @@ describe('the tracker on SwiftF0', () => {
     const { wav, labels } = readVoice('middle')
     // -46 dBFS peak, 40 dB under the file.
     const quiet = (wav.channels[0] ?? new Float32Array(0)).map(x => x / 100)
-    const analysis = await withSwiftF0(infer =>
+    const analysis = await withSwiftF0(model, infer =>
       analyseTake(resample(quiet, wav.sampleRate, 16_000), infer),
     )
     expect(analysis._tag).toBe('Tracked')
@@ -127,7 +99,7 @@ describe('the tracker on SwiftF0', () => {
     async name => {
       const { wav } = readVoice(name)
       const samples = wav.channels[0] ?? new Float32Array(0)
-      const { live, whole } = await withSwiftF0(async infer => {
+      const { live, whole } = await withSwiftF0(model, async infer => {
         // As the tracker Worker hears a take: 20 ms batches at 48 kHz,
         // resampled as they come.
         const resampler = createResampler(wav.sampleRate, 16_000)

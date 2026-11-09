@@ -95,12 +95,13 @@ The middle voice, written in each format, with the same checks (gain within 1%, 
 | 48 kHz 16-bit stereo                            | Yes, mixed to mono by the capture node                                                         | 89 dB                           |
 | 8 kHz 16-bit mono                               | Yes, but its top band, above about 3.5 kHz, is cut on the way, so it is compared below 3.5 kHz | 53 dB below 3.5 kHz             |
 | 16 kHz, 22.05 kHz, 44.1 kHz, 96 kHz 16-bit mono | Yes                                                                                            | 88 to 93 dB                     |
+| 24 kHz 16-bit mono                              | Yes                                                                                            | 92 dB                           |
 | 48 kHz 8-bit mono                               | Yes                                                                                            | 42 dB, 8-bit quantisation's own |
 | 48 kHz 24-bit mono                              | No: it arrives as silence                                                                      |                                 |
 | 48 kHz 32-bit integer mono                      | Yes                                                                                            | 104 dB                          |
 | 48 kHz 32-bit float mono                        | Yes                                                                                            | 104 dB                          |
 
-Write test audio as 48 kHz 16-bit mono, as the fixtures are; never 24-bit.
+Write test audio as 16-bit mono, never 24-bit: 48 kHz for audio the tests make, as `fixtures/synthetic/` is, or the source's own rate, as the VOICEVOX fixtures (24 kHz) and the LibriVox clips (22.05 kHz) in `fixtures/` keep theirs.
 
 ## The buffer source
 

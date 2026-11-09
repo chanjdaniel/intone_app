@@ -26,6 +26,9 @@
     "pnpm-lock.yaml",
     "NOTICES.md",
     "src/virtual-modules.d.ts",
-    "fixtures/synthetic"
+    "fixtures/synthetic",
+    "fixtures/voices",
+    "fixtures/real",
+    "fixtures/noise"
   ]
 }

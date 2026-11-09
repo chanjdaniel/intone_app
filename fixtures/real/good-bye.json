@@ -1,0 +1,19 @@
+{
+  "id": "good-bye",
+  "item": "good-bye_um_librivox",
+  "file": "goodbye_01_dazai_64kb.mp3",
+  "sha1": "b911f120ef10c05e44fe45b65ceaa0e3a8e0887a",
+  "title": "グッド・バイ (Good-Bye), part 1",
+  "author": "太宰治 (Osamu Dazai)",
+  "reader": "ekzemplaro",
+  "licence": "CC0 1.0",
+  "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "url": "https://archive.org/download/good-bye_um_librivox/goodbye_01_dazai_64kb.mp3",
+  "itemUrl": "https://archive.org/details/good-bye_um_librivox",
+  "sampleRate": 22050,
+  "samples": 635040,
+  "durationSeconds": 28.8,
+  "fromSample": 629528,
+  "toSample": 1264568,
+  "decoder": "ffmpeg version n9.0.2"
+}

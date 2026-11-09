@@ -1,0 +1,118 @@
+{
+  "id": "ame-ga-suki/shirakami-kotaro/right.room",
+  "phrase": {
+    "id": "ame-ga-suki",
+    "text": "雨が好き",
+    "reading": "あめがすき",
+    "morae": 5
+  },
+  "voice": {
+    "id": "shirakami-kotaro",
+    "name": "白上虎太郎",
+    "styleId": 12,
+    "credit": "VOICEVOX:白上虎太郎"
+  },
+  "variant": "right",
+  "condition": "room",
+  "wrong": null,
+  "kana": "ア'メガ/_スキ'",
+  "speedScale": 1,
+  "sampleRate": 24000,
+  "samples": 30976,
+  "durationSeconds": 1.290667,
+  "frameRate": 93.75,
+  "speechStartSample": 7168,
+  "speechEndSample": 23808,
+  "accentPhrases": [
+    {
+      "kana": "ア'メガ",
+      "morae": 3,
+      "accent": 1,
+      "fallAfter": 1,
+      "rightFallAfter": 1,
+      "pauseAfter": false
+    },
+    {
+      "kana": "_スキ'",
+      "morae": 2,
+      "accent": 2,
+      "fallAfter": null,
+      "rightFallAfter": null,
+      "pauseAfter": false
+    }
+  ],
+  "morae": [
+    {
+      "text": "ア",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 7168,
+      "vowelSample": 7168,
+      "endSample": 9728,
+      "startSeconds": 0.298667,
+      "endSeconds": 0.405333,
+      "targetHz": 225.65
+    },
+    {
+      "text": "メ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 9728,
+      "vowelSample": 11008,
+      "endSample": 12800,
+      "startSeconds": 0.405333,
+      "endSeconds": 0.533333,
+      "targetHz": 128.88
+    },
+    {
+      "text": "ガ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 12800,
+      "vowelSample": 13824,
+      "endSample": 16128,
+      "startSeconds": 0.533333,
+      "endSeconds": 0.672,
+      "targetHz": 127.6
+    },
+    {
+      "text": "ス",
+      "phrase": 1,
+      "devoiced": true,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 16128,
+      "vowelSample": 18432,
+      "endSample": 19712,
+      "startSeconds": 0.672,
+      "endSeconds": 0.821333,
+      "targetHz": null
+    },
+    {
+      "text": "キ",
+      "phrase": 1,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 19712,
+      "vowelSample": 20480,
+      "endSample": 23808,
+      "startSeconds": 0.821333,
+      "endSeconds": 0.992,
+      "targetHz": 183.82
+    }
+  ],
+  "noise": {
+    "source": "noise/classroom",
+    "snrDb": 20,
+    "offsetSample": 123331,
+    "gain": 0.076893
+  },
+  "band": null
+}

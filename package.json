@@ -18,6 +18,8 @@
     "generate": "node build/generate.ts",
     "generate:check": "node build/generate.ts --check",
     "fixtures:synthetic": "node scripts/synthetic-voices.ts",
+    "fixtures:voices": "node scripts/voice-fixtures.ts",
+    "fixtures:voices-setup": "scripts/voicevox/setup.sh",
     "vendor:foldkit": "scripts/vendor-foldkit.sh"
   },
   "dependencies": {

@@ -9,3 +9,9 @@ src/virtual-modules.d.ts linguist-generated
 # Written by `npm run fixtures:synthetic`; a test checks they are what it
 # writes, byte for byte.
 fixtures/synthetic/** linguist-generated
+
+# Written by `npm run fixtures:voices`; a test checks what CI can remake
+# byte for byte, and the rest where VOICEVOX CORE is set up.
+fixtures/voices/** linguist-generated
+fixtures/real/** linguist-generated
+fixtures/noise/** linguist-generated

@@ -133,13 +133,15 @@ End-to-end tests drive the real audio path with Chromium's fake microphone playi
 A test that needs the exact samples plays them through the capture worklet with the buffer source in `src/engine/audio/buffer-source.ts` instead.
 
 - `fixtures/synthetic/` holds the synthetic voices and their labels, written by `npm run fixtures:synthetic` from a seed; never edit them by hand, and rerun the script after changing `tests/support/synthetic-voice.ts`, since a test fails on any byte of difference.
+- `fixtures/voices/`, `fixtures/real/` and `fixtures/noise/` hold the labelled fixtures in many voices (VOICEVOX phrases right and wrong, in room noise and through a phone band), the LibriVox CC0 clips and the room noise, written by `npm run fixtures:voices`; `fixtures/README.md` says what each holds, each voice's terms and credit, and how far synthetic speech is from a learner's.
+  Never edit them by hand: CI remakes the derived files byte for byte, and the sources only where VOICEVOX CORE is set up (`npm run fixtures:voices-setup`, whose terms prompt is Daniel's to answer).
 - `tests/e2e/probe/` is a test-only page that drives the capture worklet; Playwright builds it to `.cache/e2e-probe` and serves it on the port after the app's, and it never ships.
 - `tests/support/` holds the measuring code the end-to-end tests share (the comparison, a plain pitch estimate, the voices), tested in the `tooling` project.
 - `tests/e2e/take.spec.ts` records each voice in the built app and reads the drawn curve back off the canvas by the painter's own axis (`plotArea`, `semitonesOfY`, and the canvas's `data-curve-seconds`); `tests/e2e/take-session.ts` holds what the take specs share.
 - `tests/e2e/live-curve.spec.ts` times the live curve from the voice's end to the paint that shows it, by watching the batches, the Worker's replies and the canvas's `data-drawn-frames` and `data-drawn-last-voiced` from inside the page.
 - `tests/e2e/frame-rate.spec.ts` holds 60 frames a second through a 20 s take at 6x CPU throttle; it runs in the Playwright project `frame-rate`, after every other test, so nothing shares the machine while it measures.
 - The headless shell, Playwright's default, cannot show a permission prompt, so `getUserMedia` there fails `NotSupportedError` unless `--use-fake-ui-for-media-stream` answers it; a test of a refused microphone runs full Chromium (`channel: 'chromium'`) with `--deny-permission-prompts`.
-- Write test audio as 48 kHz 16-bit mono WAV; the fake device plays 24-bit as silence.
+- Write test audio as 16-bit mono WAV, at 48 kHz when a test makes it or at its source's own rate (VOICEVOX's 24 kHz, LibriVox's 22.05 kHz); the fake device plays 24-bit as silence.
 - Open the microphone only once the capture worklet has posted its first batch: the fake device plays its file from `getUserMedia` on, and audio before the context renders is lost.
 
 ## Checks

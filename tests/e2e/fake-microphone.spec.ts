@@ -409,6 +409,7 @@ test.describe('the fake microphone', () => {
       },
       { sampleRate: 16000, encoding: 'pcm16', channels: 1, arrives: true },
       { sampleRate: 22050, encoding: 'pcm16', channels: 1, arrives: true },
+      { sampleRate: 24000, encoding: 'pcm16', channels: 1, arrives: true },
       { sampleRate: 44100, encoding: 'pcm16', channels: 1, arrives: true },
       { sampleRate: 48000, encoding: 'pcm16', channels: 2, arrives: true },
       { sampleRate: 96000, encoding: 'pcm16', channels: 1, arrives: true },

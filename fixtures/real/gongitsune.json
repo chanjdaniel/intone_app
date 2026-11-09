@@ -1,0 +1,19 @@
+{
+  "id": "gongitsune",
+  "item": "gongitsune_um_librivox",
+  "file": "gongitsune_01_niimi_64kb.mp3",
+  "sha1": "a187a4cf898fe553ffcb6377fbfe381a2ef33809",
+  "title": "ごん狐 (Gongitsune), part 1",
+  "author": "新美南吉 (Nankichi Niimi)",
+  "reader": "ekzemplaro",
+  "licence": "CC0 1.0",
+  "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "url": "https://archive.org/download/gongitsune_um_librivox/gongitsune_01_niimi_64kb.mp3",
+  "itemUrl": "https://archive.org/details/gongitsune_um_librivox",
+  "sampleRate": 22050,
+  "samples": 644521,
+  "durationSeconds": 29.229977,
+  "fromSample": 655988,
+  "toSample": 1300509,
+  "decoder": "ffmpeg version n9.0.2"
+}
