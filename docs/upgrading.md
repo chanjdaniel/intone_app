@@ -17,7 +17,7 @@ Foldkit is pre-1.0 and breaks in minor releases, and Effect's minor releases wai
 4. Commit, then re-pin the vendored Foldkit source with `npm run vendor:foldkit`.
    It needs a clean tree, replaces `repos/foldkit/` with the tree of the tag `foldkit@<installed version>`, drops the maintainer files and Foldkit's own `repos/` again, replaces `FOLDKIT.md` whole with the release's template, and commits.
    Read the new `FOLDKIT.md`'s diff: it is how Foldkit's conventions changed.
-5. Update the version list in `AGENTS.md`.
+5. Update the version list in `AGENTS.md`, and run `npm run generate` so `NOTICES.md` names the new versions.
 6. Run the whole suite, the end-to-end tests included:
 
    ```bash
@@ -26,13 +26,16 @@ Foldkit is pre-1.0 and breaks in minor releases, and Effect's minor releases wai
    npm run lint
    npm run typecheck
    npm run check:effect
+   npm run generate:check
    npm test
+   npm run build
+   npm run check:budget
    npm run test:e2e
    ```
 
    Once the frame-rate test lands in `tests/e2e/`, `npm run test:e2e` runs it too, and a Foldkit upgrade that slows the live curve fails there.
 
-7. Open the pull request with the changelog entries you read and what each changed in the app, and look at its Vercel preview once Vercel builds them.
+7. Open the pull request with the changelog entries you read and what each changed in the app, the entry chunk's size before and after (`docs/bundle-budget.md`), and look at its Vercel preview once Vercel builds them.
 
 ## Dependency bots
 

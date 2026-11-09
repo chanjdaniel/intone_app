@@ -31,7 +31,10 @@ The pins that move together:
 - `foldkit`, `@foldkit/ui` and `@foldkit/devtools` at 0.170.0; `@foldkit/vite-plugin` 0.29.0 and `@foldkit/oxlint-plugin` 0.15.4, which have no 0.170.0 release and are the versions `create-foldkit-app` 0.41.0 pairs with it.
 - `effect`, `@effect/platform-browser` and `@effect/vitest` at 4.1.2, inside Foldkit's peer range `~4.1.0`.
 - `@effect/tsgo` 0.67.5 on TypeScript 7, which accepts only oxlint 1.88.0 to 1.92.0 (1.92.0 here) and oxlint-tsgolint 7.0.2004 to 7.0.2006 (7.0.2006 here).
+- `onnxruntime-web` 1.31.1, whose WebAssembly the build serves from `/ort/<version>/`.
 - Node 24.22.1, in `.nvmrc` only, read by CI and Vercel.
+
+Any change to the lockfile or `models.json` is followed by `npm run generate`, which rewrites `NOTICES.md` and `src/virtual-modules.d.ts`; CI fails while either is stale.
 
 ## The folder line
 
@@ -49,11 +52,45 @@ Pitch frames stay out of Foldkit's Model; the Model gets coarse events only (ons
 `.oxlintrc.json` enforces it inside `src/`, where these fail lint:
 
 - a Foldkit import outside `src/app`, and an import of `src/app` from any folder below it;
+- in `src/app`, an import of the dev library in `src/app/dev/` from outside it, except the one in `src/app/devLibrary.ts` (see "The dev library");
 - in `src/engine`, an Effect or Foldkit import, or one of `src/services` or `src/workers`;
 - in `src/score`, an Effect or Foldkit import, one of any other `src/` folder, or any global beyond the language's own built-ins (`window`, `document`, `navigator`, `AudioContext`, `fetch`, `console`, `process`, `globalThis` and the like).
 
 Each rule has fixtures under `tests/lint/fixtures/src/`, laid out like `src/`, with every line lint must refuse marked `// lint: <rule>`; `tests/lint/folder-line.test.ts` checks exactly those lines fail, and the normal lint run skips the fixtures.
 When a folder's rule changes, change its fixtures with it.
+
+## The build
+
+`build/` holds the build's own code, imported by `vite.config.ts` and run by Node under its type stripping (so its relative imports name the `.ts` file); it is linted and type checked by `tsconfig.node.json`, and tested in `tests/build/`.
+
+- **Content Security Policy:** `build/content-security-policy.ts` defines it once; the production build puts it in `index.html` as the head's first `<meta>`.
+  Everything comes from `'self'`, with `'wasm-unsafe-eval'` the one relaxation, for WebAssembly.
+  The dev server runs without it.
+- **Models:** `models.json` lists every model file: id, name, file, source URL at a pinned commit, size, SHA-256, licence and source page.
+  The build fetches each into the git-ignored `.cache/models/`, reuses a cached copy whose hash matches, fails naming the file on a size or hash mismatch, and copies it to `dist/models/<id>/<first 16 hex of its SHA-256>/<file>`; the dev server serves the same paths.
+  Code reads a model's URL only from `modelUrls` in `virtual:intone/models`, typed by the ids in the list; nothing hard-codes a model path, and no model file is committed.
+- **ONNX Runtime:** the build copies `onnxruntime-web`'s single-threaded CPU build (`ort-wasm-simd-threaded.wasm` and `.mjs`) to `dist/ort/<version>/`; code points `wasmPaths` at `onnxRuntimeWasmPaths` from `virtual:intone/onnx-runtime`.
+- **Bundle budget:** `bundle-budget.json` caps the entry chunk's gzip size, and `npm run check:budget` reads a build's `dist/` against it in CI; `docs/bundle-budget.md` says how it was set and how a raise is justified.
+- **Notices:** `NOTICES.md` names every package a production install keeps, with its version and licence, and every model's licence; `npm run generate` writes it from the lockfile and `models.json`.
+
+## The dev library
+
+`/dev` is a component library inside the app, in development builds only: `src/app/route.ts` registers its routes inside an `import.meta.env.DEV` branch, and a production build answers `/dev` with the not-found screen.
+`src/app/devLibrary.ts` is the one way in: a Mount that dynamically imports `src/app/dev/library.ts` and embeds the page it opens in a container of its own.
+The index lists `plannedEntries`, the whole list written once; an entry is built when `src/app/dev/entries/<name>.ts` exists, found by `import.meta.glob` and imported only when opened, and listed as "coming" until then.
+Each entry exports `entry`, whose `makeProgram` builds its own small Foldkit program; its page uses `entryFrame` from `src/app/dev/entry.ts`, with a read-out line under the demo and a "Choices for you" note at the end.
+A screen ticket adds an entry for each reusable component it builds, and a Scene test beside it.
+
+Two guards keep it out of production:
+
+- lint refuses any import of the dev folder outside it, by any path, static or dynamic, except in `src/app/devLibrary.ts` (fixtures in `tests/lint/fixtures/src/app/`);
+- `build/dev-library-guard.ts` fails every production build that holds a module from `src/app/dev/`, naming the chunk and the module, and `tests/build/dev-library-guard.test.ts` proves it with real builds.
+
+## Look
+
+The tokens (colour, spacing, radius, type scale) and the system font stack, Japanese faces first, are defined once, in the `@theme` block of `src/app/styles.css`.
+Tailwind's own colours, radii and type steps are cleared there, so only the app's own classes build; `/dev/tokens` shows the set.
+The app downloads no font.
 
 ## Effect
 
@@ -87,7 +124,8 @@ node_modules/.bin/effect-tsgo tsc -p tsconfig.json
 npm test
 ```
 
-`npm run check:effect` runs the `effect-tsgo` check on both tsconfigs, `npm run format:check` the formatter, and `npm run test:e2e` builds and runs Playwright against the production build; CI runs all of them.
+`npm run check:effect` runs the `effect-tsgo` check on both tsconfigs, `npm run format:check` the formatter, `npm run generate:check` that the generated files are current, `npm run check:budget` the bundle budget against `dist/`, and `npm run test:e2e` builds and runs Playwright against the production build; CI runs all of them.
+The build and its tests fetch the listed model files once, so they need the network until `.cache/models/` holds them.
 `npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, in Node, type checked by `tsconfig.node.json`).
 
 ## Content and privacy
@@ -100,4 +138,4 @@ npm test
 
 The scaffold's `.mcp.json`, which ran `@foldkit/devtools-mcp` through an unpinned `npx -y`, is removed, and the package with it.
 The server is out of this project's scope (the agent team builds its own), and its pinned `@modelcontextprotocol/sdk` carried six high-severity advisories.
-`@foldkit/vite-plugin` still opens a DevTools relay on `ws://127.0.0.1:37037` under `npm run dev`, so two dev servers on one machine contend for that port.
+`@foldkit/vite-plugin` still opens a DevTools relay under `npm run dev`, on a free loopback port it prints at start (`ws://127.0.0.1:<port>/__foldkit/devtools-mcp`), so two dev servers on one machine do not contend for it.

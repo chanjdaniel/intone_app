@@ -25,13 +25,18 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm run check:effect
+npm run generate:check
 npm test
+npm run build
+npm run check:budget
 npx playwright install chromium
 npm run test:e2e
 ```
 
 `npm test` runs the unit, Story and Scene tests in Vitest.
 `npm run test:e2e` builds the app and runs the Playwright tests against that build in headless Chromium.
+The first build fetches the model files listed in `models.json` into `.cache/models/`, so it needs the network.
+`npm run dev` also serves a component library at http://localhost:5173/dev, which production builds leave out.
 
 The app is built with [Foldkit](https://foldkit.dev) on [Effect](https://effect.website).
 [`AGENTS.md`](AGENTS.md) says how the code is laid out and checked, [`CONTEXT.md`](CONTEXT.md) what its words mean, and [`docs/upgrading.md`](docs/upgrading.md) how Foldkit and Effect are upgraded.
@@ -44,6 +49,7 @@ The original Xcode project, its test targets and Swift files are kept on the [`l
 ## Licence
 
 All rights reserved; see [LICENSE](LICENSE).
+The third-party packages and models the app ships, and their licences, are in [NOTICES.md](NOTICES.md).
 
 ## Thanks
 
