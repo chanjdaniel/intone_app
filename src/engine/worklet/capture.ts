@@ -6,7 +6,8 @@ const processorName = 'intone-capture'
 // The capture worklet's node in `context`, ready for a source to connect:
 // whatever reaches its one input is mixed down to mono, and every 20 ms of
 // it reaches `onBatch` as a Float32Array the caller owns, in order, with
-// nothing dropped. It has no output; nothing needs to pull it.
+// nothing dropped, silence while nothing is connected. It has no output;
+// nothing needs to pull it.
 export const createCaptureNode = async (
   context: BaseAudioContext,
   onBatch: (batch: Float32Array) => void,

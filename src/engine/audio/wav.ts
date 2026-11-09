@@ -94,7 +94,11 @@ const readSample = (
   }
 }
 
-export const encodeWav = ({ sampleRate, encoding, channels }: Wav): Uint8Array => {
+export const encodeWav = ({
+  sampleRate,
+  encoding,
+  channels,
+}: Wav): Uint8Array => {
   const length = channels[0]?.length ?? 0
   if (channels.some(channel => channel.length !== length)) {
     throw new Error('Every channel of a WAV file must have the same length.')

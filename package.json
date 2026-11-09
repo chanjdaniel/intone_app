@@ -12,11 +12,12 @@
     "check:budget": "node build/bundle-budget.ts",
     "format": "oxfmt --disable-nested-config",
     "format:check": "oxfmt --check --disable-nested-config",
-    "lint": "oxlint --ignore-pattern tests/lint/fixtures/ src tests build && effect-tsgo patch --no-typescript --oxlint && oxlint --config .oxlintrc.effect.json --deny-warnings --ignore-pattern tests/lint/fixtures/ src tests build",
+    "lint": "oxlint --ignore-pattern tests/lint/fixtures/ src tests build scripts && effect-tsgo patch --no-typescript --oxlint && oxlint --config .oxlintrc.effect.json --deny-warnings --ignore-pattern tests/lint/fixtures/ src tests build scripts",
     "test": "vitest run",
     "test:e2e": "vite build && playwright test",
     "generate": "node build/generate.ts",
     "generate:check": "node build/generate.ts --check",
+    "fixtures:synthetic": "node scripts/synthetic-voices.ts",
     "vendor:foldkit": "scripts/vendor-foldkit.sh"
   },
   "dependencies": {

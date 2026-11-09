@@ -111,6 +111,25 @@
       }
     },
     {
+      // An audio worklet processor's module is loaded on its own, on the
+      // audio thread, so it imports nothing at all: not even the rest of the
+      // engine. The node that loads it, beside it, may.
+      "files": ["**/src/engine/worklet/*-processor.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": ".",
+                "message": "An audio worklet processor imports nothing; its module is loaded on its own (AGENTS.md, the folder line)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       // The score runs anywhere, Node included. It imports nothing from
       // Effect, Foldkit or another src folder, and only the language's own
       // built-ins are defined there, so any browser or host global (window,

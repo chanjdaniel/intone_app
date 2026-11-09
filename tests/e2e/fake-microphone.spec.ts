@@ -11,8 +11,16 @@ import {
   test,
 } from '@playwright/test'
 
-import { type WavEncoding, decodeWav, encodeWav } from '../../src/engine/audio/wav.ts'
-import { type Comparison, compareWithSource } from '../support/audio-compare.ts'
+import {
+  type WavEncoding,
+  decodeWav,
+  encodeWav,
+} from '../../src/engine/audio/wav.ts'
+import {
+  type Comparison,
+  compareWithSource,
+  lowPass,
+} from '../support/audio-compare.ts'
 import { type PitchError, estimatePitch, pitchError } from '../support/pitch.ts'
 import {
   type SyntheticVoiceLabels,
@@ -68,12 +76,20 @@ type Measurement = Comparison &
     batchLengths: ReadonlyArray<number>
   }>
 
-const measure = (capture: Capture, source: Source): Measurement | null => {
+// The capture against its source, the samples compared below `belowHz`
+// when given, for a path that cuts the top of the source's band.
+const measure = (
+  capture: Capture,
+  source: Source,
+  belowHz?: number,
+): Measurement | null => {
   const received = samplesOf(capture)
+  const band = (samples: Float32Array, sampleRate: number) =>
+    belowHz === undefined ? samples : lowPass(samples, sampleRate, belowHz)
   const comparison = compareWithSource(
-    received,
+    band(received, capture.sampleRate),
     capture.sampleRate,
-    source.samples,
+    band(source.samples, source.sampleRate),
     source.sampleRate,
   )
   if (comparison === null) {
@@ -84,12 +100,7 @@ const measure = (capture: Capture, source: Source): Measurement | null => {
   return {
     ...comparison,
     pitch: pitchError(
-      estimatePitch(
-        received,
-        capture.sampleRate,
-        frameHz,
-        comparison.delaySeconds,
-      ),
+      pitchAcrossSlips(received, capture.sampleRate, frameHz, comparison),
       f0Hz,
       frames,
     ),
@@ -100,6 +111,32 @@ const measure = (capture: Capture, source: Source): Measurement | null => {
     ),
     batchLengths: [...new Set(capture.batchLengths)],
   }
+}
+
+// The pitch estimate of the received audio, each frame read where the
+// source sits at that point, after the slips before it.
+const pitchAcrossSlips = (
+  received: Float32Array,
+  sampleRate: number,
+  frameHz: number,
+  { delaySeconds, slips }: Comparison,
+): Float64Array => {
+  const delays = slips.reduce(
+    (sum, slip) => [...sum, (sum.at(-1) ?? 0) + slip.bySeconds],
+    [delaySeconds],
+  )
+  const estimates = delays.map(delay =>
+    estimatePitch(received, sampleRate, frameHz, delay),
+  )
+  return Float64Array.from(estimates[0] ?? [], (_, frame) => {
+    let stretch = 0
+    slips.forEach((slip, index) => {
+      if (slip.atSeconds <= frame / frameHz + (delays[index + 1] ?? 0)) {
+        stretch = index + 1
+      }
+    })
+    return estimates[stretch]?.[frame] ?? Number.NaN
+  })
 }
 
 const openProbe = async (page: Page): Promise<void> => {
@@ -142,17 +179,14 @@ const withFakeMicrophone = async <A>(
 const recordThroughMicrophone = (
   browserType: BrowserType,
   file: string,
-  options: { sampleRate?: number; browserProcessing?: boolean } = {},
+  options: { browserProcessing?: boolean } = {},
 ): Promise<Capture> =>
   withFakeMicrophone(browserType, file, page =>
-    page.evaluate(
-      request => window.intoneProbe.fromMicrophone(request),
-      {
-        seconds: captureSeconds,
-        sampleRate: options.sampleRate ?? 48000,
-        browserProcessing: options.browserProcessing ?? false,
-      },
-    ),
+    page.evaluate(request => window.intoneProbe.fromMicrophone(request), {
+      seconds: captureSeconds,
+      sampleRate: 48000,
+      browserProcessing: options.browserProcessing ?? false,
+    }),
   )
 
 const report = async (
@@ -166,9 +200,11 @@ const report = async (
   })
 }
 
-// What every faithful path must deliver, from a 16-bit source: its own
-// gain, nothing added beyond 16-bit quantisation and resampling, and a
-// pitch estimate as close to the known curve as the source's own.
+// What the fake microphone delivers from a 16-bit source, slips aside:
+// the source's own gain, nothing added beyond 16-bit quantisation and
+// resampling between slips, each slip 10 ms of samples added, and a pitch
+// estimate as close to the known curve as the source's own, but for the
+// frames a slip falls in.
 const expectFaithful = (measurement: Measurement | null): void => {
   expect(measurement).not.toBeNull()
   if (measurement === null) {
@@ -177,15 +213,21 @@ const expectFaithful = (measurement: Measurement | null): void => {
   expect(measurement.gain).toBeGreaterThan(0.999)
   expect(measurement.gain).toBeLessThan(1.001)
   expect(measurement.snrDb).toBeGreaterThan(70)
+  for (const slip of measurement.slips) {
+    expect(slip.bySeconds).toBeCloseTo(0.01, 4)
+  }
+  const slips = measurement.slips.length
   expect(measurement.pitch.missing).toBeLessThanOrEqual(
-    measurement.sourcePitch.missing,
+    measurement.sourcePitch.missing + 2 * slips,
   )
   expect(measurement.pitch.medianCents).toBeLessThan(
     measurement.sourcePitch.medianCents + 0.5,
   )
-  expect(measurement.pitch.maxCents).toBeLessThan(
-    measurement.sourcePitch.maxCents + 2,
-  )
+  if (slips === 0) {
+    expect(measurement.pitch.maxCents).toBeLessThan(
+      measurement.sourcePitch.maxCents + 2,
+    )
+  }
 }
 
 test.describe('the buffer source', () => {
@@ -240,7 +282,10 @@ test.describe('the fake microphone', () => {
       playwright,
     }, testInfo) => {
       const source = fixture(name)
-      const capture = await recordThroughMicrophone(playwright.chromium, source.file)
+      const capture = await recordThroughMicrophone(
+        playwright.chromium,
+        source.file,
+      )
       const measurement = measure(capture, source)
       await report(testInfo, `microphone-${name}.json`, {
         settings: capture.settings,
@@ -252,10 +297,10 @@ test.describe('the fake microphone', () => {
         noiseSuppression: false,
         autoGainControl: false,
       })
-      // The device's file starts at getUserMedia, before the worklet hears
-      // it; the probe readies the worklet first, as the app does.
-      expect(measurement?.delaySeconds).toBeGreaterThan(-0.03)
-      expect(measurement?.delaySeconds).toBeLessThan(0.03)
+      // The device's file starts at getUserMedia, after the worklet runs:
+      // the probe waits for its first batch, as the app should.
+      expect(measurement?.delaySeconds).toBeGreaterThan(0)
+      expect(measurement?.delaySeconds).toBeLessThan(0.1)
     })
   }
 
@@ -264,45 +309,52 @@ test.describe('the fake microphone', () => {
   }, testInfo) => {
     test.setTimeout(240_000)
     const source = fixture('middle')
-    const runs: Array<Measurement> = []
+    const runs: Array<Measurement | null> = []
     for (let run = 0; run < 20; run++) {
-      const measurement = measure(
-        await recordThroughMicrophone(playwright.chromium, source.file),
-        source,
+      runs.push(
+        measure(
+          await recordThroughMicrophone(playwright.chromium, source.file),
+          source,
+        ),
       )
-      expectFaithful(measurement)
-      if (measurement !== null) {
-        runs.push(measurement)
-      }
     }
+    const found = runs.filter(run => run !== null)
     const spread = (values: ReadonlyArray<number>) => ({
       min: Math.min(...values),
       max: Math.max(...values),
       range: Math.max(...values) - Math.min(...values),
     })
     const variation = {
-      delaySeconds: spread(runs.map(run => run.delaySeconds)),
-      gain: spread(runs.map(run => run.gain)),
-      snrDb: spread(runs.map(run => run.snrDb)),
-      pitchMedianCents: spread(runs.map(run => run.pitch.medianCents)),
-      pitchMaxCents: spread(runs.map(run => run.pitch.maxCents)),
+      delaySeconds: spread(found.map(run => run.delaySeconds)),
+      slips: spread(found.map(run => run.slips.length)),
+      gain: spread(found.map(run => run.gain)),
+      snrDb: spread(found.map(run => run.snrDb)),
+      pitchMedianCents: spread(found.map(run => run.pitch.medianCents)),
+      pitchMaxCents: spread(found.map(run => run.pitch.maxCents)),
     }
     await report(testInfo, 'microphone-twenty-runs.json', { variation, runs })
-    expect(runs).toHaveLength(20)
+    for (const run of runs) {
+      expectFaithful(run)
+    }
     expect(variation.gain.range).toBeLessThan(1e-4)
     expect(variation.snrDb.range).toBeLessThan(3)
     expect(variation.pitchMedianCents.range).toBeLessThan(0.5)
     expect(variation.pitchMaxCents.range).toBeLessThan(2)
-    expect(variation.delaySeconds.range).toBeLessThan(0.025)
+    // The start moves in whole 10 ms device buffers.
+    expect(variation.delaySeconds.range).toBeLessThan(0.035)
   })
 
   test('alters the audio when the browser processing is left on', async ({
     playwright,
   }, testInfo) => {
     const source = fixture('middle')
-    const capture = await recordThroughMicrophone(playwright.chromium, source.file, {
-      browserProcessing: true,
-    })
+    const capture = await recordThroughMicrophone(
+      playwright.chromium,
+      source.file,
+      {
+        browserProcessing: true,
+      },
+    )
     const measurement = measure(capture, source)
     await report(testInfo, 'microphone-browser-processing.json', {
       settings: capture.settings,
@@ -321,10 +373,21 @@ test.describe('the fake microphone', () => {
       sampleRate: number
       encoding: WavEncoding
       channels: 1 | 2
+      // Whether its audio arrived.
+      arrives: boolean
+      // Where the device's resampler cut its band, when it cut it below
+      // the file's own Nyquist frequency.
+      cutBelowHz?: number
     }>
-    // Each format the fake device was given, and whether its audio arrived.
-    const formats: ReadonlyArray<Format & { arrives: boolean }> = [
-      { sampleRate: 8000, encoding: 'pcm16', channels: 1, arrives: true },
+    // Each format the fake device was given.
+    const formats: ReadonlyArray<Format> = [
+      {
+        sampleRate: 8000,
+        encoding: 'pcm16',
+        channels: 1,
+        arrives: true,
+        cutBelowHz: 3500,
+      },
       { sampleRate: 16000, encoding: 'pcm16', channels: 1, arrives: true },
       { sampleRate: 22050, encoding: 'pcm16', channels: 1, arrives: true },
       { sampleRate: 44100, encoding: 'pcm16', channels: 1, arrives: true },
@@ -345,9 +408,12 @@ test.describe('the fake microphone', () => {
 
     for (const format of formats) {
       const label = `${format.sampleRate} Hz ${format.encoding} ${format.channels === 1 ? 'mono' : 'stereo'}`
-      test(`${label} ${format.arrives ? 'arrives' : 'arrives as silence'}`, async ({
-        playwright,
-      }, testInfo) => {
+      const outcome = !format.arrives
+        ? 'arrives as silence'
+        : format.cutBelowHz === undefined
+          ? 'arrives'
+          : `arrives cut below ${format.cutBelowHz} Hz`
+      test(`${label} ${outcome}`, async ({ playwright }, testInfo) => {
         const { samples, labels } = synthesiseVoice('middle', format.sampleRate)
         const file = join(
           scratch,
@@ -369,15 +435,22 @@ test.describe('the fake microphone', () => {
             sampleRate: format.sampleRate,
             labels,
           },
+          format.cutBelowHz,
         )
         await report(testInfo, `format-${label}.json`, measurement)
         expect(measurement !== null).toBe(format.arrives)
         if (measurement !== null) {
           expect(measurement.gain).toBeGreaterThan(0.99)
           expect(measurement.gain).toBeLessThan(1.01)
-          expect(measurement.pitch.medianCents).toBeLessThan(
-            measurement.sourcePitch.medianCents + 0.5,
-          )
+          // 8-bit quantisation's own noise is about 40 dB down.
+          expect(measurement.snrDb).toBeGreaterThan(35)
+          for (const slip of measurement.slips) {
+            expect(slip.bySeconds).toBeCloseTo(0.01, 4)
+          }
+          // The estimate reads a voice sampled at 8 kHz worse than the
+          // device's band-cut copy of it, so this bound is the estimate's
+          // own on the 48 kHz voice, not the source's.
+          expect(measurement.pitch.medianCents).toBeLessThan(3)
         }
       })
     }

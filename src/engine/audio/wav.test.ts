@@ -39,7 +39,11 @@ describe('encodeWav', () => {
       ...ascii('data'),
       ...uint32(10),
       // 0, 16384, -16384, 32767 (clamped from 32768), -32768
-      0x00, 0x00, 0x00, 0x40, 0x00, 0xc0, 0xff, 0x7f, 0x00, 0x80,
+      ...uint16(0),
+      ...uint16(0x4000),
+      ...uint16(0xc000),
+      ...uint16(0x7fff),
+      ...uint16(0x8000),
     ])
   })
 
@@ -142,7 +146,9 @@ describe('decodeWav', () => {
       9,
       9,
     ])
-    expect(decodeWav(bytes).channels).toStrictEqual([Float32Array.of(0.5, -0.5)])
+    expect(decodeWav(bytes).channels).toStrictEqual([
+      Float32Array.of(0.5, -0.5),
+    ])
   })
 
   it('refuses bytes that are not a WAV file', () => {

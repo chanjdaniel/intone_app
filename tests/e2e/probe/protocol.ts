@@ -13,8 +13,8 @@ export type Capture = Readonly<{
 
 export type MicrophoneRequest = Readonly<{
   seconds: number
-  // The AudioContext's rate; the browser's own when absent.
-  sampleRate: number | null
+  // The AudioContext's rate.
+  sampleRate: number
   // Echo cancellation, noise suppression and auto gain as the browser
   // sets them by default, instead of off as the app asks.
   browserProcessing: boolean

@@ -1,6 +1,6 @@
 // Compares audio a capture path delivered with the audio it was given:
-// where the source landed in the capture, at what gain, and how much else
-// came with it. Plain maths on typed arrays, for the fake-microphone tests
+// where the source landed in the capture, whether it slipped, at what
+// gain, and how much else came with it. Plain maths on typed arrays, for the fake-microphone tests
 // (docs/fake-microphone.md).
 
 const taps = 32
@@ -62,6 +62,27 @@ export const sourceAsCaptured = (
   return result
 }
 
+// The samples low-passed at `cutoffHz` by a 25 ms Blackman-windowed sinc,
+// for comparing a path that cuts the top of a source's band below it.
+export const lowPass = (
+  samples: Float32Array,
+  sampleRate: number,
+  cutoffHz: number,
+): Float32Array => {
+  const reach = Math.round(0.0125 * sampleRate)
+  const cutoff = (2 * cutoffHz) / sampleRate
+  const kernel = Float64Array.from({ length: 2 * reach + 1 }, (_, j) =>
+    weight(j - reach, cutoff, reach + 1),
+  )
+  return Float32Array.from(samples, (_, i) => {
+    let sum = 0
+    for (let j = 0; j < kernel.length; j++) {
+      sum += (samples[i + j - reach] ?? 0) * (kernel[j] ?? 0)
+    }
+    return sum
+  })
+}
+
 const firstAbove = (signal: ArrayLike<number>, level: number): number => {
   for (let i = 0; i < signal.length; i++) {
     if (Math.abs(signal[i] ?? 0) > level) {
@@ -79,26 +100,31 @@ const peakOf = (signal: ArrayLike<number>): number => {
   return peak
 }
 
+type Range = Readonly<{ from: number; to: number }>
+
 type Fit = Readonly<{ gain: number; snrDb: number }>
 
-// Least-squares gain of the capture against the expected audio over
-// [from, to), and what is left over against the signal, in decibels.
+// Least-squares gain of the capture against the expected audio over the
+// ranges, and what is left over against the signal, in decibels.
 const fit = (
   capture: Float32Array,
   expected: Float64Array,
-  from: number,
-  to: number,
+  ranges: ReadonlyArray<Range>,
 ): Fit => {
   let cross = 0
   let power = 0
-  for (let i = from; i < to; i++) {
-    cross += (capture[i] ?? 0) * (expected[i] ?? 0)
-    power += (expected[i] ?? 0) ** 2
+  for (const { from, to } of ranges) {
+    for (let i = from; i < to; i++) {
+      cross += (capture[i] ?? 0) * (expected[i] ?? 0)
+      power += (expected[i] ?? 0) ** 2
+    }
   }
   const gain = power === 0 ? 0 : cross / power
   let residual = 0
-  for (let i = from; i < to; i++) {
-    residual += ((capture[i] ?? 0) - gain * (expected[i] ?? 0)) ** 2
+  for (const { from, to } of ranges) {
+    for (let i = from; i < to; i++) {
+      residual += ((capture[i] ?? 0) - gain * (expected[i] ?? 0)) ** 2
+    }
   }
   return {
     gain,
@@ -109,42 +135,17 @@ const fit = (
   }
 }
 
-export type Comparison = Readonly<{
-  // Where the source's first sample landed, in seconds from the capture's
-  // first sample: negative when the capture lost the source's start.
-  delaySeconds: number
-  gain: number
-  // Signal against everything else over the source's sounding stretch:
-  // quantisation, resampling and any processing.
-  snrDb: number
-  // The largest difference from the source at the nearest whole sample,
-  // with no gain or resampling: 0 when the samples arrived unchanged.
-  maxDifference: number
-}>
-
-// Finds the source in the capture: by onset to the nearest few samples,
-// then by golden-section search for the fractional delay that leaves the
-// least behind. Null when nothing arrived.
-export const compareWithSource = (
+// The fractional delay near `roughDelay`, within a sample and a half
+// either way, at which the source leaves the least behind over [from, to),
+// by golden-section search.
+const fractionalDelay = (
   capture: Float32Array,
   captureRate: number,
   source: Float32Array,
   sourceRate: number,
-): Comparison | null => {
-  const sourcePeak = peakOf(source)
-  const capturePeak = peakOf(capture)
-  if (capturePeak < sourcePeak * 0.01) {
-    return null
-  }
-  const sourceOnset = firstAbove(source, sourcePeak * 0.05) / sourceRate
-  const captureOnset = firstAbove(capture, capturePeak * 0.05) / captureRate
-  const roughDelay = captureOnset - sourceOnset
-  const sourceEnd = (source.length - 1) / sourceRate
-  const from = Math.max(0, Math.ceil((roughDelay + sourceOnset) * captureRate))
-  const to = Math.min(
-    capture.length,
-    Math.floor((roughDelay + sourceEnd) * captureRate),
-  )
+  roughDelay: number,
+  range: Range,
+): number => {
   const residualAt = (delay: number): number =>
     -fit(
       capture,
@@ -154,22 +155,19 @@ export const compareWithSource = (
         captureRate,
         delay,
         capture.length,
-        from,
-        to,
+        range.from,
+        range.to,
       ),
-      from,
-      to,
+      [range],
     ).snrDb
-
-  // Golden-section search over three capture samples either way.
   const ratio = (Math.sqrt(5) - 1) / 2
-  let low = roughDelay - 3 / captureRate
-  let high = roughDelay + 3 / captureRate
+  let low = roughDelay - 1.5 / captureRate
+  let high = roughDelay + 1.5 / captureRate
   let left = high - ratio * (high - low)
   let right = low + ratio * (high - low)
   let leftValue = residualAt(left)
   let rightValue = residualAt(right)
-  while (high - low > 0.005 / captureRate) {
+  while (high - low > 1e-4 / captureRate) {
     if (leftValue < rightValue) {
       high = right
       right = left
@@ -184,33 +182,229 @@ export const compareWithSource = (
       rightValue = residualAt(right)
     }
   }
-  const delaySeconds = (low + high) / 2
-  const best = fit(
-    capture,
-    sourceAsCaptured(
+  return (low + high) / 2
+}
+
+// The source is followed through the capture in 20 ms segments, each
+// matched to the source within 15 ms of where the last one sat, so a
+// capture path that drops or adds a stretch of samples shows as a slip
+// rather than as noise over everything after it.
+const segmentSeconds = 0.02
+const followSeconds = 0.015
+// A segment this far below the capture's peak power is too quiet to place.
+const quietSegment = 1e-4
+// A segment that matches the source no better than this at any lag, about
+// 17 dB of signal over the rest, holds a slip or audio the path changed:
+// it places nothing.
+const matched = 0.99
+
+export type Slip = Readonly<{
+  // Where in the capture the source was first found at its new delay.
+  atSeconds: number
+  // How much later the source sits from there on: positive when samples
+  // were added, negative when some were lost.
+  bySeconds: number
+}>
+
+export type Comparison = Readonly<{
+  // Where the source's first sample landed, in seconds from the capture's
+  // first sample, before any slip: negative when the capture lost the
+  // source's start.
+  delaySeconds: number
+  slips: ReadonlyArray<Slip>
+  gain: number
+  // Signal against everything else over the stretches between slips, each
+  // at its own delay: quantisation, resampling and any processing. A
+  // capture the path changed throughout is fitted whole, at one delay.
+  snrDb: number
+  // The largest difference from the source at the first delay's nearest
+  // whole sample, with no gain or resampling, over the whole capture: 0
+  // when the samples arrived unchanged.
+  maxDifference: number
+}>
+
+type Stretch = Range & Readonly<{ lag: number }>
+
+type Followed = Readonly<{
+  stretches: ReadonlyArray<Stretch>
+  // Each segment loud enough to place, at its best lag, matched or not.
+  bestLags: ReadonlyArray<number>
+  // How many of them matched.
+  placed: number
+}>
+
+type Placed = Readonly<{ from: number; lag: number }>
+
+// The stretches of the capture over which the source sits at one whole
+// lag (capture samples), found segment by segment from `startLag`.
+const followSource = (
+  capture: Float32Array,
+  expected: Float64Array,
+  captureRate: number,
+  startLag: number,
+): Followed => {
+  const segment = Math.round(segmentSeconds * captureRate)
+  const reach = Math.round(followSeconds * captureRate)
+  const quiet = quietSegment * peakOf(capture) ** 2 * segment
+  const bestLags: Array<number> = []
+  const placed: Array<Placed> = []
+  let lag = startLag
+  for (let from = 0; from + segment <= capture.length; from += segment) {
+    let energy = 0
+    for (let i = from; i < from + segment; i++) {
+      energy += (capture[i] ?? 0) ** 2
+    }
+    if (energy < quiet) {
+      continue
+    }
+    let best = Number.NEGATIVE_INFINITY
+    let bestLag = lag
+    for (let candidate = lag - reach; candidate <= lag + reach; candidate++) {
+      let cross = 0
+      let power = 0
+      for (let i = from; i < from + segment; i++) {
+        const value = expected[i - candidate] ?? 0
+        cross += (capture[i] ?? 0) * value
+        power += value * value
+      }
+      const correlation = power === 0 ? 0 : cross / Math.sqrt(power * energy)
+      if (correlation > best) {
+        best = correlation
+        bestLag = candidate
+      }
+    }
+    bestLags.push(bestLag)
+    if (best >= matched) {
+      placed.push({ from, lag: bestLag })
+      lag = bestLag
+    }
+  }
+
+  // A sample either way is the resampler's fraction, not a slip.
+  const near = (a: number, b: number) => Math.abs(a - b) <= 1
+  const stretches: Array<Stretch> = []
+  placed.forEach(({ from, lag: segmentLag }, index) => {
+    const last = stretches.at(-1)
+    if (last !== undefined && near(segmentLag, last.lag)) {
+      stretches[stretches.length - 1] = { ...last, to: from + segment }
+      return
+    }
+    // A new lag holds only if the next segment placed agrees: one segment
+    // alone at its own lag straddles a slip, half at each side.
+    const next = placed[index + 1]
+    if (
+      last === undefined ||
+      (next !== undefined && near(next.lag, segmentLag))
+    ) {
+      stretches.push({ lag: segmentLag, from, to: from + segment })
+    }
+  })
+  return { stretches, bestLags, placed: placed.length }
+}
+
+// Finds the source in the capture: by onset to the nearest few samples,
+// then segment by segment for any slip, then by golden-section search for
+// each stretch's fractional delay. Null when nothing arrived.
+export const compareWithSource = (
+  capture: Float32Array,
+  captureRate: number,
+  source: Float32Array,
+  sourceRate: number,
+): Comparison | null => {
+  const sourcePeak = peakOf(source)
+  const capturePeak = peakOf(capture)
+  if (capturePeak < sourcePeak * 0.01) {
+    return null
+  }
+  const sourceOnset = firstAbove(source, sourcePeak * 0.05) / sourceRate
+  const captureOnset = firstAbove(capture, capturePeak * 0.05) / captureRate
+  // The source at the capture's rate with its first sample at the
+  // capture's first, which each segment is matched against.
+  const expectedLength = Math.ceil((source.length / sourceRate) * captureRate)
+  const resampled = sourceAsCaptured(
+    source,
+    sourceRate,
+    captureRate,
+    0,
+    expectedLength,
+  )
+  const roughLag = Math.round((captureOnset - sourceOnset) * captureRate)
+  const followed = followSource(capture, resampled, captureRate, roughLag)
+  // Most of it unplaced: the path changed the audio throughout, and there
+  // is no slip to speak of, only the whole sounding stretch, at the lag
+  // most segments came closest at.
+  const sortedLags = [...followed.bestLags].sort((a, b) => a - b)
+  const wholeLag = sortedLags[Math.floor(sortedLags.length / 2)] ?? roughLag
+  const stretches =
+    followed.placed * 2 >= followed.bestLags.length
+      ? followed.stretches
+      : [
+          {
+            lag: wholeLag,
+            from: Math.max(0, wholeLag),
+            to: Math.min(capture.length, wholeLag + expectedLength),
+          },
+        ]
+  const delays = stretches.map(stretch =>
+    fractionalDelay(
+      capture,
+      captureRate,
       source,
       sourceRate,
-      captureRate,
-      delaySeconds,
-      capture.length,
-      from,
-      to,
+      stretch.lag / captureRate,
+      stretch,
     ),
-    from,
-    to,
   )
+  const expected = new Float64Array(capture.length)
+  stretches.forEach((stretch, index) => {
+    expected.set(
+      sourceAsCaptured(
+        source,
+        sourceRate,
+        captureRate,
+        delays[index] ?? 0,
+        capture.length,
+        stretch.from,
+        stretch.to,
+      ).subarray(stretch.from, stretch.to),
+      stretch.from,
+    )
+  })
+  const best = fit(capture, expected, stretches)
+  const delaySeconds = delays[0] ?? 0
+  const slips = stretches.slice(1).map((stretch, index) => ({
+    atSeconds: stretch.from / captureRate,
+    bySeconds: (delays[index + 1] ?? 0) - (delays[index] ?? 0),
+  }))
 
   let maxDifference = Number.POSITIVE_INFINITY
   if (captureRate === sourceRate) {
     const shift = Math.round(delaySeconds * captureRate)
     maxDifference = 0
     for (let i = 0; i < capture.length; i++) {
-      const expected = source[i - shift] ?? 0
+      const expectedSample = source[i - shift] ?? 0
       maxDifference = Math.max(
         maxDifference,
-        Math.abs((capture[i] ?? 0) - expected),
+        Math.abs((capture[i] ?? 0) - expectedSample),
       )
     }
+    // The samples arrived unchanged, a whole number of samples late: the
+    // search's fractional delay and its fit are only close to that.
+    if (maxDifference === 0) {
+      return {
+        delaySeconds: shift / captureRate,
+        slips: [],
+        gain: 1,
+        snrDb: Number.POSITIVE_INFINITY,
+        maxDifference,
+      }
+    }
   }
-  return { delaySeconds, gain: best.gain, snrDb: best.snrDb, maxDifference }
+  return {
+    delaySeconds,
+    slips,
+    gain: best.gain,
+    snrDb: best.snrDb,
+    maxDifference,
+  }
 }

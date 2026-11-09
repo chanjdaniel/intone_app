@@ -70,8 +70,8 @@ describe('the synthetic voices', () => {
         labels.f0Hz,
         voicedFramesAwayFromEdges(labels),
       )
-      // The estimate's own limits on a glide (tests/support/pitch.ts), not
-      // the voice's: it reads a steady pitch within a cent.
+      // The estimate's own limits on a glide, not the voice's: it reads a
+      // steady pitch within a cent (tests/support/pitch.test.ts).
       expect(error.frames).toBeGreaterThan(60)
       expect(error.missing).toBeLessThanOrEqual(1)
       expect(error.medianCents).toBeLessThan(3)

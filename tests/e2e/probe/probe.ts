@@ -1,4 +1,7 @@
-import { audioBufferOf, playBuffer } from '../../../src/engine/audio/buffer-source'
+import {
+  audioBufferOf,
+  playBuffer,
+} from '../../../src/engine/audio/buffer-source'
 import { decodeWav } from '../../../src/engine/audio/wav'
 import { createCaptureNode } from '../../../src/engine/worklet/capture'
 import type { BufferRequest, Capture, MicrophoneRequest } from './protocol'
@@ -8,11 +11,16 @@ const collector = (length: number) => {
   const samples = new Float32Array(length)
   const batchLengths: Array<number> = []
   let filled = 0
+  let begin = () => {}
   let finish = () => {}
+  const started = new Promise<void>(resolve => {
+    begin = resolve
+  })
   const done = new Promise<void>(resolve => {
     finish = resolve
   })
   const push = (batch: Float32Array): void => {
+    begin()
     batchLengths.push(batch.length)
     if (filled < length) {
       samples.set(batch.subarray(0, length - filled), filled)
@@ -22,7 +30,7 @@ const collector = (length: number) => {
       }
     }
   }
-  return { samples, batchLengths, push, done }
+  return { samples, batchLengths, push, started, done }
 }
 
 const toBase64 = (samples: Float32Array): string => {
@@ -52,17 +60,21 @@ const capture = (
   settings,
 })
 
-// The order the app follows: the worklet is ready before the microphone
-// opens, since the fake device plays its file from getUserMedia on, and
-// whatever arrives before the source is connected is lost.
+// The order the app should follow: the worklet is running before the
+// microphone opens, since the fake device plays its file from getUserMedia
+// on, and whatever it plays before the source is connected and the context
+// renders is lost. The context starts rendering some time after it is
+// made, later on a busy machine, so the first batch, not the node, says it
+// has started.
 const fromMicrophone = async ({
   seconds,
   sampleRate,
   browserProcessing,
 }: MicrophoneRequest): Promise<Capture> => {
-  const context = new AudioContext(sampleRate === null ? {} : { sampleRate })
+  const context = new AudioContext({ sampleRate })
   const collected = collector(Math.round(seconds * context.sampleRate))
   const node = await createCaptureNode(context, collected.push)
+  await collected.started
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: browserProcessing
       ? true

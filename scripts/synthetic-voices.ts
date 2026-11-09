@@ -8,7 +8,10 @@ import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 
 import { encodeWav } from '../src/engine/audio/wav.ts'
-import { synthesiseVoice, voiceNames } from '../tests/support/synthetic-voice.ts'
+import {
+  synthesiseVoice,
+  voiceNames,
+} from '../tests/support/synthetic-voice.ts'
 
 const fixtureSampleRate = 48000
 

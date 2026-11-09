@@ -25,6 +25,7 @@
     "*.tsbuildinfo",
     "pnpm-lock.yaml",
     "NOTICES.md",
-    "src/virtual-modules.d.ts"
+    "src/virtual-modules.d.ts",
+    "fixtures/synthetic"
   ]
 }

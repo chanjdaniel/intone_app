@@ -149,8 +149,7 @@ export const synthesiseVoice = (
     if (phrase === undefined || f0 === null) {
       phase = 0
     } else {
-      source =
-        envelopeAt(t) * (glottalFlow(phase) + breath * (2 * noise() - 1))
+      source = envelopeAt(t) * (glottalFlow(phase) + breath * (2 * noise() - 1))
       phase = (phase + f0 / sampleRate) % 1
     }
     const progress =
@@ -169,8 +168,7 @@ export const synthesiseVoice = (
         Math.exp((-Math.PI * bandwidth) / sampleRate) *
         Math.cos((2 * Math.PI * frequency) / sampleRate)
       const a = 1 - b - c
-      const y =
-        a * x + b * (previous[k] ?? 0) + c * (beforePrevious[k] ?? 0)
+      const y = a * x + b * (previous[k] ?? 0) + c * (beforePrevious[k] ?? 0)
       beforePrevious[k] = previous[k] ?? 0
       previous[k] = y
       x = y

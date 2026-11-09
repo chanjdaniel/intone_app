@@ -32,6 +32,13 @@
   },
   "include": ["src/**/*", "tests/**/*"],
   // The tooling tests and their support run in Node (tsconfig.node.json),
-  // and the lint fixtures are deliberately wrong code only the lint test reads.
-  "exclude": ["tests/lint", "tests/build", "tests/scripts", "tests/support"]
+  // as does the probe page's Vite config, and the lint fixtures are
+  // deliberately wrong code only the lint test reads.
+  "exclude": [
+    "tests/lint",
+    "tests/build",
+    "tests/scripts",
+    "tests/support",
+    "tests/e2e/probe/vite.config.ts"
+  ]
 }

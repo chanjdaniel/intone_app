@@ -26,6 +26,9 @@ const batchSeconds = 0.02
 // A block is 128 frames today; the ring holds a batch and a block far
 // larger than that.
 const largestBlock = 4096
+// The render quantum: the frames one block holds when no input is
+// connected, and so none says how long the block is.
+const silentBlock = 128
 
 class CaptureProcessor extends AudioWorkletProcessor {
   private readonly batchLength = Math.round(sampleRate * batchSeconds)
@@ -35,15 +38,16 @@ class CaptureProcessor extends AudioWorkletProcessor {
   private taken = 0
 
   process(inputs: ReadonlyArray<ReadonlyArray<Float32Array>>): boolean {
+    // An input with nothing connected, or whose source has ended, has no
+    // channels: it counts as a block of silence, so the samples taken keep
+    // time with the context whatever feeds them.
     const channel = inputs[0]?.[0]
-    if (channel === undefined) {
-      return true
-    }
+    const length = channel?.length ?? silentBlock
     const { ring } = this
-    for (let i = 0; i < channel.length; i++) {
-      ring[(this.written + i) % ring.length] = channel[i] ?? 0
+    for (let i = 0; i < length; i++) {
+      ring[(this.written + i) % ring.length] = channel?.[i] ?? 0
     }
-    this.written += channel.length
+    this.written += length
     while (this.written - this.taken >= this.batchLength) {
       const batch = new Float32Array(this.batchLength)
       for (let i = 0; i < batch.length; i++) {

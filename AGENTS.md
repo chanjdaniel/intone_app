@@ -54,6 +54,7 @@ Pitch frames stay out of Foldkit's Model; the Model gets coarse events only (ons
 - a Foldkit import outside `src/app`, and an import of `src/app` from any folder below it;
 - in `src/app`, an import of the dev library in `src/app/dev/` from outside it, except the one in `src/app/devLibrary.ts` (see "The dev library");
 - in `src/engine`, an Effect or Foldkit import, or one of `src/services` or `src/workers`;
+- in `src/engine/worklet`, any import at all in an audio worklet processor (`*-processor.ts`), whose module is loaded on its own on the audio thread;
 - in `src/score`, an Effect or Foldkit import, one of any other `src/` folder, or any global beyond the language's own built-ins (`window`, `document`, `navigator`, `AudioContext`, `fetch`, `console`, `process`, `globalThis` and the like).
 
 Each rule has fixtures under `tests/lint/fixtures/src/`, laid out like `src/`, with every line lint must refuse marked `// lint: <rule>`; `tests/lint/folder-line.test.ts` checks exactly those lines fail, and the normal lint run skips the fixtures.
@@ -113,6 +114,17 @@ The rule `unstable-api-usage` is an error in both `effect-tsgo tsc` and the lint
 
 An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquireRelease` with `{ interruptible: true }`, since `Stream.callback` starts its setup at once in 4.1.
 
+## Audio in tests
+
+End-to-end tests drive the real audio path with Chromium's fake microphone playing a known WAV; `docs/fake-microphone.md` says how faithfully it arrives and what a test must allow for (a start 32 ms in or a few 10 ms buffers later, and now and then a 10 ms slip).
+A test that needs the exact samples plays them through the capture worklet with the buffer source in `src/engine/audio/buffer-source.ts` instead.
+
+- `fixtures/synthetic/` holds the synthetic voices and their labels, written by `npm run fixtures:synthetic` from a seed; never edit them by hand, and rerun the script after changing `tests/support/synthetic-voice.ts`, since a test fails on any byte of difference.
+- `tests/e2e/probe/` is a test-only page that drives the capture worklet; Playwright builds it to `.cache/e2e-probe` and serves it on the port after the app's, and it never ships.
+- `tests/support/` holds the measuring code the end-to-end tests share (the comparison, a plain pitch estimate, the voices), tested in the `tooling` project.
+- Write test audio as 48 kHz 16-bit mono WAV; the fake device plays 24-bit as silence.
+- Open the microphone only once the capture worklet has posted its first batch: the fake device plays its file from `getUserMedia` on, and audio before the context renders is lost.
+
 ## Checks
 
 Run after each edit, and all of them before delivering:
@@ -126,7 +138,7 @@ npm test
 
 `npm run check:effect` runs the `effect-tsgo` check on both tsconfigs, `npm run format:check` the formatter, `npm run generate:check` that the generated files are current, `npm run check:budget` the bundle budget against `dist/`, and `npm run test:e2e` builds and runs Playwright against the production build; CI runs all of them.
 The build and its tests fetch the listed model files once, so they need the network until `.cache/models/` holds them.
-`npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, in Node, type checked by `tsconfig.node.json`).
+`npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, `tests/support`, in Node, type checked by `tsconfig.node.json`).
 
 ## Content and privacy
 
