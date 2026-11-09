@@ -4,6 +4,7 @@ import { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { modifyFields } from 'foldkit/struct'
 
+import { dayText } from '../../history/format'
 import { dueRowAttribute } from '../../returns/commands'
 import { dueSection } from '../../returns/dueList'
 import { DuePage, dueLinesFound, dueRowsPerPage } from '../../returns/returns'
@@ -80,7 +81,7 @@ const secondaryButton = `inline-flex min-h-11 items-center justify-center rounde
 
 export const readOut = (model: Model): string => {
   const found = dueLinesFound(sampleDue.due, model.words)
-  return `${found.length} of ${sampleDue.due.length} lines due on ${sampleToday} found`
+  return `${found.length} of ${sampleDue.due.length} lines due on ${dayText(sampleToday)} found`
 }
 
 export const choices: ReadonlyArray<string> = [
@@ -93,7 +94,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
   entryFrame(
     {
       title: 'Lines due back',
-      summary: `The lines due back for a blind take on ${sampleToday}, ${sampleDue.due.length} of them from the sample learner, and the section with none due.`,
+      summary: `The lines due back for a blind take on ${dayText(sampleToday)}, ${sampleDue.due.length} of them from the sample learner, and the section with none due.`,
       demo: [
         h.div(
           [h.Role('group'), h.AriaLabel('Show'), h.Class('flex gap-2')],

@@ -97,6 +97,15 @@ describe('the lines due back on the home screen', () => {
       expect(findField).toBeAbsent(),
       expect(text(/\b(overdue|late|missed|lost)\b/i)).toBeAbsent(),
     )
+    scene(
+      { update, view },
+      given(
+        onHome([{ ...dueLine(1), title: '雨が好き', levelName: '雨が好き' }]),
+      ),
+      expect(
+        role('link', { name: '雨が好き, last blind take 3 November 2026' }),
+      ).toExist(),
+    )
   })
 
   test('in the large-list frame past 12, find by the words in the address, show 50 and offer the rest', () => {

@@ -15,7 +15,7 @@ import type { BlindPoint } from './history'
 // screen reader the picture is its summary: the first, latest and best.
 
 const width = 600
-const height = 180
+const height = 160
 const pad = 8
 const dotRadius = 5
 
@@ -116,7 +116,7 @@ export const blindChart = <ViewMessage>(
   const { dots, runs } = blindChartOf(points)
   const thresholdY = yOf(reach)
   return h.figure(
-    [h.DataAttribute('blind-chart', ''), h.Class('flex flex-col gap-2')],
+    [h.DataAttribute('blind-chart', ''), h.Class('flex flex-col gap-2 pt-2')],
     [
       h.div(
         [h.Class('flex gap-2')],
@@ -124,7 +124,7 @@ export const blindChart = <ViewMessage>(
           h.div(
             [
               h.AriaHidden(true),
-              h.Class('relative w-9 shrink-0 text-right text-xs text-muted'),
+              h.Class('relative w-8 shrink-0 text-right text-xs text-muted'),
             ],
             [
               axisLabel('100%', 1, false, h),
@@ -194,7 +194,7 @@ export const blindChart = <ViewMessage>(
       h.div(
         [
           h.AriaHidden(true),
-          h.Class('flex justify-between gap-4 pl-11 text-xs text-muted'),
+          h.Class('flex justify-between gap-4 pl-10 text-xs text-muted'),
         ],
         [
           h.span([], [dayText(points[0]?.day ?? '')]),

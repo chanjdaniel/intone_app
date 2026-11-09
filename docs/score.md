@@ -151,6 +151,17 @@ Every clip's top is the provisional top of the scale, a match of 1, until ticket
 On the fixtures 89% of the clean right takes reach the threshold as guided takes and 60% beat it, while 3% of the wrong takes reach it, all of them in the 19-mora phrase, and none beats it ("Stars").
 Stars are not part of the score, so changing a threshold bumps no `SCORE_VERSION`; a line's stars are worked out from its kept takes each time they are shown, so a threshold tuned or a take scored again moves them.
 
+## Returns
+
+Once a line has had a blind take, it comes back for another on a widening schedule (`src/score/returns.ts`), worked out from its blind takes alone, earliest first, so a guided take is never its return.
+A blind take made on or after the day the line is due is its return: one that reaches the threshold, read as stars read it, brings the line back after the next of `returnStepDays` (1, 3, 7, 14 and 30 days, then 30 from then on), and one that misses brings it back `returnAfterMissDays` (1) later and starts the steps again.
+A line's first blind take, reached or not, brings it back the next day.
+A blind take made before the line is due moves the date only when it misses, so several in one sitting cannot skip the steps; one that could not be compared moves nothing, as it costs no star.
+A line stays due from its day on, however long after, with nothing lost and no word of lateness, and its next step is reckoned from the day the return is made.
+The steps are the widening intervals of spaced practice the ticket gives; no data of the app's own has tuned them yet.
+Days are the learner's own, as each take keeps them, so travel moves no return.
+Like stars, a line's return is worked out from its kept takes of the line as it is now whenever it is shown, never stored apart: a take scored again, a span changed (its returns start again), a restore or a deletion moves it with the takes, and a backup carries it with them.
+
 ## Time to score
 
 Scoring the study's 3,528 takes of 5 to 19 morae takes 0.23 to 0.48 ms a take in Node 24.22.1 on Daniel's machine (11 cores, at load averages of 2 to 9), and two 29 s readings against each other 36 to 60 ms (`npm run score:study -- --time`).

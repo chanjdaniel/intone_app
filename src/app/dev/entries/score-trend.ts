@@ -49,7 +49,7 @@ export const view = (_model: Model, h: HtmlBuilder<never>): Html =>
         h.section(
           [h.Class('flex flex-col gap-2')],
           [
-            h.h3([h.Class('text-base font-bold')], [name]),
+            h.h2([h.Class('text-base font-bold')], [name]),
             scoreTrend(trend, h),
           ],
         ),

@@ -32,6 +32,15 @@ const focusRing =
 
 export const dueFindInputId = 'find-due-lines'
 
+// A row's second line, before the day of its last blind take, which is
+// kept on one line: its level, unless the level is named by the line
+// itself, as a bundled clip of one line is.
+export const dueRowLead = (line: DueLine): string =>
+  [
+    ...(line.levelName === line.title ? [] : [line.levelName]),
+    'last blind take',
+  ].join(' · ')
+
 const dueRow = <ViewMessage>(
   line: DueLine,
   index: number,
@@ -66,13 +75,21 @@ const dueRow = <ViewMessage>(
               h.span(
                 [h.Class('text-sm text-muted break-words')],
                 [
-                  `${line.levelName} · last blind take ${dayText(line.lineReturn.setOn)}`,
+                  `${dueRowLead(line)} `,
+                  h.span(
+                    [h.Class('whitespace-nowrap')],
+                    [dayText(line.lineReturn.setOn)],
+                  ),
                 ],
               ),
             ],
           ),
           h.span(
-            [h.Class('flex shrink-0 items-center gap-3')],
+            [
+              h.Class(
+                'flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3',
+              ),
+            ],
             [
               starRow(line.stars, h),
               h.span(

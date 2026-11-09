@@ -28,6 +28,8 @@ Every screen, test, doc and name in the code uses these words with these meaning
 - **Marks:** a line's warning that its native curve is weak: low pitch confidence (little of its speech pitched) or likely music (a pitch through most of its pauses).
 - **Cut:** making an upload's lines: its speech found by Silero VAD, cut at pauses of about 300 ms into lines of about 1 to 4 s, and each line's native curve tracked, all in the clip Worker, with its progress shown and a way to stop it.
 - **Stars:** per line, 0 to 3: one for reaching the clip's threshold on a guided take, two for beating it, three for reaching it blind; worked out from the line's kept takes, so a take that couldn't compare never costs one.
+- **Return:** a line coming back for a blind take on a later day, spaced out 1, 3, 7, 14 and 30 days after each blind take made when it was due that reaches its threshold, and the next day after one that does not; a line is **due back** from that day on, listed on the home screen with no penalty however long it waits, and only a blind take counts as its return.
+- **Blind-take chart:** a line's blind takes over time on its history page, the threshold drawn across: whether practice held.
 - **Personal best:** a line's best match; a take that beats it, as the screen shows them in whole percent, is marked as a new one.
 - **Practice loop:** what a line's practice screen runs: hear the line, a guided take, the curves and the match, again as often as wanted, a blind take, and on to the next line of its level.
 - **Starter set:** the bundled, openly licensed lines.
