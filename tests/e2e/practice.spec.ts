@@ -248,9 +248,14 @@ const storedOnDevice = (page: Page) =>
       ),
     )
     database.close()
+    const files: Array<string> = []
+    for await (const name of (await navigator.storage.getDirectory()).keys()) {
+      files.push(name)
+    }
     return {
       stores: Object.fromEntries(names.map((name, i) => [name, counts[i]])),
       localStorage: localStorage.length,
+      files,
     }
   })
 
@@ -266,9 +271,17 @@ test('the native curve is tracked once, kept on the device, and tracked again if
 
       await openLine(page)
       expect(workers).toHaveLength(1)
+      // The line's curve, and the history's format; no take yet.
       expect(await storedOnDevice(page)).toStrictEqual({
-        stores: { nativeCurves: 1 },
+        stores: {
+          meta: 1,
+          nativeCurves: 1,
+          natives: 0,
+          takeRecordings: 0,
+          takes: 0,
+        },
         localStorage: 0,
+        files: [],
       })
 
       await page.reload()
@@ -302,7 +315,9 @@ test('the native curve is tracked once, kept on the device, and tracked again if
       ).toBeVisible({ timeout: 30_000 })
       expect(workers).toHaveLength(2)
 
-      // A take keeps nothing on the device: its audio stays in memory.
+      // A take keeps its curves and score in the history (docs/history.md),
+      // the native it was scored against once, and its audio nowhere: it
+      // stays in memory until the learner turns kept audio on.
       await page.getByRole('button', { name: 'Record' }).click()
       await expect(page.getByRole('timer')).toHaveText(/^0:01 of 0:30$/, {
         timeout: 30_000,
@@ -312,8 +327,15 @@ test('the native curve is tracked once, kept on the device, and tracked again if
         page.getByRole('button', { name: 'Record again' }),
       ).toBeVisible({ timeout: 30_000 })
       expect(await storedOnDevice(page)).toStrictEqual({
-        stores: { nativeCurves: 1 },
+        stores: {
+          meta: 1,
+          nativeCurves: 1,
+          natives: 1,
+          takeRecordings: 1,
+          takes: 1,
+        },
         localStorage: 0,
+        files: [],
       })
       expect(problems).toStrictEqual([])
     })
