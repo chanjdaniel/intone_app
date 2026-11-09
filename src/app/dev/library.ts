@@ -36,6 +36,9 @@ export const plannedEntries: ReadonlyArray<
   { name: 'score-card', title: 'Score card' },
   { name: 'star-row', title: 'Star row' },
   { name: 'line-row', title: 'Line row' },
+  { name: 'practice-calendar', title: 'Practice calendar' },
+  { name: 'score-trend', title: 'Score trend' },
+  { name: 'history-list', title: 'History list: lines practised' },
 ]
 
 const entryModules = import.meta.glob<DevEntryModule>([

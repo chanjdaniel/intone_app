@@ -11,7 +11,10 @@ import type { TrendPoint } from './history'
 
 const width = 600
 const height = 160
+// The frame keeps its shape, so a dot stays round; the margin keeps a
+// dot at either end inside it.
 const pad = 6
+const dotRadius = 4
 
 // Each run of scored takes, as SVG points.
 export const trendRuns = (
@@ -80,11 +83,10 @@ export const scoreTrend = <ViewMessage>(
           h.svg(
             [
               h.ViewBox(`0 0 ${width} ${height}`),
-              h.PreserveAspectRatio('none'),
               h.Role('img'),
               h.AriaLabel(describeTrend(trend)),
               h.Class(
-                'h-40 w-full rounded-md border border-line bg-surface text-accent',
+                'block h-auto w-full rounded-md border border-line bg-surface text-accent',
               ),
             ],
             [
@@ -111,18 +113,14 @@ export const scoreTrend = <ViewMessage>(
                 ]),
               ),
               // A lone scored take, between two that could not be
-              // compared, is drawn as a short mark of its own.
+              // compared, is drawn as a dot of its own.
               ...single.map(point => {
                 const [x = '0', y = '0'] = point.split(',')
-                return h.line([
-                  h.X1(String(Number(x) - 3)),
-                  h.X2(String(Number(x) + 3)),
-                  h.Y1(y),
-                  h.Y2(y),
-                  h.Stroke('currentColor'),
-                  h.StrokeWidth('6'),
-                  h.StrokeLinecap('round'),
-                  h.VectorEffect('non-scaling-stroke'),
+                return h.circle([
+                  h.Cx(x),
+                  h.Cy(y),
+                  h.R(String(dotRadius)),
+                  h.Fill('currentColor'),
                 ])
               }),
             ],

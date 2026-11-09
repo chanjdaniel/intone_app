@@ -1,7 +1,6 @@
 import { Schema } from 'effect'
 
 import type { Recording, Score } from '../score/score'
-import { historyFormat } from './indexed-db'
 
 // The history's records, as IndexedDB holds them and as the backup file
 // carries them, each checked by its Schema on every read
@@ -12,7 +11,11 @@ import { historyFormat } from './indexed-db'
 // score it again. The native recording a take was scored against is
 // kept once, by its content, however many takes share it.
 
-export { historyFormat }
+// The history's format, written in the database's meta store
+// (./indexed-db.ts) and in each record. A later format bumps the
+// database's version, converts the records it changes in its upgrade,
+// and moves this number on.
+export const historyFormat = 1
 
 const Format = Schema.Literal(historyFormat)
 
@@ -198,3 +201,17 @@ export const recordingId = (recording: Recording): string => {
   const hex = (value: number) => value.toString(16).padStart(8, '0')
   return `${hex(fnv(words, 0x811c9dc5))}${hex(fnv(words, 0x2f0e1d3b))}`
 }
+
+export type DumpedTake = Readonly<{
+  entry: TakeEntry
+  recording: TakeRecording
+}>
+
+// Everything kept, for the backup (./backup.ts): the kept audio by its
+// file's path, when asked for.
+export type HistoryDump = Readonly<{
+  settings: Settings
+  natives: ReadonlyArray<NativeEntry>
+  takes: ReadonlyArray<DumpedTake>
+  audio: ReadonlyMap<string, Uint8Array>
+}>

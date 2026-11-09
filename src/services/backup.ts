@@ -4,13 +4,13 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { decodeWav } from '../engine/audio/wav'
 import {
   Frames,
+  type HistoryDump,
   Settings,
   TakeEntry,
   historyFormat,
   nativeEntryOf,
   takeRecordingOf,
 } from './history-records'
-import type { HistoryDump } from './history-store'
 
 // The backup: one zip file the learner saves on their own device, with
 // `history.json` (every take, every native it was scored against, the
@@ -83,6 +83,9 @@ const audioName = /^[A-Za-z0-9][A-Za-z0-9._-]*\.wav$/
 const zipPathOf = (file: string): string =>
   `${audioFolder}${file.slice(file.lastIndexOf('/') + 1)}`
 
+const earliestZipDate = Date.UTC(1980, 0, 1, 12)
+const latestZipDate = Date.UTC(2099, 11, 31, 12)
+
 // The backup file of `dump`, made at `exportedAt`.
 export const encodeBackup = (
   dump: HistoryDump,
@@ -102,11 +105,17 @@ export const encodeBackup = (
   )
   // NOTE: the audio is stored, not deflated: WAV hardly shrinks, and
   // storing keeps a large backup quick to make.
+  // Each file is dated by the backup, so the same history saved at the
+  // same moment is the same file, byte for byte; within the years a zip
+  // can date, whatever the device's clock says.
+  const mtime = new Date(
+    Math.min(Math.max(exportedAt, earliestZipDate), latestZipDate),
+  )
   return zipSync({
-    [historyFile]: strToU8(encodeJson(file)),
+    [historyFile]: [strToU8(encodeJson(file)), { mtime }],
     ...Object.fromEntries(
       Object.entries(audio).map(
-        ([path, bytes]) => [path, [bytes, { level: 0 }]] as const,
+        ([path, bytes]) => [path, [bytes, { level: 0, mtime }]] as const,
       ),
     ),
   })

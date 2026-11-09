@@ -4,6 +4,7 @@ import { encodeWav } from '../engine/audio/wav'
 import type { Recording } from '../score/score'
 import { ClipStore } from './clip-store'
 import {
+  type HistoryDump,
   NativeEntry,
   Settings,
   TakeEntry,
@@ -73,20 +74,6 @@ export type HistoryReading = Readonly<{
   entries: ReadonlyArray<TakeEntry>
   // Records that did not decode: damaged, or written by a newer app.
   unreadable: number
-}>
-
-export type DumpedTake = Readonly<{
-  entry: TakeEntry
-  recording: TakeRecording
-}>
-
-// Everything kept, for the backup (./backup.ts): the kept audio by its
-// file's path, when asked for.
-export type HistoryDump = Readonly<{
-  settings: Settings
-  natives: ReadonlyArray<NativeEntry>
-  takes: ReadonlyArray<DumpedTake>
-  audio: ReadonlyMap<string, Uint8Array>
 }>
 
 export type Rescored = Readonly<{ id: string; comparison: Comparison }>

@@ -120,6 +120,18 @@ describe('the backup', () => {
       }),
   )
 
+  it.effect('is made whatever the device’s clock says', () =>
+    Effect.gen(function* () {
+      const from = yield* historyWith(false)
+      const dump = yield* from.run(store => store.dump(false))
+      const early = yield* decodeBackup(encodeBackup(dump, 5_000))
+      expect(early.takes).toHaveLength(2)
+      expect(encodeBackup(dump, Date.UTC(2026, 10, 10))).toEqual(
+        encodeBackup(dump, Date.UTC(2026, 10, 10)),
+      )
+    }),
+  )
+
   it.effect('leaves the audio out unless asked to bring it', () =>
     Effect.gen(function* () {
       const from = yield* historyWith(true)

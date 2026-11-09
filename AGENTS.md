@@ -72,7 +72,7 @@ When a folder's rule changes, change its fixtures with it.
   Code reads a model's URL only from `modelUrls` in `virtual:intone/models`, typed by the ids in the list; nothing hard-codes a model path, and no model file is committed.
 - **ONNX Runtime:** the build copies `onnxruntime-web`'s single-threaded CPU build (`ort-wasm-simd-threaded.wasm` and `.mjs`) to `dist/ort/<version>/`; code points `wasmPaths` at `onnxRuntimeWasmPaths` from `virtual:intone/onnx-runtime`.
   `vite.config.ts` resolves the package with its `onnxruntime-web-use-extern-wasm` condition, so the bundle loads those files rather than inlining the loader and emitting the 15 MB binary again under `assets/`.
-- **Bundle budget:** `bundle-budget.json` caps the entry chunk's gzip size, and `npm run check:budget` reads a build's `dist/` against it in CI; `docs/bundle-budget.md` says how it was set and how a raise is justified.
+- **Bundle budget:** `bundle-budget.json` caps the gzip size of the entry chunk and the chunks it imports statically, what the page loads before it starts, and `npm run check:budget` reads a build's `dist/` against it in CI; `docs/bundle-budget.md` says how it was set and how a raise is justified.
 - **Notices:** `NOTICES.md` names every package a production install keeps, with its version and licence, and every model's licence; `npm run generate` writes it from the lockfile and `models.json`.
 
 ## The dev library
@@ -129,7 +129,7 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 - Pitch frames never enter the Model.
   The Subscription's `takeEvents` sends it only the voice's onset (`DetectedVoiceOnset`, once) and the level meter with the clock (`TickedTakeMeter`, about 10 Hz); the curve comes once, from `AnalyseTake`, with its score.
   The curves' Mount (`DrawCurvePair`) draws the native's curve on the lower canvas and the learner's on the upper one; during a take it gets its take's frames from `liveFrames.ts`, where the tracker resource offers them while it holds the Worker, since a Mount runs with no services, feeds them to the painter's ring buffer, and the painter draws on each animation frame that changes the picture.
-- When a take ends, `AnalyseTake` asks the tracker for its curve and features, and `src/services/scorer.ts` (`Scorer`, with `layer` and `layerTest(respond)`) for its score against the native in its args; the take's features go no further than the score.
+- When a take ends, `AnalyseTake` asks the tracker for its curve and features, `src/services/scorer.ts` (`Scorer`, with `layer` and `layerTest(respond)`) for its score against the native in its args, and the history to keep it (see "History on the device"); the take's features go to the score and the history, never into the Model.
   The real layer loads the score's maths, `src/services/compare-take.ts`, as a chunk of its own on the first take, so the entry chunk does not carry it.
   The Model keeps the score as `TakeScore` (`take.ts`), with the take's pitch at each native frame through the score's alignment, which is how the result draws the take over the line, the worst stretch shaded behind both.
 - The score card (`scoreCard.ts`) shows "N% match to this clip", each part by name, the provisional note, and the worst stretch with a button for each voice; a take that could not be compared gets what to try, and no number.
@@ -154,6 +154,21 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 - `fixtures/tracked/` is every fixture's curve and features as the app makes them, written by `npm run fixtures:tracked`; `npm run score:study` writes `docs/score-study.md` from it, and fails while an anchor of the scale in the constants has drifted from what it measures.
   Both scripts run the app's own source under Node through `scripts/source-imports.ts`, which lets Node resolve its extensionless imports.
   `tests/scripts/` remakes both and fails on any difference; `tests/score/` holds the score to the fixtures, and `src/score/*.test.ts` proves its properties on the synthetic takes of `src/score/synthetic-take.ts`.
+
+## History on the device
+
+- `src/services/history-store.ts` (`HistoryStore`, with `layer` and `layerTest(factory, files)`) keeps every scored take in IndexedDB: its entry (line, guided or blind, date and the learner's day, score with its version, kept audio's file) in `takes`, its curve, features and aligned pitch in `takeRecordings`, and the native it was scored against in `natives`, once per recording by its content (`recordingId`).
+  The history screens read entries only; a take's recording is read to draw or score it again.
+  Every record is decoded by its Schema (`src/services/history-records.ts`) on every read, and one that does not decode is counted as unreadable and left out.
+- `src/services/indexed-db.ts` holds the database's version (2), its stores, the upgrade from version 1 (ticket 09's `nativeCurves` alone), and `meta`'s history format (1); a later format bumps the version and converts its records in `upgrade`.
+  Each read or write opens the database and closes it after, and an open connection closes itself when another tab upgrades or deletes it.
+- `src/services/clip-store.ts` (`ClipStore`, with `layer` and `layerMemory(files)`) keeps audio files in the origin private file system, written by `src/workers/clip-store.worker.ts` through a synchronous access handle (the one way every browser with the file system lets a page write there), read and deleted from the page; ticket 13 keeps clips there too.
+  A take's audio is kept, as 16-bit WAV, only when `meta`'s settings say `keepTakeAudio` (off until the learner turns it on), and goes with its take.
+- `src/services/backup.ts`, loaded only when used, with `fflate`, writes and reads the backup: `history.json` (the records, their frames as base64 of little-endian Float32) and an `audio/` folder only when asked, each zip entry dated by the backup; reading checks it whole with the same Schemas, every take's native and audio present, before anything is restored.
+- `src/app/history/` holds `/history` (the practice calendar, the lines practised in the large-list frame with the find words in the address as `?find=`), a line's history `/history/:clipId/:lineId` (the clip and the line, since a line's id is unique only in its clip) and scoring older takes again after `SCORE_VERSION` changes, a batch of 20 at a time; `src/app/settings/` holds `/settings` (kept audio, the storage the browser promised, Safari's seven-day limit, the backup and the clear-all dialog).
+  Each screen reads the device when it opens, through its Command; only the sums and the three drawn takes enter the Model.
+- The app asks for persistent storage when a take is first kept, and from the settings; `public/manifest.webmanifest` makes a Home Screen copy an app of its own, which Safari's limit does not reach.
+- `tests/e2e/history.spec.ts` proves it in the built app, nothing sent anywhere; its scale test restores 5,000 takes from `tests/support/history-fixture.ts`'s seeded backup, pinned by `tests/scripts/history-fixture.test.ts`, and times the screens (`docs/history.md`).
 
 ## Audio in tests
 

@@ -20,6 +20,9 @@ Every screen, test, doc and name in the code uses these words with these meaning
 - **Worst stretch:** the 400 ms of the line where the take's pitch part is lowest.
 - **Couldn't compare:** the score's answer when a take cannot be scored fairly.
 - **Score card:** what the practice screen shows after a take: the match and its parts by name, and the worst stretch, shaded on both curves and playable from both voices; or, when it couldn't compare, what to try and no number.
+- **History:** every take kept on the device, with both curves and features, its score and the score's version; `/history` shows the days practised (the **practice calendar**, which counts only what was done) and the lines practised, and a line's history its first, best and latest takes over the native curve and its **trend**, the match take by take.
+- **Kept audio:** a take's own recording, kept with it only once the learner turns that on, and deleted with it.
+- **Backup:** one zip file the learner saves on their own device, holding the history and, only when asked, the kept audio; restoring it adds its takes to the history there.
 - **Stars:** per line, 0 to 3: one for reaching the clip's threshold on a guided take, two for beating it, three for reaching it blind.
 - **Starter set:** the bundled, openly licensed lines.
 - **Local pack:** Daniel's untracked `local/` folder and its manifest.

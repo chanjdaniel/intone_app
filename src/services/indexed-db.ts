@@ -1,5 +1,7 @@
 import { Effect, Schema, type Scope } from 'effect'
 
+import { historyFormat } from './history-records'
+
 // The app's own thin way into IndexedDB, on Effect's stable core (never
 // `@effect/platform-browser`'s unstable `IndexedDb`): the one database,
 // its stores, and a request or a transaction as an Effect. The database's
@@ -30,10 +32,9 @@ export const stores = {
 } as const
 export type Store = (typeof stores)[keyof typeof stores]
 
-// The history's format, written in the meta store when version 2 makes
-// its stores. A later format bumps `databaseVersion`, converts the
-// records it changes in `upgrade`, and writes its own number here.
-export const historyFormat = 1
+// Where the meta store keeps the history's format, written when version
+// 2 makes its stores. A later format bumps `databaseVersion`, converts
+// the records it changes in `upgrade`, and writes its own number here.
 export const formatKey = 'format'
 
 // Brings a database at `oldVersion` up to `databaseVersion`, one version
