@@ -34,6 +34,8 @@ npm run test:e2e
 `npm run test:e2e` builds the app and runs the Playwright tests against that build in headless Chromium.
 
 The app is built with [Foldkit](https://foldkit.dev) on [Effect](https://effect.website).
+[`AGENTS.md`](AGENTS.md) says how the code is laid out and checked, [`CONTEXT.md`](CONTEXT.md) what its words mean, and [`docs/upgrading.md`](docs/upgrading.md) how Foldkit and Effect are upgraded.
+`repos/foldkit/` holds Foldkit's own repository at the installed release, vendored as reading only.
 
 ## The 2023 iOS project
 
