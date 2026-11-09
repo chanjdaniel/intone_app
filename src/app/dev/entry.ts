@@ -25,7 +25,8 @@ export const entryPath = (name: string): string => `${libraryPath}/${name}`
 const focusRing =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
-export const linkClass = `rounded-sm text-accent underline underline-offset-4 ${focusRing}`
+// Standalone links reach the 44 px touch target.
+export const linkClass = `inline-flex min-h-11 items-center rounded-sm text-accent underline underline-offset-4 ${focusRing}`
 
 export const buttonFocusClass = focusRing
 

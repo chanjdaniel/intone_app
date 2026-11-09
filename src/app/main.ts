@@ -113,7 +113,7 @@ const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
         [
           h.Href(homeRouter()),
           h.Class(
-            'rounded-md text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+            'inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
           ),
         ],
         ['Go to the start'],

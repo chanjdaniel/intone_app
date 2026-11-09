@@ -96,7 +96,7 @@ export const indexView = <Message>(h: HtmlBuilder<Message>): Html =>
             Array.map(plannedEntries, ({ name, title }) =>
               h.keyed('li')(
                 name,
-                [h.Class('flex items-center justify-between gap-4 py-3')],
+                [h.Class('flex items-center justify-between gap-4 py-1')],
                 isBuilt(name)
                   ? [
                       h.a(
@@ -108,7 +108,14 @@ export const indexView = <Message>(h: HtmlBuilder<Message>): Html =>
                       ),
                     ]
                   : [
-                      h.span([h.Class('text-lg text-muted')], [title]),
+                      h.span(
+                        [
+                          h.Class(
+                            'inline-flex min-h-11 items-center text-lg text-muted',
+                          ),
+                        ],
+                        [title],
+                      ),
                       h.span(
                         [
                           h.Class(
