@@ -4,6 +4,7 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { decodeWav } from '../engine/audio/wav'
 import {
   ClipEntry,
+  clipNativeIds,
   Frames,
   type HistoryDump,
   Settings,
@@ -205,11 +206,7 @@ export const decodeBackup = (
     }
     const clips = backup.clips ?? []
     const clipNatives = clips.find(clip =>
-      clip.lines.some(
-        line =>
-          line.native._tag === 'Tracked' &&
-          !nativeIds.has(line.native.nativeId),
-      ),
+      clipNativeIds(clip).some(nativeId => !nativeIds.has(nativeId)),
     )
     if (clipNatives !== undefined) {
       return yield* refused(

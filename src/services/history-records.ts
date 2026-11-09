@@ -183,15 +183,46 @@ export const LineNative = Schema.Union([
 ])
 export type LineNative = typeof LineNative.Type
 
+// How far a line's native curve can be trusted
+// (../engine/cut/quality.ts): the share of its speech with a confident
+// pitch, and the share of its pauses that still have one.
+export const LineQuality = Schema.Struct({
+  speechFrames: Schema.Finite,
+  confidentShare: Fraction,
+  pauseFrames: Schema.Finite,
+  pausePitchedShare: Fraction,
+})
+export type LineQuality = typeof LineQuality.Type
+
 export const ClipLine = Schema.Struct({
-  // Unique in its clip: the line's number when the clip was cut.
+  // Unique in its clip, and never used again once the line is gone, since
+  // its takes keep it: the line's number when the clip was cut, or the
+  // clip's next id when a split made it.
   id: Schema.String,
   // Seconds from the clip's start.
   from: Schema.Finite,
   to: Schema.Finite,
   native: LineNative,
+  // A tracked line's quality; none on a line cut before it was measured.
+  quality: Schema.optionalKey(LineQuality),
 })
 export type ClipLine = typeof ClipLine.Type
+
+// The learner's last change to a clip's lines, and the line it changed by
+// its place in the clip then, counting from 1: what undoing it says.
+export const LineChange = Schema.Struct({
+  kind: Schema.Literals(['Moved', 'Split', 'Merged', 'Deleted']),
+  lineNumber: Schema.Finite,
+})
+export type LineChange = typeof LineChange.Type
+
+// The lines as they were before the last change, so it can be undone
+// once; their curves are kept until it can no longer be.
+export const ClipUndo = Schema.Struct({
+  change: LineChange,
+  lines: Schema.Array(ClipLine),
+})
+export type ClipUndo = typeof ClipUndo.Type
 
 export const ClipEntry = Schema.Struct({
   format: Format,
@@ -204,8 +235,20 @@ export const ClipEntry = Schema.Struct({
   // Null when the clip came from a backup that left its audio out.
   audio: Schema.NullOr(ClipAudio),
   lines: Schema.Array(ClipLine),
+  // The id the next line a split makes gets; none until a split, when it
+  // is one past the lines the clip was cut into.
+  nextLineId: Schema.optionalKey(Schema.Finite),
+  // The last change to the lines, until it is undone.
+  undo: Schema.optionalKey(ClipUndo),
 })
 export type ClipEntry = typeof ClipEntry.Type
+
+// The native curves a clip's records name: its lines', and those of its
+// lines before the last change, kept so it can be undone.
+export const clipNativeIds = (clip: ClipEntry): ReadonlyArray<string> =>
+  [...clip.lines, ...(clip.undo?.lines ?? [])].flatMap(line =>
+    line.native._tag === 'Tracked' ? [line.native.nativeId] : [],
+  )
 
 export const Settings = Schema.Struct({
   // Whether each take's audio is kept with it; off until the learner

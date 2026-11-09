@@ -23,6 +23,7 @@ import {
   LoadLevel,
   ReplaceLevelFind,
 } from './commands'
+import { initialEditor } from './editor'
 import { ClipsPage, DeleteState, LevelPage, levelRowsPerPage } from './level'
 import { sampleClip } from './testClips'
 
@@ -37,6 +38,7 @@ const onLevel = (clip = sampleClip(120)): Model => ({
     clip,
     shownRows: levelRowsPerPage,
     deleting: DeleteState.Idle(),
+    editor: initialEditor(clip),
   }),
 })
 
@@ -78,6 +80,7 @@ describe('a clip’s lines', () => {
             clip,
             shownRows: levelRowsPerPage,
             deleting: DeleteState.Idle(),
+            editor: initialEditor(clip),
           }),
         ),
       ),

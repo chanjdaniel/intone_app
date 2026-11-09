@@ -1,4 +1,4 @@
-import { Context, Duration, Effect, Layer, Schema } from 'effect'
+import { Context, Duration, Effect, Layer, Schedule, Schema } from 'effect'
 
 // Playing a voice back: the native line from its file, at its own speed
 // or slowed without changing its pitch, and the learner's take from the
@@ -34,15 +34,21 @@ export type MediaElement = Pick<
 const reasonOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
+// How often a play says where it has got to, when asked.
+export const heardEvery = Duration.millis(50)
+
 // Plays `url` once at `rate` times its speed, its pitch kept as it is:
 // whole, or from a stretch's start for as long as it lasts at that rate,
-// timed from when the sound starts.
+// timed from when the sound starts. `heardAt`, when given, hears the
+// seconds from the recording's start played so far, every 50 ms from
+// when the sound starts.
 export const playMedia =
   (makeElement: () => MediaElement) =>
   (
     url: string,
     rate: number,
     stretch?: Stretch,
+    heardAt?: (seconds: number) => void,
   ): Effect.Effect<void, PlaybackError> =>
     Effect.scoped(
       Effect.gen(function* () {
@@ -71,6 +77,17 @@ export const playMedia =
           ),
         )
         const ended = heard('ended')
+        if (heardAt !== undefined) {
+          yield* heard('playing').pipe(
+            Effect.andThen(
+              Effect.repeat(
+                Effect.sync(() => heardAt(element.currentTime)),
+                Schedule.spaced(heardEvery),
+              ),
+            ),
+            Effect.forkScoped,
+          )
+        }
         const done =
           stretch === undefined
             ? ended
@@ -182,11 +199,12 @@ export class Playback extends Context.Service<
   Playback,
   {
     // The native line from its file, `rate` times its speed, its pitch
-    // kept, whole or one stretch.
+    // kept, whole or one stretch; `heardAt` hears how far it has got.
     readonly playLine: (
       url: string,
       rate: number,
       stretch?: Stretch,
+      heardAt?: (seconds: number) => void,
     ) => Effect.Effect<void, PlaybackError>
     // The learner's take, from its samples, whole or one stretch.
     readonly playTake: (
@@ -207,7 +225,9 @@ export class Playback extends Context.Service<
 
   // Plays nothing: each play is written to `heard` and lasts as long as
   // its sound would, a line `lineSeconds` at its own speed, a take its
-  // samples' length, and a stretch its own, on the Effect clock.
+  // samples' length, and a stretch its own, on the Effect clock; a line
+  // asked where it has got to says so at its start and every 50 ms of
+  // that clock.
   static readonly layerTest = (
     heard: Array<Heard>,
     lineSeconds: number,
@@ -215,8 +235,14 @@ export class Playback extends Context.Service<
     Layer.succeed(
       Playback,
       Playback.of({
-        playLine: (url, rate, stretch) =>
-          Effect.sync(() =>
+        playLine: (url, rate, stretch, heardAt) => {
+          const from = stretch?.from ?? 0
+          const sleep = Effect.sleep(
+            Duration.millis(
+              (1000 * stretchSeconds(stretch, lineSeconds)) / rate,
+            ),
+          )
+          return Effect.sync(() =>
             heard.push(
               stretch === undefined
                 ? { voice: 'Line', url, rate }
@@ -224,13 +250,25 @@ export class Playback extends Context.Service<
             ),
           ).pipe(
             Effect.andThen(
-              Effect.sleep(
-                Duration.millis(
-                  (1000 * stretchSeconds(stretch, lineSeconds)) / rate,
-                ),
-              ),
+              heardAt === undefined
+                ? sleep
+                : Effect.gen(function* () {
+                    const started = yield* Effect.clockWith(
+                      clock => clock.currentTimeMillis,
+                    )
+                    yield* Effect.repeat(
+                      Effect.clockWith(clock => clock.currentTimeMillis).pipe(
+                        Effect.map(now =>
+                          heardAt(from + ((now - started) / 1000) * rate),
+                        ),
+                      ),
+                      Schedule.spaced(heardEvery),
+                    ).pipe(Effect.forkScoped)
+                    yield* sleep
+                  }).pipe(Effect.scoped),
             ),
-          ),
+          )
+        },
         playTake: (samples, sampleRate, stretch) =>
           Effect.sync(() =>
             heard.push(

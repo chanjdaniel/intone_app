@@ -5,7 +5,7 @@ import { Dialog } from '@foldkit/ui'
 
 import { countText } from '../history/format'
 import { pageFrame } from '../history/historyView'
-import { clipLineTitle, clockText } from '../line/lines'
+import { clockText } from '../line/lines'
 import { homeRouter, lineRouter } from '../route'
 import { levelRowAttribute } from './commands'
 import {
@@ -14,20 +14,27 @@ import {
   type LevelLine,
   LevelPage,
   levelFindFromRows,
+  levelLineTitle,
   levelLinesFound,
   levelRowsPerPage,
 } from './level'
+import { type LineEditorEvents, lineEditorView } from './lineEditorView'
+import { marksOf } from './lineMarks'
 
 // /level/:clipId: a clip's lines in order, in the app's one frame for a
 // long list (spec, "Frontend patterns applied"): a find field once there
 // are more than 12, a count line, the first 50 rows and "Show N more",
 // the find words in the address. Each line with a native curve opens its
-// practice screen. The clip can be deleted with everything of it, behind
+// practice screen, and each can be chosen in the line editor above the
+// list (./lineEditorView.ts) to fix where it starts and ends; a line with
+// a mark says why. The clip can be deleted with everything of it, behind
 // a confirming dialog.
 
 export type LevelEvents<ViewMessage> = Readonly<{
   changedWords: (words: string) => ViewMessage
   showMore: ViewMessage
+  editLine: (lineId: string) => ViewMessage
+  editor: LineEditorEvents<ViewMessage>
   deleteClip: ViewMessage
   keepClip: ViewMessage
   confirmDelete: ViewMessage
@@ -49,6 +56,7 @@ export const lengthText = (seconds: number): string =>
 const lineDetail = (line: LevelLine): string =>
   `${clockText(line.from, true)} to ${clockText(line.to, true)} · ${(line.to - line.from).toFixed(1)} s`
 
+// Why a line cannot be copied, if it cannot.
 const unplayable = (
   line: LevelLine,
   hasAudio: boolean,
@@ -69,7 +77,7 @@ const lineRowBody = <ViewMessage>(
   h.span(
     [h.Class('flex min-w-0 flex-col gap-0.5')],
     [
-      h.span([h.Class('text-xl font-bold')], [clipLineTitle(line)]),
+      h.span([h.Class('text-xl font-bold')], [levelLineTitle(line)]),
       // NOTE: a row's lines are one link's name; this keeps a pause
       // between them for a screen reader.
       h.span([h.Class('sr-only')], [', ']),
@@ -81,6 +89,10 @@ const lineRowBody = <ViewMessage>(
           h.span([h.Class('text-sm text-warn')], [why]),
         ],
       }),
+      ...marksOf(line).flatMap(mark => [
+        h.span([h.Class('sr-only')], [', ']),
+        h.span([h.Class('text-sm text-warn')], [`${mark.name}: ${mark.why}`]),
+      ]),
     ],
   ),
 ]
@@ -90,14 +102,15 @@ const lineRow = <ViewMessage>(
   hasAudio: boolean,
   line: LevelLine,
   index: number,
+  editLine: ((lineId: string) => ViewMessage) | null,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
   const maybeWhy = unplayable(line, hasAudio)
   const rowClass =
-    'flex min-h-11 items-center justify-between gap-4 rounded-lg border border-line bg-raised px-4 py-3 text-ink'
+    'flex min-h-11 min-w-0 flex-1 items-center justify-between gap-4 rounded-lg border border-line bg-raised px-4 py-3 text-ink'
   return h.keyed('li')(
     line.id,
-    [],
+    [h.Class('flex items-stretch gap-2')],
     [
       Option.isSome(maybeWhy)
         ? h.div(
@@ -125,6 +138,21 @@ const lineRow = <ViewMessage>(
               ),
             ],
           ),
+      ...(editLine === null
+        ? []
+        : [
+            h.button(
+              [
+                h.Type('button'),
+                h.AriaLabel(`Fix ${levelLineTitle(line).toLowerCase()}`),
+                h.OnClick(editLine(line.id)),
+                h.Class(
+                  `inline-flex min-h-11 shrink-0 items-center rounded-lg border border-line bg-surface px-4 text-base font-semibold text-ink hover:border-accent ${focusRing}`,
+                ),
+              ],
+              ['Fix'],
+            ),
+          ]),
     ],
   )
 }
@@ -138,7 +166,8 @@ export const levelLineList = <ViewMessage>(
   clip: LevelClip,
   words: string,
   shownRows: number,
-  events: Pick<LevelEvents<ViewMessage>, 'changedWords' | 'showMore'>,
+  events: Pick<LevelEvents<ViewMessage>, 'changedWords' | 'showMore'> &
+    Partial<Pick<LevelEvents<ViewMessage>, 'editLine'>>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
   const found = levelLinesFound(clip.lines, words)
@@ -179,7 +208,14 @@ export const levelLineList = <ViewMessage>(
       h.ul(
         [h.Class('flex flex-col gap-2')],
         shown.map((line, index) =>
-          lineRow(clip.id, clip.hasAudio, line, index, h),
+          lineRow(
+            clip.id,
+            clip.hasAudio,
+            line,
+            index,
+            clip.hasAudio ? (events.editLine ?? null) : null,
+            h,
+          ),
         ),
       ),
       ...(more > 0
@@ -365,6 +401,9 @@ const readyBody = <ViewMessage>(
             h,
           ),
         ]),
+    ...(clip.hasAudio
+      ? [lineEditorView(clip, page.editor, events.editor, h)]
+      : []),
     h.section(
       [h.AriaLabelledBy('level-lines-heading'), h.Class('flex flex-col gap-4')],
       [

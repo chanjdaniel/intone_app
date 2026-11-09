@@ -15,7 +15,10 @@ import { scoreTrend } from './trend'
 
 // A line's history: its match over every take, and its first, best and
 // latest takes, each drawn over the native it was scored against, with
-// the version of the score that scored it.
+// the version of the score that scored it. A line of the learner's clip
+// whose start or end has changed since keeps its earlier takes apart,
+// with a trend of their own, since they copied other audio; one gone
+// from its clip keeps its takes, and says so.
 
 export type LineHistoryEvents<ViewMessage> = Readonly<{
   draw: (args: {
@@ -195,28 +198,83 @@ export const lineHistoryView = <ViewMessage>(
       ),
       ...practiseLink(clipId, lineId, h),
     ],
-    Ready: ({ clipId, lineId, lineText, trend, first, maybeBest, latest }) => [
+    Ready: ({
+      clipId,
+      lineId,
+      lineText,
+      lineNow,
+      trend,
+      earlierTrend,
+      drawnFrom,
+      first,
+      maybeBest,
+      latest,
+    }) => [
       lineHeading(
         lineText,
-        `${countText(trend.length, 'take')} since ${dayText(first.day)}`,
+        Array.isReadonlyArrayNonEmpty(trend)
+          ? `${countText(trend.length, 'take')} since ${dayText(first.day)}`
+          : 'No takes yet of the line as it is now',
       ),
-      ...practiseLink(clipId, lineId, h),
-      h.section(
-        [h.AriaLabelledBy('trend-heading'), h.Class('flex flex-col gap-3')],
-        [
-          h.h2(
-            [h.Id('trend-heading'), h.Class('text-xl font-bold')],
-            ['Your match over time'],
-          ),
-          scoreTrend(trend, h),
-        ],
-      ),
+      ...(lineNow === 'Gone'
+        ? [
+            statusBox(
+              'This line is no longer in its clip: it was deleted, or merged into another line. Your takes of it are kept here.',
+              'status',
+              h,
+            ),
+          ]
+        : practiseLink(clipId, lineId, h)),
+      ...(Array.isReadonlyArrayNonEmpty(trend)
+        ? [
+            h.section(
+              [
+                h.AriaLabelledBy('trend-heading'),
+                h.Class('flex flex-col gap-3'),
+              ],
+              [
+                h.h2(
+                  [h.Id('trend-heading'), h.Class('text-xl font-bold')],
+                  ['Your match over time'],
+                ),
+                scoreTrend(trend, h),
+              ],
+            ),
+          ]
+        : []),
+      ...(Array.isReadonlyArrayNonEmpty(earlierTrend)
+        ? [
+            h.section(
+              [
+                h.AriaLabelledBy('earlier-heading'),
+                h.Class('flex flex-col gap-3'),
+              ],
+              [
+                h.h2(
+                  [h.Id('earlier-heading'), h.Class('text-xl font-bold')],
+                  ['Taken against its earlier start or end'],
+                ),
+                h.p(
+                  [h.Class('text-base text-muted')],
+                  [
+                    `${countText(earlierTrend.length, 'take')} copied the line before its start or end was changed. They are kept, and shown apart from its match over time, since they copied a different stretch of the clip.`,
+                  ],
+                ),
+                scoreTrend(earlierTrend, h),
+              ],
+            ),
+          ]
+        : []),
       h.section(
         [h.AriaLabelledBy('takes-heading'), h.Class('flex flex-col gap-4')],
         [
           h.h2(
             [h.Id('takes-heading'), h.Class('text-xl font-bold')],
-            ['Your takes over the line'],
+            [
+              drawnFrom === 'Now'
+                ? 'Your takes over the line'
+                : 'Your takes over its earlier start or end',
+            ],
           ),
           ...shownTakesOf(first, maybeBest, latest).map(({ name, take }) =>
             takeCard(name, take, events, h),

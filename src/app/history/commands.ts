@@ -9,10 +9,17 @@ import {
   HistoryStore,
 } from '../../services/history-store'
 import { Scorer } from '../../services/scorer'
+import { clipLineTitle, lineOf } from '../line/lines'
 import { Message } from '../message'
 import { historyRouter } from '../route'
 import { takeCurveOf, takeScoreOf } from '../take/take'
-import { type ShownTake, lineTakesOf, summarise, trendOf } from './history'
+import {
+  type LineAsKept,
+  type ShownTake,
+  lineTakesOf,
+  summarise,
+  trendOf,
+} from './history'
 
 // Reads the history from the device for /history: the lines practised
 // and the days, summed up, and today, for the calendar.
@@ -65,8 +72,45 @@ const shownTake = (
     ),
   )
 
-// Reads a line's takes for its page: the trend of every take, and the
-// first, best and latest whole, to draw.
+// What the device holds of a line now: a bundled line as it is, a line of
+// the learner's clip by the curve it is copied from now, and its name now
+// (its place in its clip may have moved), or that it is gone.
+const lineAsKept = (
+  history: HistoryStore['Service'],
+  clipId: string,
+  lineId: string,
+): Effect.Effect<
+  Readonly<{ asKept: LineAsKept; maybeName: Option.Option<string> }>,
+  HistoryError
+> =>
+  Option.isSome(lineOf(clipId, lineId))
+    ? Effect.succeed({ asKept: { _tag: 'Bundled' }, maybeName: Option.none() })
+    : history.clipLine(clipId, lineId).pipe(
+        Effect.map(
+          Option.match({
+            onNone: () => ({
+              asKept: { _tag: 'Gone' } as const,
+              maybeName: Option.none(),
+            }),
+            onSome: ({ clip, line }) => ({
+              asKept: {
+                _tag: 'Current' as const,
+                maybeNativeId:
+                  line.native._tag === 'Tracked'
+                    ? Option.some(line.native.nativeId)
+                    : Option.none(),
+              },
+              maybeName: Option.some(
+                `${clip.name}, ${clipLineTitle(clip.lines.findIndex(found => found.id === lineId) + 1).toLowerCase()}`,
+              ),
+            }),
+          }),
+        ),
+      )
+
+// Reads a line's takes for its page: the trend of the line as it is now
+// and of its takes before its span changed, and the first, best and
+// latest whole, to draw.
 export const LoadLineHistory = Command.define('LoadLineHistory', {
   args: { clipId: Schema.String, lineId: Schema.String },
   messages: [Message.SucceededLoadLineHistory, Message.FailedLoadLineHistory],
@@ -74,7 +118,8 @@ export const LoadLineHistory = Command.define('LoadLineHistory', {
     Effect.gen(function* () {
       const history = yield* HistoryStore
       const { entries } = yield* history.entries
-      const maybeTakes = lineTakesOf(entries, clipId, lineId)
+      const { asKept, maybeName } = yield* lineAsKept(history, clipId, lineId)
+      const maybeTakes = lineTakesOf(entries, clipId, lineId, asKept)
       if (Option.isNone(maybeTakes)) {
         return Message.SucceededLoadLineHistory({
           clipId,
@@ -82,7 +127,8 @@ export const LoadLineHistory = Command.define('LoadLineHistory', {
           maybeFound: Option.none(),
         })
       }
-      const { takes, first, maybeBest, latest } = maybeTakes.value
+      const { lineNow, takes, earlier, drawnFrom, first, maybeBest, latest } =
+        maybeTakes.value
       const shown = yield* Effect.all({
         first: shownTake(history, first),
         maybeBest: Option.match(maybeBest, {
@@ -95,8 +141,11 @@ export const LoadLineHistory = Command.define('LoadLineHistory', {
         clipId,
         lineId,
         maybeFound: Option.some({
-          lineText: latest.lineText,
+          lineText: Option.getOrElse(maybeName, () => latest.lineText),
+          lineNow,
           trend: trendOf(takes),
+          earlierTrend: trendOf(earlier),
+          drawnFrom,
           ...shown,
         }),
       })

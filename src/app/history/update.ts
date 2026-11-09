@@ -4,7 +4,7 @@ import { modifyFields } from 'foldkit/struct'
 
 import type { Message } from '../message'
 import type { Model } from '../model'
-import type { TakeResourceServices } from '../take/resources'
+import type { AppResourceServices } from '../resources'
 import {
   FocusLineRow,
   LoadHistory,
@@ -17,6 +17,7 @@ import {
   type DayCount,
   HistoryPage,
   LineHistoryPage,
+  type LineNow,
   type LineSummary,
   Rescoring,
   type ShownTake,
@@ -27,7 +28,7 @@ import {
 // The history screens' transitions: each screen reads the device when it
 // opens, and a result for a screen no longer open changes nothing.
 
-type HistoryUpdate = Update.Return<Model, Message, TakeResourceServices>
+type HistoryUpdate = Update.Return<Model, Message, AppResourceServices>
 
 const unchanged = (model: Model): HistoryUpdate => ({ model })
 
@@ -102,7 +103,7 @@ const whenReady = (
   model: Model,
   change: (page: Extract<HistoryPage, { _tag: 'Ready' }>) => Readonly<{
     page: Extract<HistoryPage, { _tag: 'Ready' }>
-    commands?: Update.Commands<Message, TakeResourceServices>
+    commands?: Update.Commands<Message, AppResourceServices>
   }>,
 ): HistoryUpdate => {
   if (model.history._tag !== 'Ready') {
@@ -240,7 +241,10 @@ export const succeededLoadLineHistory = (
   maybeFound: Option.Option<
     Readonly<{
       lineText: string
+      lineNow: LineNow
       trend: ReadonlyArray<TrendPoint>
+      earlierTrend: ReadonlyArray<TrendPoint>
+      drawnFrom: 'Now' | 'Earlier'
       first: ShownTake
       maybeBest: Option.Option<ShownTake>
       latest: ShownTake

@@ -2,6 +2,7 @@ import { Option } from 'effect'
 import { Mount, expect, given, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
+import { initialEditor } from './level/editor'
 import { ClipsPage, DeleteState, LevelPage } from './level/level'
 import { sampleClip } from './level/testClips'
 import { NativeCurve } from './line/native'
@@ -122,6 +123,7 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
         clip: sampleClip(20, false),
         shownRows: 50,
         deleting: DeleteState.Idle(),
+        editor: initialEditor(sampleClip(20, false)),
       }),
     },
     false,

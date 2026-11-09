@@ -115,6 +115,36 @@ describe('playing the line', () => {
       }),
   )
 
+  it.effect(
+    'says where it has got to every 50 ms from when the sound starts, until it ends',
+    () =>
+      Effect.gen(function* () {
+        const fake = fakeElement()
+        const heard: Array<number> = []
+        const fiber = yield* playMedia(() => fake.element)(
+          '/clip.wav',
+          1,
+          { from: 2, to: 3 },
+          seconds => heard.push(seconds),
+        ).pipe(Effect.forkChild)
+        yield* settled
+        yield* TestClock.adjust('200 millis')
+        expect(heard).toStrictEqual([])
+        fake.dispatch('playing')
+        yield* settled
+        fake.element.currentTime = 2.05
+        yield* TestClock.adjust('50 millis')
+        fake.element.currentTime = 2.1
+        yield* TestClock.adjust('50 millis')
+        expect(heard).toStrictEqual([2, 2.05, 2.1])
+        yield* TestClock.adjust('900 millis')
+        yield* Fiber.join(fiber)
+        const count = heard.length
+        yield* TestClock.adjust('200 millis')
+        expect(heard).toHaveLength(count)
+      }),
+  )
+
   it.effect('ends a stretch early if the line itself ends first', () =>
     Effect.gen(function* () {
       const fake = fakeElement()

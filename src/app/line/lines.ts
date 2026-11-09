@@ -102,8 +102,16 @@ export const clockText = (seconds: number, tenths = false): string => {
     : `${minutes}:${rest}`
 }
 
-export const clipLineTitle = (line: Pick<ClipLine, 'id'>): string =>
-  `Line ${line.id}`
+// Minutes, seconds and hundredths, as 1:05.32: the line editor's 10 ms
+// steps.
+export const preciseClockText = (seconds: number): string => {
+  const hundredths = Math.round(seconds * 100)
+  const whole = Math.floor(hundredths / 100)
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}.${String(hundredths % 100).padStart(2, '0')}`
+}
+
+// A line of a clip is named by its place in the clip, counting from 1.
+export const clipLineTitle = (number: number): string => `Line ${number}`
 
 export const clipLineDetail = (
   clip: Pick<ClipEntry, 'name'>,
@@ -116,18 +124,23 @@ export const practiceLineOfClip = (
   clip: ClipEntry,
   line: ClipLine,
   audio: NonNullable<ClipEntry['audio']>,
-): PracticeLine => ({
-  clipId: clip.id,
-  lineId: line.id,
-  title: clipLineTitle(line),
-  titleIsText: false,
-  detail: clipLineDetail(clip, line),
-  credit: 'From your own clip, kept on this device.',
-  historyText: `${clip.name}, ${clipLineTitle(line).toLowerCase()}`,
-  audio: LineAudio.Clip({
-    file: audio.file,
-    type: audio.type,
-    from: line.from,
-    to: line.to,
-  }),
-})
+): PracticeLine => {
+  const title = clipLineTitle(
+    clip.lines.findIndex(found => found.id === line.id) + 1,
+  )
+  return {
+    clipId: clip.id,
+    lineId: line.id,
+    title,
+    titleIsText: false,
+    detail: clipLineDetail(clip, line),
+    credit: 'From your own clip, kept on this device.',
+    historyText: `${clip.name}, ${title.toLowerCase()}`,
+    audio: LineAudio.Clip({
+      file: audio.file,
+      type: audio.type,
+      from: line.from,
+      to: line.to,
+    }),
+  }
+}

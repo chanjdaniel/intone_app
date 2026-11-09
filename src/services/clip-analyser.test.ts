@@ -12,6 +12,7 @@ import {
   type ClipWorker,
   analyseWith,
   clipSampleRate,
+  editWith,
 } from './clip-analyser'
 
 // A stand-in for the clip Worker: it records what it is sent, with what
@@ -56,6 +57,13 @@ const fakeWorker = (reply: (message: ToClip) => ReadonlyArray<FromClip>) => {
   }
 }
 
+const quality = {
+  speechFrames: 2,
+  confidentShare: 1,
+  pauseFrames: 1,
+  pausePitchedShare: 0,
+}
+
 const tracked = (onset: number): FromClip & { _tag: 'CutDone' } => ({
   _tag: 'CutDone',
   lines: [
@@ -71,6 +79,7 @@ const tracked = (onset: number): FromClip & { _tag: 'CutDone' } => ({
         onsetFrame: onset,
         featureDims: 1,
         features: Float32Array.of(1, 2, 3),
+        quality,
       },
     },
     { from: 48_000, to: 64_000, curve: { _tag: 'TooQuiet' } },
@@ -82,6 +91,23 @@ const answering =
   (message: ToClip): ReadonlyArray<FromClip> => {
     if (message._tag === 'Load') {
       return [{ _tag: 'Loaded' }]
+    }
+    if (message._tag === 'Hold') {
+      return [{ _tag: 'Held', peaks: Uint8Array.of(0, 128, 255) }]
+    }
+    if (message._tag === 'Track') {
+      return [
+        // An answer to an earlier request is passed over.
+        { _tag: 'TrackDone', request: message.request - 1, lines: [] },
+        {
+          _tag: 'TrackDone',
+          request: message.request,
+          lines: message.spans.map(span => ({
+            ...span,
+            curve: { _tag: 'TooNoisy' },
+          })),
+        },
+      ]
     }
     if (message._tag === 'Cut') {
       return [
@@ -341,6 +367,79 @@ describe('analyseWith', () => {
       yield* Fiber.join(interrupting)
       expect(fake.isTerminated()).toBe(true)
     }),
+  )
+})
+
+describe('editWith', () => {
+  it.effect(
+    'decodes a kept clip once, holds it in the Worker and gives its waveform',
+    () =>
+      Effect.gen(function* () {
+        const fake = fakeWorker(answering(tracked(1)))
+        const { browser, decoded } = browserWith(fake.worker, {
+          decodedSeconds: 3,
+        })
+        const editing = yield* editWith(browser)(file)
+        expect(editing.seconds).toBe(3)
+        expect([...editing.peaks]).toStrictEqual([0, 128, 255])
+        expect(decoded).toStrictEqual([file])
+        expect(fake.sent.map(({ message }) => message._tag)).toStrictEqual([
+          'Load',
+          'Hold',
+        ])
+        expect(fake.sent[1]?.transfer).toBe(1)
+      }).pipe(Effect.scoped),
+  )
+
+  it.effect(
+    'tracks spans of the held clip, in samples, one request at a time',
+    () =>
+      Effect.gen(function* () {
+        const fake = fakeWorker(answering(tracked(1)))
+        const { browser } = browserWith(fake.worker)
+        const editing = yield* editWith(browser)(file)
+        const first = yield* editing.track([{ from: 0.5, to: 1.25 }])
+        const second = yield* editing.track([
+          { from: 2, to: 3 },
+          { from: 3, to: 4 },
+        ])
+        expect(first).toStrictEqual([
+          { from: 0.5, to: 1.25, native: { _tag: 'TooNoisy' } },
+        ])
+        expect(second.map(line => [line.from, line.to])).toStrictEqual([
+          [2, 3],
+          [3, 4],
+        ])
+        expect(fake.sent[2]?.message).toStrictEqual({
+          _tag: 'Track',
+          request: 1,
+          spans: [{ from: 8000, to: 20_000 }],
+        })
+      }).pipe(Effect.scoped),
+  )
+
+  it.effect('closes the Worker when its scope closes', () =>
+    Effect.gen(function* () {
+      const fake = fakeWorker(answering(tracked(1)))
+      const { browser } = browserWith(fake.worker)
+      yield* editWith(browser)(file).pipe(Effect.scoped)
+      expect(fake.sent.at(-1)?.message).toStrictEqual({ _tag: 'Close' })
+      expect(fake.isTerminated()).toBe(true)
+    }),
+  )
+
+  it.effect('fails with the reason the Worker gives for a track', () =>
+    Effect.gen(function* () {
+      const fake = fakeWorker(message =>
+        message._tag === 'Track'
+          ? [{ _tag: 'Failed', reason: 'The pitch model failed.' }]
+          : answering(tracked(1))(message),
+      )
+      const { browser } = browserWith(fake.worker)
+      const editing = yield* editWith(browser)(file)
+      const error = yield* Effect.flip(editing.track([{ from: 0, to: 1 }]))
+      expect(error.reason).toBe('The pitch model failed.')
+    }).pipe(Effect.scoped),
   )
 })
 

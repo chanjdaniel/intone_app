@@ -8,7 +8,7 @@ import { HistoryPage, LineHistoryPage } from '../history/history'
 import { NativeCurve } from '../line/native'
 import { Message } from '../message'
 import type { Model } from '../model'
-import type { TakeResourceServices } from '../take/resources'
+import type { AppResourceServices } from '../resources'
 import {
   DeleteClip,
   FocusLevelRow,
@@ -17,6 +17,7 @@ import {
   LoadLevel,
   ReplaceLevelFind,
 } from './commands'
+import { initialEditor } from './editor'
 import {
   type ClipSummary,
   ClipsPage,
@@ -30,7 +31,7 @@ import {
 // read from the device when their screen opens, and a result for a
 // screen no longer open, or for another clip, changes nothing.
 
-type LevelUpdate = Update.Return<Model, Message, TakeResourceServices>
+type LevelUpdate = Update.Return<Model, Message, AppResourceServices>
 type ReadyLevel = Extract<LevelPage, { _tag: 'Ready' }>
 
 const unchanged = (model: Model): LevelUpdate => ({ model })
@@ -85,6 +86,7 @@ export const succeededLoadLevel = (
                   clip,
                   shownRows: levelRowsPerPage,
                   deleting: DeleteState.Idle(),
+                  editor: initialEditor(clip),
                 }),
             }),
         }),
@@ -107,7 +109,7 @@ export const failedLoadLevel = (
 const whenReady = (
   model: Model,
   change: (page: ReadyLevel) => ReadyLevel,
-  ...commands: Update.Commands<Message, TakeResourceServices>
+  ...commands: Update.Commands<Message, AppResourceServices>
 ): LevelUpdate =>
   model.level._tag === 'Ready'
     ? {

@@ -9,7 +9,13 @@ import {
   Stream,
 } from 'effect'
 
-import { type ClipProgress, analyseClip } from '../engine/cut/clip'
+import { waveformPeaks } from '../engine/audio/peaks'
+import {
+  type ClipLine,
+  type ClipProgress,
+  analyseClip,
+  trackSpans,
+} from '../engine/cut/clip'
 import type { SileroInference } from '../engine/cut/silero'
 import type { SwiftF0Inference } from '../engine/pitch/swift-f0'
 import {
@@ -28,7 +34,9 @@ import { openSwiftF0 } from './swift-f0-session'
 // each line (../engine/cut/clip.ts), posting its progress as it goes. A
 // `Close` stops a cut at the next window or line, frees both models,
 // says `Closed` and closes the Worker, so cancelling from the page frees
-// the clip's memory.
+// the clip's memory. For the line editor it holds a kept clip instead
+// (`Hold`, answered with its waveform) and tracks the lines the learner
+// changed (`Track`), one request at a time.
 
 const post = (message: FromClip): Effect.Effect<void> =>
   Effect.sync(() => {
@@ -69,6 +77,25 @@ const yieldToMessages = (): Promise<void> =>
 
 type Models = { speech: SileroInference; pitch: SwiftF0Inference }
 
+const cutLineOf = (line: ClipLine): CutLine =>
+  line.curve._tag === 'Tracked'
+    ? {
+        from: line.from,
+        to: line.to,
+        curve: {
+          _tag: 'Tracked',
+          frameHz: line.curve.curve.frameHz,
+          f0Hz: line.curve.curve.f0Hz,
+          confidence: line.curve.curve.confidence,
+          levelDb: line.curve.curve.levelDb,
+          onsetFrame: line.curve.curve.onsetFrame,
+          featureDims: line.curve.featureDims,
+          features: line.curve.features,
+          quality: line.curve.quality,
+        },
+      }
+    : { from: line.from, to: line.to, curve: line.curve }
+
 const program = Effect.gen(function* () {
   const modelScope = yield* Scope.make()
   const cutScope = yield* Scope.make()
@@ -76,7 +103,8 @@ const program = Effect.gen(function* () {
     models: Models | null
     stopping: boolean
     cutting: Fiber.Fiber<void> | null
-  } = { models: null, stopping: false, cutting: null }
+    held: Float32Array | null
+  } = { models: null, stopping: false, cutting: null, held: null }
 
   const load = (message: Extract<ToClip, { _tag: 'Load' }>) =>
     Effect.gen(function* () {
@@ -122,27 +150,7 @@ const program = Effect.gen(function* () {
           : new CutError({ reason: reasonOf(error) }),
     }).pipe(
       Effect.flatMap(lines =>
-        post({
-          _tag: 'CutDone',
-          lines: lines.map((line): CutLine =>
-            line.curve._tag === 'Tracked'
-              ? {
-                  from: line.from,
-                  to: line.to,
-                  curve: {
-                    _tag: 'Tracked',
-                    frameHz: line.curve.curve.frameHz,
-                    f0Hz: line.curve.curve.f0Hz,
-                    confidence: line.curve.curve.confidence,
-                    levelDb: line.curve.curve.levelDb,
-                    onsetFrame: line.curve.curve.onsetFrame,
-                    featureDims: line.curve.featureDims,
-                    features: line.curve.features,
-                  },
-                }
-              : { from: line.from, to: line.to, curve: line.curve },
-          ),
-        }),
+        post({ _tag: 'CutDone', lines: lines.map(cutLineOf) }),
       ),
       Effect.catch(error =>
         error === null
@@ -150,6 +158,42 @@ const program = Effect.gen(function* () {
           : post({ _tag: 'Failed', reason: error.reason }),
       ),
     )
+
+  const track = (
+    request: number,
+    samples: Float32Array,
+    spans: ReadonlyArray<Readonly<{ from: number; to: number }>>,
+    models: Models,
+  ) =>
+    Effect.tryPromise({
+      try: () =>
+        trackSpans(samples, spans, models, async () => {
+          await yieldToMessages()
+          if (state.stopping) {
+            throw new Stopped()
+          }
+        }),
+      catch: error =>
+        error instanceof Stopped
+          ? null
+          : new CutError({ reason: reasonOf(error) }),
+    }).pipe(
+      Effect.flatMap(lines =>
+        post({ _tag: 'TrackDone', request, lines: lines.map(cutLineOf) }),
+      ),
+      Effect.catch(error =>
+        error === null
+          ? Effect.void
+          : post({ _tag: 'Failed', reason: error.reason }),
+      ),
+    )
+
+  const busy = (models: Models | null): string | null =>
+    models === null
+      ? 'The models are not loaded.'
+      : state.cutting !== null
+        ? 'The clip analyser is busy.'
+        : null
 
   const handle = (message: ToClip): Effect.Effect<void> =>
     Match.value(message).pipe(
@@ -163,16 +207,38 @@ const program = Effect.gen(function* () {
         Cut: ({ samples }) =>
           Effect.gen(function* () {
             const { models } = state
-            if (models === null || state.cutting !== null) {
-              return yield* post({
-                _tag: 'Failed',
-                reason:
-                  models === null
-                    ? 'The models are not loaded.'
-                    : 'A clip is already being cut.',
-              })
+            const reason = busy(models)
+            if (models === null || reason !== null) {
+              return yield* post({ _tag: 'Failed', reason: reason ?? '' })
             }
             state.cutting = yield* Effect.forkIn(cut(samples, models), cutScope)
+          }),
+        Hold: ({ samples }) =>
+          Effect.gen(function* () {
+            state.held = samples
+            yield* post({
+              _tag: 'Held',
+              peaks: waveformPeaks(samples, 16_000),
+            })
+          }),
+        Track: ({ request, spans }) =>
+          Effect.gen(function* () {
+            const { models, held } = state
+            const reason =
+              busy(models) ?? (held === null ? 'No clip is held.' : null)
+            if (models === null || held === null || reason !== null) {
+              return yield* post({ _tag: 'Failed', reason: reason ?? '' })
+            }
+            state.cutting = yield* Effect.forkIn(
+              track(request, held, spans, models).pipe(
+                Effect.ensuring(
+                  Effect.sync(() => {
+                    state.cutting = null
+                  }),
+                ),
+              ),
+              cutScope,
+            )
           }),
         Close: () =>
           Effect.sync(() => {

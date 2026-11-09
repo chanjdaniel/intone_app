@@ -5,9 +5,9 @@ import { modifyFields } from 'foldkit/struct'
 import type { MicrophoneFailure } from '../../services/microphone'
 import type { Message } from '../message'
 import type { Model } from '../model'
+import type { AppResourceServices } from '../resources'
 import { AskToPersistStorage } from '../settings/commands'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
-import type { TakeResourceServices } from './resources'
 import {
   type Extent,
   type FinishedTake,
@@ -24,7 +24,7 @@ import {
 // against the state the take is in; one that does not fit the state (a
 // late timer, a result from an earlier take) leaves the Model as it is.
 
-export type TakeUpdate = Update.Return<Model, Message, TakeResourceServices>
+export type TakeUpdate = Update.Return<Model, Message, AppResourceServices>
 
 const unchanged = (model: Model): TakeUpdate => ({ model })
 
@@ -32,7 +32,7 @@ const unchanged = (model: Model): TakeUpdate => ({ model })
 const moveTo = (
   model: Model,
   take: Take,
-  ...commands: Update.Commands<Message, TakeResourceServices>
+  ...commands: Update.Commands<Message, AppResourceServices>
 ): TakeUpdate => ({
   model: modifyFields(model, { take: () => take }),
   commands: [...commands, FocusTakeControl()],

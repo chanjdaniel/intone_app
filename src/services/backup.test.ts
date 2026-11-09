@@ -8,6 +8,13 @@ import { syntheticTake } from '../score/synthetic-take'
 import { decodeBackup, encodeBackup, historyFile } from './backup'
 import { HistoryStore, type NewTake } from './history-store'
 
+const quality = {
+  speechFrames: 40,
+  confidentShare: 0.7,
+  pauseFrames: 12,
+  pausePitchedShare: 0,
+}
+
 const native = syntheticTake({
   pattern: [false, true, false],
   moraFrames: 8,
@@ -263,7 +270,7 @@ describe('the backup', () => {
               {
                 from: 0.5,
                 to: 2.5,
-                native: { _tag: 'Tracked', recording: native },
+                native: { _tag: 'Tracked', recording: native, quality },
               },
             ],
           }),
@@ -302,6 +309,87 @@ describe('the backup', () => {
             }),
           ),
         ).toContain('missing')
+      }),
+  )
+
+  it.effect(
+    'carries an edited clip with its undo, and refuses one missing a curve its undo names',
+    () =>
+      Effect.gen(function* () {
+        const from = yield* historyWith(false)
+        const other = syntheticTake({
+          pattern: [true, false, false],
+          moraFrames: 8,
+          registerHz: 180,
+          spanSemitones: 5,
+          seed: 31,
+        })
+        const cutNative = syntheticTake({
+          pattern: [false, true, true],
+          moraFrames: 8,
+          registerHz: 190,
+          spanSemitones: 5,
+          seed: 32,
+        })
+        const clip = yield* from.run(store =>
+          store.addClip({
+            name: 'reading.m4a',
+            type: 'audio/mp4',
+            addedAt: 3_000,
+            seconds: 9,
+            bytes: Uint8Array.of(1, 2, 3),
+            lines: [
+              {
+                from: 0.5,
+                to: 2.5,
+                native: { _tag: 'Tracked', recording: cutNative, quality },
+              },
+            ],
+          }),
+        )
+        const edited = yield* from.run(store =>
+          store.editClipLines(
+            clip.id,
+            { _tag: 'Move', lineId: '1', edge: 'to', seconds: 3 },
+            spans =>
+              Effect.succeed(
+                spans.map(span => ({
+                  ...span,
+                  native: {
+                    _tag: 'Tracked' as const,
+                    recording: other,
+                    quality,
+                  },
+                })),
+              ),
+          ),
+        )
+        const backup = encodeBackup(
+          yield* from.run(store => store.dump(false)),
+          5_000,
+        )
+        const restored = yield* decodeBackup(backup)
+        expect(restored.clips).toEqual([
+          { ...Option.getOrThrow(edited), audio: null },
+        ])
+        const json = historyJsonOf(backup)
+        const nativeOf = (line: { native: { nativeId?: string } }) =>
+          line.native.nativeId
+        const undoOnly = nativeOf(json.clips[0].undo.lines[0])
+        expect(
+          yield* refusal(
+            zipOf({
+              [historyFile]: JSON.stringify({
+                ...json,
+                natives: json.natives.filter(
+                  (entry: { id: string }) => entry.id !== undoOnly,
+                ),
+              }),
+            }),
+          ),
+        ).toBe(
+          `This file is not an Intone backup this app can read: the clip reading.m4a is missing a line's curve.`,
+        )
       }),
   )
 

@@ -3,8 +3,10 @@ import { join } from 'node:path'
 import { beforeAll, describe, expect, test } from 'vitest'
 
 import { decodeWav } from '../../src/engine/audio/wav.ts'
-import { analyseClip } from '../../src/engine/cut/clip.ts'
+import { analyseClip, trackSpans } from '../../src/engine/cut/clip.ts'
+import { lineMarks } from '../../src/engine/cut/quality.ts'
 import { resample } from '../../src/engine/pitch/resample.ts'
+import { mixUnder, musicBed, rmsWhere } from '../support/music-bed.ts'
 import { root } from '../support/run.ts'
 import { loadSileroModel, withSilero } from '../support/silero.ts'
 import { loadSwiftF0Model, withSwiftF0 } from '../support/swift-f0.ts'
@@ -78,4 +80,108 @@ describe('cutting a clip on the real models', () => {
       })
     },
   )
+})
+
+describe('a line’s quality and tracking it again, on the real models', () => {
+  const clip = 'fixtures/real/gongitsune.wav'
+
+  test('no line of a CC0 reading in a quiet room is marked', async () => {
+    const lines = await cut(read(clip))
+    lines.forEach(line => {
+      expect(line.curve._tag).toBe('Tracked')
+      if (line.curve._tag === 'Tracked') {
+        expect(lineMarks(line.curve.quality)).toStrictEqual({
+          lowConfidence: false,
+          likelyMusic: false,
+        })
+      }
+    })
+  })
+
+  test('the same reading over the music bed has most lines marked as music', async () => {
+    const samples = read(clip)
+    const lines = await cut(samples)
+    const speechRms = rmsWhere(samples, n =>
+      lines.some(line => n >= line.from && n < line.to),
+    )
+    const overMusic = mixUnder(
+      samples,
+      musicBed(
+        samples.length / rate,
+        speechRms * 10 ** (-15 / 20),
+        'gongitsune',
+      ),
+    )
+    const marked = (await cut(overMusic)).flatMap(line =>
+      line.curve._tag === 'Tracked' && lineMarks(line.curve.quality).likelyMusic
+        ? [line]
+        : [],
+    )
+    expect(marked.length).toBeGreaterThanOrEqual(3)
+  })
+
+  test('a cut line’s own span tracked again gives the same curve and features', async () => {
+    const samples = read(clip)
+    const lines = await cut(samples)
+    const picked = [lines[0], lines[4]].flatMap(line =>
+      line === undefined ? [] : [line],
+    )
+    const again = await withSilero(speechModel, speech =>
+      withSwiftF0(pitchModel, pitch =>
+        trackSpans(samples, picked, { speech, pitch }),
+      ),
+    )
+    expect(again).toHaveLength(2)
+    again.forEach((line, k) => {
+      const cutLine = picked[k]
+      expect(line.from).toBe(cutLine?.from)
+      expect(line.to).toBe(cutLine?.to)
+      if (line.curve._tag !== 'Tracked' || cutLine?.curve._tag !== 'Tracked') {
+        throw new Error('Both should be tracked.')
+      }
+      expect(line.curve.curve.f0Hz).toStrictEqual(cutLine.curve.curve.f0Hz)
+      expect(line.curve.features).toStrictEqual(cutLine.curve.features)
+      expect(lineMarks(line.curve.quality)).toStrictEqual(
+        lineMarks(cutLine.curve.quality),
+      )
+      expect(
+        Math.abs(
+          line.curve.quality.confidentShare -
+            cutLine.curve.quality.confidentShare,
+        ),
+      ).toBeLessThan(0.05)
+    })
+  })
+
+  test('a span moved or split is tracked from its own audio', async () => {
+    const samples = read(clip)
+    const [first] = await cut(samples)
+    if (first === undefined) {
+      throw new Error('The clip has a first line.')
+    }
+    const middle = Math.round((first.from + first.to) / 2)
+    const halves = await withSilero(speechModel, speech =>
+      withSwiftF0(pitchModel, pitch =>
+        trackSpans(
+          samples,
+          [
+            { from: first.from, to: middle },
+            { from: middle, to: first.to },
+          ],
+          { speech, pitch },
+        ),
+      ),
+    )
+    expect(halves.map(({ from, to }) => [from, to])).toStrictEqual([
+      [first.from, middle],
+      [middle, first.to],
+    ])
+    halves.forEach(half => {
+      if (half.curve._tag === 'Tracked') {
+        expect(half.curve.curve.f0Hz.length).toBeLessThan(
+          (first.to - first.from) / 256,
+        )
+      }
+    })
+  })
 })

@@ -7,7 +7,7 @@ import { FileDrop } from '@foldkit/ui'
 import { ClipsPage } from '../level/level'
 import { Message } from '../message'
 import type { Model } from '../model'
-import type { TakeResourceServices } from '../take/resources'
+import type { AppResourceServices } from '../resources'
 import { FocusUploadStatus, OpenLevel } from './commands'
 import { UploadJob, UploadStep, refusalOf } from './upload'
 
@@ -16,7 +16,7 @@ import { UploadJob, UploadStep, refusalOf } from './upload'
 // lines. A step or an end from a job that is no longer running (it was
 // cancelled, or the screen was left) changes nothing.
 
-type UploadUpdate = Update.Return<Model, Message, TakeResourceServices>
+type UploadUpdate = Update.Return<Model, Message, AppResourceServices>
 
 const unchanged = (model: Model): UploadUpdate => ({ model })
 
@@ -68,7 +68,7 @@ const started = (model: Model, file: File.File): UploadUpdate => {
 }
 
 const foldFileDropOutMessage = FileDrop.OutMessage.match<
-  Update.Step<Model, Message, TakeResourceServices>
+  Update.Step<Model, Message, AppResourceServices>
 >({
   ReceivedFiles:
     ({ files }) =>

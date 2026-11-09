@@ -25,6 +25,8 @@ import {
   view,
 } from '../main'
 import { DeleteClip, FocusLevelRow } from './commands'
+import { initialEditor } from './editor'
+import { FollowLineEditorPointer } from './editorPointer'
 import { ClipsPage, DeleteState, LevelPage, levelRowsPerPage } from './level'
 import { sampleClip } from './testClips'
 
@@ -37,10 +39,16 @@ const onLevel = (
     clip,
     shownRows: levelRowsPerPage,
     deleting: DeleteState.Idle(),
+    editor: initialEditor(clip),
   }),
 })
 
 const rows = all.role('link', { name: /^Line \d+/ })
+
+const pointerFollowed = Mount.resolve(
+  FollowLineEditorPointer,
+  Message.CompletedFollowLineEditorPointer(),
+)
 
 const dialogShown = [
   Command.resolve(Dialog.ShowDialog, Dialog.Message.SucceededShowDialog()),
@@ -55,6 +63,7 @@ describe('/level/:clipId', () => {
     scene(
       { update, view },
       given(onLevel()),
+      pointerFollowed,
       expect(role('heading', { name: 'reading.mp3', level: 1 })).toExist(),
       expect(
         text('3 lines from 10.0 s of audio, kept on this device.'),
@@ -74,6 +83,7 @@ describe('/level/:clipId', () => {
     scene(
       { update, view },
       given(onLevel()),
+      pointerFollowed,
       expect(role('link', { name: /^Line 2/ })).not.toExist(),
       expect(text('Too quiet to find its pitch')).toExist(),
     )
@@ -92,6 +102,7 @@ describe('/level/:clipId', () => {
     scene(
       { update, view },
       given(onLevel(sampleClip(12))),
+      pointerFollowed,
       expect(label('Find a line')).not.toExist(),
       expectAll(rows).toHaveCount(11),
     )
@@ -101,8 +112,9 @@ describe('/level/:clipId', () => {
     scene(
       { update, view },
       given(onLevel(sampleClip(120))),
+      pointerFollowed,
       expect(label('Find a line')).toExist(),
-      expect(role('status')).toHaveText('120 lines'),
+      expect(text('120 lines')).toExist(),
       expectAll(rows).toHaveCount(49),
       click(role('button', { name: 'Show 50 more' })),
       Command.resolve(FocusLevelRow, Message.CompletedFocusLevelRow()),
@@ -117,13 +129,15 @@ describe('/level/:clipId', () => {
     scene(
       { update, view },
       given(onLevel(sampleClip(120), Option.some('Line 11'))),
-      expect(role('status')).toHaveText('11 lines of 120 found for “Line 11”'),
+      pointerFollowed,
+      expect(text('11 lines of 120 found for “Line 11”')).toExist(),
       expect(label('Find a line')).toHaveValue('Line 11'),
     )
     scene(
       { update, view },
       given(onLevel(sampleClip(120), Option.some('5:00'))),
-      expect(role('status')).toHaveText('1 line of 120 found for “5:00”'),
+      pointerFollowed,
+      expect(text('1 line of 120 found for “5:00”')).toExist(),
       expect(role('link', { name: /^Line 101/ })).toExist(),
     )
   })
@@ -132,6 +146,7 @@ describe('/level/:clipId', () => {
     scene(
       { update, view },
       given(onLevel()),
+      pointerFollowed,
       click(role('button', { name: 'Delete this clip' })),
       ...dialogShown,
       expect(role('heading', { name: 'Delete reading.mp3?' })).toExist(),
@@ -147,9 +162,7 @@ describe('/level/:clipId', () => {
         DeleteClip,
         Message.FailedDeleteClip({ clipId: 'c1', reason: 'The disk is busy.' }),
       ),
-      expect(role('alert')).toHaveText(
-        'Nothing was deleted. The disk is busy.',
-      ),
+      expect(text('Nothing was deleted. The disk is busy.')).toExist(),
     )
   })
 
@@ -227,6 +240,7 @@ describe('a long clip’s heading', () => {
     scene(
       { update, view },
       given(onLevel(sampleClip(200))),
+      pointerFollowed,
       expect(
         text('200 lines from 10:01 of audio, kept on this device.'),
       ).toExist(),

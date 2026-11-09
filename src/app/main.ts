@@ -13,8 +13,11 @@ import { historyView } from './history/historyView'
 import { lineHistoryView } from './history/lineHistoryView'
 import * as HistoryUpdate from './history/update'
 import { clipRow } from './level/clipRow'
+import { FollowLineEditorPointer } from './level/editorPointer'
+import * as EditorUpdate from './level/editorUpdate'
 import { ClipsPage, LevelPage, deleteClipDialogId } from './level/level'
 import { levelView } from './level/levelView'
+import { levelSubscriptions } from './level/subscriptions'
 import * as LevelUpdate from './level/update'
 import { lineRow } from './line/lineRow'
 import {
@@ -28,6 +31,7 @@ import { practiceView } from './line/practiceView'
 import * as LineUpdate from './line/update'
 import { Message } from './message'
 import { type Model } from './model'
+import type { AppResourceServices } from './resources'
 import { AppRoute, homeRouter, uploadRouter, urlToAppRoute } from './route'
 import { AskToPersistStorage } from './settings/commands'
 import { SettingsPage, clearDialogId } from './settings/settings'
@@ -36,7 +40,6 @@ import * as SettingsUpdate from './settings/update'
 import { siteNav } from './siteNav'
 import { ForgetTakeAudio } from './take/commands'
 import { DrawCurvePair } from './take/curvePair'
-import type { TakeResourceServices } from './take/resources'
 import { subscriptions as takeSubscriptions } from './take/subscriptions'
 import { Take } from './take/take'
 import * as TakeUpdate from './take/update'
@@ -48,11 +51,12 @@ import { uploadView } from './upload/uploadView'
 export { AppRoute } from './route'
 export { Message } from './message'
 export { Model } from './model'
-export { managedResources } from './take/resources'
+export { managedResources } from './resources'
 
 export const subscriptions = Subscription.aggregate(
   takeSubscriptions,
   uploadSubscriptions,
+  levelSubscriptions,
 )
 
 // INIT
@@ -77,7 +81,7 @@ export const initialModel = (route: AppRoute): Model => ({
   maybeHomeNotice: Option.none(),
 })
 
-type UpdateReturn = Update.Return<Model, Message, TakeResourceServices>
+type UpdateReturn = Update.Return<Model, Message, AppResourceServices>
 
 // What a screen reads when it opens: a line its native curve, unless the
 // Model has it, and the history and settings screens what the device
@@ -103,7 +107,7 @@ export const init: Runtime.RoutingApplicationInit<
   Message,
   void,
   never,
-  TakeResourceServices
+  AppResourceServices
 > = (url: Url) => {
   const model = initialModel(urlToAppRoute(url))
   return opened(model, model.route)
@@ -257,6 +261,42 @@ export const update = (model: Model, message: Message) =>
     FailedDeleteClip: ({ clipId, reason }) =>
       LevelUpdate.failedDeleteClip(model, clipId, reason),
     CompletedGoHome: () => ({ model }),
+
+    AcquiredClipEditor: ({ clipId, peaks }) =>
+      EditorUpdate.acquiredClipEditor(model, clipId, peaks),
+    FailedAcquireClipEditor: ({ reason }) =>
+      EditorUpdate.failedAcquireClipEditor(model, reason),
+    ReleasedClipEditor: () => EditorUpdate.releasedClipEditor(model),
+    SelectedLevelLine: ({ lineId }) =>
+      EditorUpdate.selectedLevelLine(model, lineId, false),
+    ClickedEditLevelLine: ({ lineId }) =>
+      EditorUpdate.selectedLevelLine(model, lineId, true),
+    ClickedPlayLevelLine: () => EditorUpdate.clickedPlayLevelLine(model),
+    ClickedStopLevelLine: () => EditorUpdate.clickedStopLevelLine(model),
+    MovedLevelPlayhead: ({ playNumber, seconds }) =>
+      EditorUpdate.movedLevelPlayhead(model, playNumber, seconds),
+    EndedLevelPlayback: ({ playNumber }) =>
+      EditorUpdate.endedLevelPlayback(model, playNumber),
+    FailedLevelPlayback: ({ playNumber, reason }) =>
+      EditorUpdate.failedLevelPlayback(model, playNumber, reason),
+    PlacedLevelPlayhead: ({ seconds }) =>
+      EditorUpdate.placedLevelPlayhead(model, seconds),
+    MovedLineEdge: ({ lineId, edge, seconds, by }) =>
+      EditorUpdate.movedLineEdge(model, lineId, edge, seconds, by),
+    ReleasedLineEdge: () => EditorUpdate.releasedLineEdge(model),
+    CompletedWaitForKeysToRest: ({ draftNumber }) =>
+      EditorUpdate.completedWaitForKeysToRest(model, draftNumber),
+    ClickedSplitLine: () => EditorUpdate.clickedSplitLine(model),
+    ClickedMergeLines: ({ lineId }) =>
+      EditorUpdate.clickedMergeLines(model, lineId),
+    ClickedDeleteLine: () => EditorUpdate.clickedDeleteLine(model),
+    ClickedUndoLineChange: () => EditorUpdate.clickedUndoLineChange(model),
+    SucceededEditClipLines: ({ clipId, clip }) =>
+      EditorUpdate.succeededEditClipLines(model, clipId, clip),
+    FailedEditClipLines: ({ clipId, reason }) =>
+      EditorUpdate.failedEditClipLines(model, clipId, reason),
+    CompletedFocusLineEditor: () => ({ model }),
+    CompletedFollowLineEditorPointer: () => ({ model }),
 
     ClickedRecord: () => TakeUpdate.clickedRecord(model),
     EndedNativeBeforeTake: ({ takeNumber }) =>
@@ -569,6 +609,21 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
         {
           changedWords: words => Message.ChangedFindLevelLines({ words }),
           showMore: Message.ClickedShowMoreLevelLines(),
+          editLine: lineId => Message.ClickedEditLevelLine({ lineId }),
+          editor: {
+            moveEdge: (lineId, edge, seconds) =>
+              Message.MovedLineEdge({ lineId, edge, seconds, by: 'Keyboard' }),
+            placePlayhead: seconds => Message.PlacedLevelPlayhead({ seconds }),
+            select: lineId => Message.SelectedLevelLine({ lineId }),
+            play: Message.ClickedPlayLevelLine(),
+            stop: Message.ClickedStopLevelLine(),
+            split: Message.ClickedSplitLine(),
+            merge: (lineId, select) =>
+              Message.ClickedMergeLines({ lineId, select }),
+            remove: Message.ClickedDeleteLine(),
+            undo: Message.ClickedUndoLineChange(),
+            follow: FollowLineEditorPointer(),
+          },
           deleteClip: Message.ClickedDeleteClip(),
           keepClip: Message.ClickedKeepClip(),
           confirmDelete: Message.SubmittedDeleteClip(),

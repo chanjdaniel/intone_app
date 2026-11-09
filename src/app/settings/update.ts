@@ -9,7 +9,7 @@ import { ClipsPage, LevelPage } from '../level/level'
 import { NativeCurve } from '../line/native'
 import { Message } from '../message'
 import type { Model } from '../model'
-import type { TakeResourceServices } from '../take/resources'
+import type { AppResourceServices } from '../resources'
 import { Take } from '../take/take'
 import {
   ClearAllData,
@@ -30,7 +30,7 @@ import {
 // The settings screen's transitions. It reads the device when it opens;
 // each action says how it went where it was started.
 
-type SettingsUpdate = Update.Return<Model, Message, TakeResourceServices>
+type SettingsUpdate = Update.Return<Model, Message, AppResourceServices>
 type ReadySettings = Extract<SettingsPage, { _tag: 'Ready' }>
 
 const unchanged = (model: Model): SettingsUpdate => ({ model })
@@ -98,7 +98,7 @@ export const failedLoadSettings = (
 const whenReady = (
   model: Model,
   change: (page: ReadySettings) => ReadySettings,
-  ...commands: Update.Commands<Message, TakeResourceServices>
+  ...commands: Update.Commands<Message, AppResourceServices>
 ): SettingsUpdate => {
   const page = model.settings
   return page._tag === 'Ready'

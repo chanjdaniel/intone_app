@@ -7,7 +7,14 @@ import { Url } from 'foldkit/url'
 import { Dialog, FileDrop } from '@foldkit/ui'
 
 import { MicrophoneFailure } from '../services/microphone'
-import { DayCount, LineSummary, ShownTake, TrendPoint } from './history/history'
+import {
+  DayCount,
+  LineNow,
+  LineSummary,
+  ShownTake,
+  TrendPoint,
+} from './history/history'
+import { EdgeName } from './level/editor'
 import { ClipSummary, LevelClip } from './level/level'
 import { PracticeLine } from './line/lines'
 import { ListenSpeed, NativeFailure } from './line/native'
@@ -76,6 +83,38 @@ export const Message = defineMessageUnion({
   FailedDeleteClip: { clipId: Schema.String, reason: Schema.String },
   CompletedGoHome: {},
 
+  // The line editor on a clip's level.
+  AcquiredClipEditor: {
+    clipId: Schema.String,
+    peaks: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
+  },
+  FailedAcquireClipEditor: { reason: Schema.String },
+  ReleasedClipEditor: {},
+  SelectedLevelLine: { lineId: Schema.String },
+  ClickedEditLevelLine: { lineId: Schema.String },
+  ClickedPlayLevelLine: {},
+  ClickedStopLevelLine: {},
+  MovedLevelPlayhead: { playNumber: Schema.Finite, seconds: Schema.Finite },
+  EndedLevelPlayback: { playNumber: Schema.Finite },
+  FailedLevelPlayback: { playNumber: Schema.Finite, reason: Schema.String },
+  PlacedLevelPlayhead: { seconds: Schema.Finite },
+  MovedLineEdge: {
+    lineId: Schema.String,
+    edge: EdgeName,
+    seconds: Schema.Finite,
+    by: Schema.Literals(['Pointer', 'Keyboard']),
+  },
+  ReleasedLineEdge: {},
+  CompletedWaitForKeysToRest: { draftNumber: Schema.Finite },
+  ClickedSplitLine: {},
+  ClickedMergeLines: { lineId: Schema.String, select: Schema.String },
+  ClickedDeleteLine: {},
+  ClickedUndoLineChange: {},
+  SucceededEditClipLines: { clipId: Schema.String, clip: LevelClip },
+  FailedEditClipLines: { clipId: Schema.String, reason: Schema.String },
+  CompletedFocusLineEditor: {},
+  CompletedFollowLineEditorPointer: {},
+
   // The take.
   ClickedRecord: {},
   EndedNativeBeforeTake: { takeNumber },
@@ -128,7 +167,10 @@ export const Message = defineMessageUnion({
     maybeFound: Schema.Option(
       Schema.Struct({
         lineText: Schema.String,
+        lineNow: LineNow,
         trend: Schema.Array(TrendPoint),
+        earlierTrend: Schema.Array(TrendPoint),
+        drawnFrom: Schema.Literals(['Now', 'Earlier']),
         first: ShownTake,
         maybeBest: Schema.Option(ShownTake),
         latest: ShownTake,

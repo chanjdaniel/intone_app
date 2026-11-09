@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { Runtime, type Update } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -42,10 +42,13 @@ const longClip = (): LevelClip => ({
   hasAudio: true,
   lines: Array.from({ length: 200 }, (_, k) => ({
     id: String(k + 1),
+    number: k + 1,
     from: k * 3 + 0.2,
     to: k * 3 + 2.6 + (k % 5) * 0.08,
     native: k % 37 === 5 ? 'TooNoisy' : 'Tracked',
+    maybeQuality: Option.none(),
   })),
+  maybeUndo: Option.none(),
 })
 
 export const init: Runtime.ElementInit<Model, Message> = () => ({

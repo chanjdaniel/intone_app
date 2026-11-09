@@ -91,14 +91,28 @@ export type TrendPoint = typeof TrendPoint.Type
 
 const lineFields = { clipId: Schema.String, lineId: Schema.String }
 
+// Where a line of the learner's clip stands now its lines can change
+// (ticket 14): as it was when its takes were made, moved since (its
+// takes of before kept apart, as they copied other audio), or gone from
+// its clip, deleted or merged into another.
+export const LineNow = Schema.Literals(['AsTaken', 'Changed', 'Gone'])
+export type LineNow = typeof LineNow.Type
+
 export const LineHistoryPage = defineTaggedUnion({
   NotLoaded: {},
   Loading: lineFields,
   Ready: {
     ...lineFields,
     lineText: Schema.String,
-    // Earliest first.
+    lineNow: LineNow,
+    // The takes of the line as it is now, earliest first; of a line gone
+    // from its clip, every take.
     trend: Schema.Array(TrendPoint),
+    // The takes made before its start or end changed, earliest first.
+    earlierTrend: Schema.Array(TrendPoint),
+    // Drawn from the takes of the line as it is, or, with none yet, from
+    // the earlier ones.
+    drawnFrom: Schema.Literals(['Now', 'Earlier']),
     first: ShownTake,
     maybeBest: Schema.Option(ShownTake),
     latest: ShownTake,
@@ -181,25 +195,55 @@ export const summarise = (
   return { lines, days, outdatedIds }
 }
 
-// A line's takes, earliest first, and which of them its page draws: the
-// first, the best scored (when one was), and the latest.
+// What the device says of a line as it is now: a bundled line is as its
+// takes found it; a line of the learner's clip is copied from the native
+// curve `Current` names (none when it has no curve), or is gone from its
+// clip.
+export type LineAsKept =
+  | Readonly<{ _tag: 'Bundled' }>
+  | Readonly<{ _tag: 'Current'; maybeNativeId: Option.Option<string> }>
+  | Readonly<{ _tag: 'Gone' }>
+
+// A line's takes, earliest first: those of the line as it is now, and
+// those made before its span changed, told apart by the native curve
+// each was scored against, since a changed span is tracked again; and
+// which of them its page draws: the first, the best scored (when one
+// was), and the latest, of the line as it is now, or of the earlier ones
+// when there are none yet.
 export const lineTakesOf = (
   entries: ReadonlyArray<TakeEntry>,
   clipId: string,
   lineId: string,
+  asKept: LineAsKept = { _tag: 'Bundled' },
 ): Option.Option<
   Readonly<{
-    takes: Array.NonEmptyReadonlyArray<TakeEntry>
+    lineNow: LineNow
+    takes: ReadonlyArray<TakeEntry>
+    earlier: ReadonlyArray<TakeEntry>
+    drawnFrom: 'Now' | 'Earlier'
     first: TakeEntry
     maybeBest: Option.Option<TakeEntry>
     latest: TakeEntry
   }>
 > => {
-  const takes = pipe(
+  const all = pipe(
     entries,
     Array.filter(entry => entry.clipId === clipId && entry.lineId === lineId),
     Array.sort(byTakenAt),
   )
+  const isNow = (entry: TakeEntry): boolean =>
+    asKept._tag !== 'Current' ||
+    Option.contains(asKept.maybeNativeId, entry.nativeId)
+  const now = Array.filter(all, isNow)
+  const earlier = Array.filter(all, entry => !isNow(entry))
+  const lineNow: LineNow =
+    asKept._tag === 'Gone'
+      ? 'Gone'
+      : Array.isArrayNonEmpty(earlier)
+        ? 'Changed'
+        : 'AsTaken'
+  const drawnFrom = Array.isArrayNonEmpty(now) ? 'Now' : 'Earlier'
+  const takes = drawnFrom === 'Now' ? now : earlier
   if (!Array.isArrayNonEmpty(takes)) {
     return Option.none()
   }
@@ -217,7 +261,10 @@ export const lineTakesOf = (
       )
     : Option.none()
   return Option.some({
-    takes,
+    lineNow,
+    takes: now,
+    earlier,
+    drawnFrom,
     first: Array.headNonEmpty(takes),
     maybeBest,
     latest: Array.lastNonEmpty(takes),

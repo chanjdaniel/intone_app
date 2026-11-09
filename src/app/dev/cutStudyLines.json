@@ -1,111 +1,448 @@
 {
  "clip": "romandourou",
  "seconds": 59.52,
+ "peaks": "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",
  "lines": [
   {
    "from": 0.394,
    "to": 2.952,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 112,
+    "confidentShare": 0.6696,
+    "pauseFrames": 31,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 3.21,
    "to": 6.312,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 172,
+    "confidentShare": 0.7326,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 6.666,
    "to": 9.896,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 166,
+    "confidentShare": 0.6506,
+    "pauseFrames": 19,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 9.962,
    "to": 12.264,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 122,
+    "confidentShare": 0.7049,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 12.586,
    "to": 15.048,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 112,
+    "confidentShare": 0.6964,
+    "pauseFrames": 25,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 15.178,
    "to": 17.96,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 152,
+    "confidentShare": 0.6447,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 18.538,
    "to": 21.064,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 136,
+    "confidentShare": 0.6618,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 21.29,
    "to": 23.472,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 120,
+    "confidentShare": 0.6833,
+    "pauseFrames": 6,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 23.472,
    "to": 25.704,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 125,
+    "confidentShare": 0.504,
+    "pauseFrames": 10,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 26.314,
    "to": 28.936,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 122,
+    "confidentShare": 0.6639,
+    "pauseFrames": 25,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 29.13,
    "to": 30.568,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 66,
+    "confidentShare": 0.5152,
+    "pauseFrames": 15,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 30.666,
    "to": 33.128,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 132,
+    "confidentShare": 0.7273,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 33.386,
    "to": 35.912,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 132,
+    "confidentShare": 0.7348,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 35.978,
    "to": 39.912,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 224,
+    "confidentShare": 0.6295,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 40.618,
    "to": 41.736,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 48,
+    "confidentShare": 0.7708,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 41.802,
    "to": 45.608,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 194,
+    "confidentShare": 0.6753,
+    "pauseFrames": 19,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 45.706,
    "to": 49.32,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 180,
+    "confidentShare": 0.6389,
+    "pauseFrames": 23,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 49.578,
    "to": 51.144,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 76,
+    "confidentShare": 0.6053,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 51.274,
    "to": 53.128,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 94,
+    "confidentShare": 0.6383,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 53.322,
    "to": 56.584,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 170,
+    "confidentShare": 0.6,
+    "pauseFrames": 15,
+    "pausePitchedShare": 0
+   }
   },
   {
    "from": 57.226,
    "to": 59.496,
-   "native": "Tracked"
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 120,
+    "confidentShare": 0.6333,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0
+   }
+  }
+ ],
+ "musicLines": [
+  {
+   "from": 0.394,
+   "to": 2.952,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 112,
+    "confidentShare": 0.75,
+    "pauseFrames": 31,
+    "pausePitchedShare": 0.9355
+   }
+  },
+  {
+   "from": 3.21,
+   "to": 6.312,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 170,
+    "confidentShare": 0.7412,
+    "pauseFrames": 15,
+    "pausePitchedShare": 0.8
+   }
+  },
+  {
+   "from": 6.666,
+   "to": 9.92,
+   "native": "TooNoisy"
+  },
+  {
+   "from": 9.962,
+   "to": 12.264,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 122,
+    "confidentShare": 0.7377,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0.6923
+   }
+  },
+  {
+   "from": 12.586,
+   "to": 15.048,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 112,
+    "confidentShare": 0.75,
+    "pauseFrames": 25,
+    "pausePitchedShare": 0.8
+   }
+  },
+  {
+   "from": 15.274,
+   "to": 17.992,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 148,
+    "confidentShare": 0.7027,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0.3077
+   }
+  },
+  {
+   "from": 18.57,
+   "to": 22.128,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 170,
+    "confidentShare": 0.7118,
+    "pauseFrames": 32,
+    "pausePitchedShare": 0.9375
+   }
+  },
+  {
+   "from": 22.128,
+   "to": 25.672,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 202,
+    "confidentShare": 0.6337,
+    "pauseFrames": 11,
+    "pausePitchedShare": 0.8182
+   }
+  },
+  {
+   "from": 26.346,
+   "to": 29,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 122,
+    "confidentShare": 0.7459,
+    "pauseFrames": 27,
+    "pausePitchedShare": 0.3704
+   }
+  },
+  {
+   "from": 29.13,
+   "to": 30.568,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 66,
+    "confidentShare": 0.6212,
+    "pauseFrames": 15,
+    "pausePitchedShare": 0.6
+   }
+  },
+  {
+   "from": 30.634,
+   "to": 33.096,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 132,
+    "confidentShare": 0.7727,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0.5385
+   }
+  },
+  {
+   "from": 33.386,
+   "to": 35.912,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 132,
+    "confidentShare": 0.6742,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0.5385
+   }
+  },
+  {
+   "from": 35.978,
+   "to": 39.912,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 224,
+    "confidentShare": 0.6295,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0.3077
+   }
+  },
+  {
+   "from": 40.618,
+   "to": 41.736,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 48,
+    "confidentShare": 0.8125,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0.3077
+   }
+  },
+  {
+   "from": 41.802,
+   "to": 45.608,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 192,
+    "confidentShare": 0.8021,
+    "pauseFrames": 21,
+    "pausePitchedShare": 0.7143
+   }
+  },
+  {
+   "from": 45.706,
+   "to": 49.32,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 174,
+    "confidentShare": 0.6897,
+    "pauseFrames": 27,
+    "pausePitchedShare": 0.8889
+   }
+  },
+  {
+   "from": 49.578,
+   "to": 51.144,
+   "native": "TooNoisy"
+  },
+  {
+   "from": 51.274,
+   "to": 53.128,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 94,
+    "confidentShare": 0.6489,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0.6154
+   }
+  },
+  {
+   "from": 53.322,
+   "to": 56.584,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 162,
+    "confidentShare": 0.7531,
+    "pauseFrames": 17,
+    "pausePitchedShare": 0.5294
+   }
+  },
+  {
+   "from": 57.226,
+   "to": 59.496,
+   "native": "Tracked",
+   "quality": {
+    "speechFrames": 118,
+    "confidentShare": 0.7119,
+    "pauseFrames": 13,
+    "pausePitchedShare": 0.6154
+   }
   }
  ]
 }

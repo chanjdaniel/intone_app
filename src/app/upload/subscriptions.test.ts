@@ -29,7 +29,20 @@ const analysed: ClipEvent = {
   _tag: 'Analysed',
   seconds: 8,
   lines: [
-    { from: 0.5, to: 2.5, native: { _tag: 'Tracked', recording } },
+    {
+      from: 0.5,
+      to: 2.5,
+      native: {
+        _tag: 'Tracked',
+        recording,
+        quality: {
+          speechFrames: 100,
+          confidentShare: 0.7,
+          pauseFrames: 20,
+          pausePitchedShare: 0,
+        },
+      },
+    },
     { from: 3, to: 5, native: { _tag: 'TooNoisy' } },
   ],
 }

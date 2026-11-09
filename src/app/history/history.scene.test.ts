@@ -217,10 +217,13 @@ describe('a line’s history', () => {
           clipId: 'ame-ga-suki',
           lineId: '1',
           lineText: '雨が好き',
+          lineNow: 'AsTaken',
           trend: [
             { takenAt: 1, maybeMatch: Option.none(), version: 0 },
             { takenAt: 2, maybeMatch: Option.some(0.824), version: 1 },
           ],
+          earlierTrend: [],
+          drawnFrom: 'Now',
           first,
           maybeBest: Option.some(latest),
           latest,
@@ -256,6 +259,104 @@ describe('a line’s history', () => {
       expectAll(
         all.role('img', { name: /^The line's pitch curve/ }),
       ).toHaveCount(2),
+    )
+  })
+
+  test('keeps the takes of a changed line’s earlier span apart from its match over time', () => {
+    const latest = shown('latest', '2026-11-09', sampleScore)
+    scene(
+      { update, view },
+      given({
+        ...initialModel(AppRoute.LineHistory({ clipId: 'c1', lineId: '4' })),
+        lineHistory: LineHistoryPage.Ready({
+          clipId: 'c1',
+          lineId: '4',
+          lineText: 'reading.mp3, line 4',
+          lineNow: 'Changed',
+          trend: [{ takenAt: 3, maybeMatch: Option.some(0.824), version: 1 }],
+          earlierTrend: [
+            { takenAt: 1, maybeMatch: Option.some(0.5), version: 1 },
+            { takenAt: 2, maybeMatch: Option.some(0.6), version: 1 },
+          ],
+          drawnFrom: 'Now',
+          first: latest,
+          maybeBest: Option.some(latest),
+          latest,
+        }),
+      }),
+      drawn,
+      expect(text('1 take since 9 November 2026')).toExist(),
+      expect(
+        role('img', {
+          name: 'Your match over 1 take: first 82%, best 82%, latest 82%.',
+        }),
+      ).toExist(),
+      expect(
+        role('heading', {
+          name: 'Taken against its earlier start or end',
+          level: 2,
+        }),
+      ).toExist(),
+      expect(
+        text(
+          '2 takes copied the line before its start or end was changed. They are kept, and shown apart from its match over time, since they copied a different stretch of the clip.',
+        ),
+      ).toExist(),
+      expect(
+        role('img', {
+          name: 'Your match over 2 takes: first 50%, best 60%, latest 60%.',
+        }),
+      ).toExist(),
+    )
+  })
+
+  test('a line just changed draws its earlier takes, and one gone from its clip says so', () => {
+    const latest = shown('latest', '2026-11-09', sampleScore)
+    const ready = (lineNow: 'Changed' | 'Gone') =>
+      LineHistoryPage.Ready({
+        clipId: 'c1',
+        lineId: '4',
+        lineText: 'reading.mp3, line 4',
+        lineNow,
+        trend:
+          lineNow === 'Gone'
+            ? [{ takenAt: 3, maybeMatch: Option.some(0.824), version: 1 }]
+            : [],
+        earlierTrend:
+          lineNow === 'Gone'
+            ? []
+            : [{ takenAt: 3, maybeMatch: Option.some(0.824), version: 1 }],
+        drawnFrom: lineNow === 'Gone' ? 'Now' : 'Earlier',
+        first: latest,
+        maybeBest: Option.some(latest),
+        latest,
+      })
+    scene(
+      { update, view },
+      given({
+        ...initialModel(AppRoute.LineHistory({ clipId: 'c1', lineId: '4' })),
+        lineHistory: ready('Changed'),
+      }),
+      drawn,
+      expect(text('No takes yet of the line as it is now')).toExist(),
+      expect(role('heading', { name: 'Your match over time' })).not.toExist(),
+      expect(
+        role('heading', { name: 'Your takes over its earlier start or end' }),
+      ).toExist(),
+    )
+    scene(
+      { update, view },
+      given({
+        ...initialModel(AppRoute.LineHistory({ clipId: 'c1', lineId: '4' })),
+        lineHistory: ready('Gone'),
+      }),
+      drawn,
+      expect(
+        text(
+          'This line is no longer in its clip: it was deleted, or merged into another line. Your takes of it are kept here.',
+        ),
+      ).toExist(),
+      expect(role('link', { name: 'Practise this line' })).not.toExist(),
     )
   })
 

@@ -23,6 +23,12 @@ const clip = {
   audio: { file: 'clips/c1.mp3', type: 'audio/mpeg', bytes: 900 },
   lines: [
     {
+      id: '1',
+      from: 0.4,
+      to: 3.1,
+      native: { _tag: 'Tracked' as const, nativeId: 'n1' },
+    },
+    {
       id: '2',
       from: 3.5,
       to: 6.25,
@@ -45,7 +51,7 @@ describe('the practice screen of a line of the learner’s clip', () => {
           NativeCurve.Ready({
             clipId: 'c1',
             lineId: '2',
-            line: practiceLineOfClip(clip, clip.lines[0]!, clip.audio),
+            line: practiceLineOfClip(clip, clip.lines[1]!, clip.audio),
             curve: sampleCurve,
             features: sampleFeatures,
           }),

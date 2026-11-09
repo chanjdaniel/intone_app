@@ -3,7 +3,7 @@ import { modifyFields } from 'foldkit/struct'
 
 import type { Message } from '../message'
 import type { Model } from '../model'
-import type { TakeResourceServices } from '../take/resources'
+import type { AppResourceServices } from '../resources'
 import type { TakeCurve, TakeFeatures } from '../take/take'
 import { LoadNativeCurve } from './commands'
 import type { PracticeLine } from './lines'
@@ -12,7 +12,7 @@ import { NativeCurve, type NativeFailure, isNativeFor } from './native'
 // The open line's native curve: asked for when the line opens, unless it
 // is already in the Model, and again on request after a failure.
 
-type LineUpdate = Update.Return<Model, Message, TakeResourceServices>
+type LineUpdate = Update.Return<Model, Message, AppResourceServices>
 
 const load = (model: Model, clipId: string, lineId: string): LineUpdate => ({
   model: modifyFields(model, {

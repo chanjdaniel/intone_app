@@ -11,6 +11,7 @@ import {
 import { modelUrls } from 'virtual:intone/models'
 import { onnxRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'
 
+import type { LineQuality } from '../engine/cut/quality'
 import type { Recording } from '../score/score'
 import {
   type CutLine,
@@ -27,8 +28,11 @@ import {
 // (../workers/clip.worker.ts). The whole is one Stream of steps, so
 // whoever runs it shows its progress, and interrupting it cancels the
 // cut at once: the Worker is asked to close, and terminated if it does
-// not within two seconds, and the clip's audio goes with it. Nothing
-// here leaves the device.
+// not within two seconds, and the clip's audio goes with it. A kept clip
+// is opened for the line editor the same way (`edit`): decoded once and
+// held in the Worker, which gives its waveform and tracks the lines the
+// learner changes, until its scope closes. Nothing here leaves the
+// device.
 
 // Ten minutes, as Daniel decided (report section 2): decoding stereo at
 // 48 kHz holds about 230 MB.
@@ -53,13 +57,28 @@ export class ClipAnalyserError extends Schema.TaggedError<
 >()('ClipAnalyserError', { failure: ClipFailure, reason: Schema.String }) {}
 
 // A line of the clip: seconds from the clip's start, and its native
-// curve and features, or why it has none.
+// curve and features with their quality, or why it has none.
 export type AnalysedLine = Readonly<{
   from: number
   to: number
   native:
-    | Readonly<{ _tag: 'Tracked'; recording: Recording }>
+    | Readonly<{
+        _tag: 'Tracked'
+        recording: Recording
+        quality: LineQuality
+      }>
     | Readonly<{ _tag: 'TooQuiet' | 'TooNoisy' }>
+}>
+
+// A kept clip open in the line editor: its length, its waveform
+// (../engine/audio/peaks.ts), and the lines at spans of it, in seconds,
+// tracked as a cut tracks them.
+export type ClipEditing = Readonly<{
+  seconds: number
+  peaks: Uint8Array
+  track: (
+    spans: ReadonlyArray<Readonly<{ from: number; to: number }>>,
+  ) => Effect.Effect<ReadonlyArray<AnalysedLine>, ClipAnalyserError>
 }>
 
 export type ClipEvent =
@@ -123,6 +142,7 @@ const recordingOfLine = (curve: CutLine['curve']): AnalysedLine['native'] =>
   curve._tag === 'Tracked'
     ? {
         _tag: 'Tracked',
+        quality: curve.quality,
         recording: {
           curve: {
             frameHz: curve.frameHz,
@@ -140,16 +160,28 @@ const recordingOfLine = (curve: CutLine['curve']): AnalysedLine['native'] =>
       }
     : curve
 
+const analysedLineOf = (line: CutLine): AnalysedLine => ({
+  from: line.from / clipSampleRate,
+  to: line.to / clipSampleRate,
+  native: recordingOfLine(line.curve),
+})
+
+// What the clip Worker does, once its models are loaded: cut a clip into
+// lines, or hold one and track spans of it, one request at a time.
+export type ClipWorkerSession = Readonly<{
+  cut: (samples: Float32Array) => Stream.Stream<ClipEvent, ClipAnalyserError>
+  hold: (samples: Float32Array) => Effect.Effect<Uint8Array, ClipAnalyserError>
+  track: (
+    spans: ReadonlyArray<Readonly<{ from: number; to: number }>>,
+  ) => Effect.Effect<ReadonlyArray<AnalysedLine>, ClipAnalyserError>
+}>
+
 // The clip Worker with its models loaded, until the scope closes: then
 // it is asked to stop and close, and terminated after the grace.
 export const openClipWorker = (
   makeWorker: () => ClipWorker,
   assets: ClipBrowser['assets'],
-): Effect.Effect<
-  (samples: Float32Array) => Stream.Stream<ClipEvent, ClipAnalyserError>,
-  ClipAnalyserError,
-  Scope.Scope
-> =>
+): Effect.Effect<ClipWorkerSession, ClipAnalyserError, Scope.Scope> =>
   Effect.gen(function* () {
     const replies = yield* Queue.unbounded<FromClip>()
     const decode = Schema.decodeUnknownExit(FromClip)
@@ -216,7 +248,48 @@ export const openClipWorker = (
       )
     }
 
-    return (samples: Float32Array) => {
+    const outOfTurn = (reply: FromClip) =>
+      failed(
+        'Failed',
+        reply._tag === 'Failed'
+          ? reply.reason
+          : `The clip analyser answered ${reply._tag} out of turn.`,
+      )
+
+    const hold = (samples: Float32Array) =>
+      Effect.gen(function* () {
+        yield* post({ _tag: 'Hold', samples })
+        const reply = yield* Queue.take(replies)
+        return reply._tag === 'Held' ? reply.peaks : yield* outOfTurn(reply)
+      })
+
+    const requests = { made: 0 }
+    const track = (
+      spans: ReadonlyArray<Readonly<{ from: number; to: number }>>,
+    ) =>
+      Effect.gen(function* () {
+        requests.made += 1
+        const request = requests.made
+        yield* post({
+          _tag: 'Track',
+          request,
+          spans: spans.map(span => ({
+            from: Math.round(span.from * clipSampleRate),
+            to: Math.round(span.to * clipSampleRate),
+          })),
+        })
+        const reply = yield* Queue.take(replies).pipe(
+          Effect.repeat({
+            until: answer =>
+              answer._tag !== 'TrackDone' || answer.request === request,
+          }),
+        )
+        return reply._tag === 'TrackDone'
+          ? reply.lines.map(analysedLineOf)
+          : yield* outOfTurn(reply)
+      })
+
+    const cut = (samples: Float32Array) => {
       const seconds = samples.length / clipSampleRate
       return Stream.fromEffect(post({ _tag: 'Cut', samples })).pipe(
         Stream.flatMap(() => Stream.fromQueue(replies)),
@@ -243,11 +316,7 @@ export const openClipWorker = (
                 : Effect.succeed({
                     _tag: 'Analysed',
                     seconds,
-                    lines: reply.lines.map(line => ({
-                      from: line.from / clipSampleRate,
-                      to: line.to / clipSampleRate,
-                      native: recordingOfLine(line.curve),
-                    })),
+                    lines: reply.lines.map(analysedLineOf),
                   })
             }
             if (reply._tag === 'Failed') {
@@ -259,6 +328,8 @@ export const openClipWorker = (
         Stream.filter(event => event !== null),
       )
     }
+
+    return { cut, hold, track }
   })
 
 // `file`, checked, decoded and analysed, step by step, through `browser`.
@@ -282,17 +353,30 @@ export const analyseWith =
                 if (seconds > longestClipSeconds) {
                   return yield* tooLong(seconds)
                 }
-                const cut = yield* openClipWorker(
+                const session = yield* openClipWorker(
                   browser.makeWorker,
                   browser.assets,
                 )
-                return cut(samples)
+                return session.cut(samples)
               }),
             ),
           )
         }),
       ),
     )
+
+// A kept clip's `file` decoded and held in the clip Worker for the line
+// editor, until the scope closes.
+export const editWith =
+  (browser: ClipBrowser) =>
+  (file: Blob): Effect.Effect<ClipEditing, ClipAnalyserError, Scope.Scope> =>
+    Effect.gen(function* () {
+      const samples = yield* browser.decode(file)
+      const seconds = samples.length / clipSampleRate
+      const session = yield* openClipWorker(browser.makeWorker, browser.assets)
+      const peaks = yield* session.hold(samples)
+      return { seconds, peaks, track: session.track }
+    })
 
 // The file's length from its header, by an audio element told to load
 // only that: what the browser says when it cannot play the file is that
@@ -395,34 +479,43 @@ export class ClipAnalyser extends Context.Service<
     readonly analyse: (
       file: Blob,
     ) => Stream.Stream<ClipEvent, ClipAnalyserError>
+    // A kept clip's file, held for the line editor until the scope
+    // closes.
+    readonly edit: (
+      file: Blob,
+    ) => Effect.Effect<ClipEditing, ClipAnalyserError, Scope.Scope>
   }
 >()('intone/services/ClipAnalyser') {
   // The browser's own audio element and decoder, and Silero VAD and
   // SwiftF0 in the clip Worker, from the app's own origin.
-  static readonly layer = Layer.succeed(
-    ClipAnalyser,
-    ClipAnalyser.of({
-      analyse: analyseWith({
-        probeSeconds: probeWithMediaElement,
-        decode: decodeWithAudioContext,
-        makeWorker: () =>
-          new Worker(new URL('../workers/clip.worker.ts', import.meta.url), {
-            type: 'module',
-            name: 'clip',
-          }),
-        assets: {
-          speechModelUrl: modelUrls['silero-vad'],
-          pitchModelUrl: modelUrls['swift-f0'],
-          wasmPaths: onnxRuntimeWasmPaths,
-        },
-      }),
-    }),
-  )
+  static readonly layer = Layer.sync(ClipAnalyser, () => {
+    const browser: ClipBrowser = {
+      probeSeconds: probeWithMediaElement,
+      decode: decodeWithAudioContext,
+      makeWorker: () =>
+        new Worker(new URL('../workers/clip.worker.ts', import.meta.url), {
+          type: 'module',
+          name: 'clip',
+        }),
+      assets: {
+        speechModelUrl: modelUrls['silero-vad'],
+        pitchModelUrl: modelUrls['swift-f0'],
+        wasmPaths: onnxRuntimeWasmPaths,
+      },
+    }
+    return ClipAnalyser.of({
+      analyse: analyseWith(browser),
+      edit: editWith(browser),
+    })
+  })
 
   // Answers each file with the events `respond` gives it, and fails with
-  // its error, with no browser, Worker or model.
+  // its error, with no browser, Worker or model; a clip opened to edit
+  // is `editing` as `openEditing` gives it, or that error.
   static readonly layerTest = (
     respond: (file: Blob) => ReadonlyArray<ClipEvent> | ClipAnalyserError,
+    openEditing: (file: Blob) => ClipEditing | ClipAnalyserError = () =>
+      failed('Failed', 'This test opens no clip to edit.'),
   ): Layer.Layer<ClipAnalyser> =>
     Layer.succeed(
       ClipAnalyser,
@@ -432,6 +525,12 @@ export class ClipAnalyser extends Context.Service<
           return answer instanceof ClipAnalyserError
             ? Stream.fail(answer)
             : Stream.fromIterable(answer)
+        },
+        edit: file => {
+          const answer = openEditing(file)
+          return answer instanceof ClipAnalyserError
+            ? Effect.fail(answer)
+            : Effect.succeed(answer)
         },
       }),
     )

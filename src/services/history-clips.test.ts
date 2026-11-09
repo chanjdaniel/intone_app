@@ -11,6 +11,13 @@ import { recordingId } from './history-records'
 import { HistoryStore, type NewTake, make } from './history-store'
 import { databaseName, stores } from './indexed-db'
 
+const quality = {
+  speechFrames: 40,
+  confidentShare: 0.7,
+  pauseFrames: 12,
+  pausePitchedShare: 0,
+}
+
 const lineCurve = (seed: number): Recording =>
   syntheticTake({
     pattern: [false, true, true, false],
@@ -32,13 +39,13 @@ const newClip = (overrides: Partial<NewClip> = {}): NewClip => ({
     {
       from: 0.4,
       to: 2.9,
-      native: { _tag: 'Tracked', recording: lineCurve(1) },
+      native: { _tag: 'Tracked', recording: lineCurve(1), quality },
     },
     { from: 3.2, to: 5.0, native: { _tag: 'TooQuiet' } },
     {
       from: 5.4,
       to: 8.1,
-      native: { _tag: 'Tracked', recording: lineCurve(2) },
+      native: { _tag: 'Tracked', recording: lineCurve(2), quality },
     },
   ],
   ...overrides,
@@ -116,6 +123,7 @@ describe('clips in the history', () => {
             from: 0.4,
             to: 2.9,
             native: { _tag: 'Tracked', nativeId: recordingId(lineCurve(1)) },
+            quality,
           },
           { id: '2', from: 3.2, to: 5.0, native: { _tag: 'TooQuiet' } },
           {
@@ -123,6 +131,7 @@ describe('clips in the history', () => {
             from: 5.4,
             to: 8.1,
             native: { _tag: 'Tracked', nativeId: recordingId(lineCurve(2)) },
+            quality,
           },
         ])
         expect(yield* countIn(factory, stores.natives)).toBe(2)
@@ -203,7 +212,7 @@ describe('clips in the history', () => {
                 {
                   from: 0,
                   to: 2,
-                  native: { _tag: 'Tracked', recording: lineCurve(5) },
+                  native: { _tag: 'Tracked', recording: lineCurve(5), quality },
                 },
               ],
             }),
@@ -402,5 +411,253 @@ describe('clips in the history', () => {
         const clip = yield* run(store => store.addClip(newClip()))
         expect((yield* run(store => store.clips)).clips).toEqual([clip])
       }),
+  )
+})
+
+// A stand-in for the line editor's Worker: each span tracked as a curve
+// of its own, made from its times, and every call written down.
+const tracker = () => {
+  const asked: Array<ReadonlyArray<Readonly<{ from: number; to: number }>>> = []
+  const track = (
+    spans: ReadonlyArray<Readonly<{ from: number; to: number }>>,
+  ) =>
+    Effect.sync(() => {
+      asked.push(spans)
+      return spans.map(span => ({
+        ...span,
+        native: {
+          _tag: 'Tracked' as const,
+          recording: lineCurve(Math.round(span.from * 100 + span.to)),
+          quality,
+        },
+      }))
+    })
+  return { asked, track }
+}
+
+const nativeIdsIn = (factory: IDBFactory) =>
+  Effect.promise(async () => {
+    const database = await request(() => factory.open(databaseName))
+    const keys = await request(() =>
+      database
+        .transaction(stores.natives, 'readonly')
+        .objectStore(stores.natives)
+        .getAllKeys(),
+    )
+    database.close()
+    return new Set(keys.map(String))
+  })
+
+const lineIdsOf = (
+  clip: Option.Option<{ lines: ReadonlyArray<{ id: string }> }>,
+) =>
+  Option.match(clip, {
+    onNone: () => [],
+    onSome: found => found.lines.map(line => line.id),
+  })
+
+describe('changing a clip’s lines', () => {
+  it.effect(
+    'tracks again only the lines an edit moves, keeps the rest, and survives a reopen',
+    () =>
+      Effect.gen(function* () {
+        const { run, factory } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        const { asked, track } = tracker()
+        const edited = yield* run(store =>
+          store.editClipLines(
+            clip.id,
+            { _tag: 'Move', lineId: '1', edge: 'to', seconds: 3 },
+            track,
+          ),
+        )
+        expect(asked).toStrictEqual([[{ from: 0.4, to: 3 }]])
+        const lines = Option.getOrThrow(edited).lines
+        expect(lines[0]).toMatchObject({ id: '1', from: 0.4, to: 3 })
+        expect(lines[0]?.native).not.toStrictEqual(clip.lines[0]?.native)
+        expect(lines.slice(1)).toStrictEqual(clip.lines.slice(1))
+        expect(yield* run(store => store.clip(clip.id))).toStrictEqual(edited)
+        const found = yield* run(store => store.clipLine(clip.id, '1'))
+        expect(
+          Option.getOrThrow(Option.getOrThrow(found).maybeNative),
+        ).toStrictEqual(lineCurve(Math.round(0.4 * 100 + 3)))
+        const natives = yield* nativeIdsIn(factory)
+        expect(natives.has(recordingId(lineCurve(1)))).toBe(true)
+        expect(natives.size).toBe(3)
+      }),
+  )
+
+  it.effect('splits, merges and deletes, never giving an id twice', () =>
+    Effect.gen(function* () {
+      const { run } = harness()
+      const clip = yield* run(store => store.addClip(newClip()))
+      const { asked, track } = tracker()
+      const split = yield* run(store =>
+        store.editClipLines(
+          clip.id,
+          { _tag: 'Split', lineId: '3', seconds: 6.5 },
+          track,
+        ),
+      )
+      expect(lineIdsOf(split)).toStrictEqual(['1', '2', '3', '4'])
+      expect(asked.at(-1)).toStrictEqual([
+        { from: 5.4, to: 6.5 },
+        { from: 6.5, to: 8.1 },
+      ])
+      const merged = yield* run(store =>
+        store.editClipLines(clip.id, { _tag: 'Merge', lineId: '1' }, track),
+      )
+      expect(lineIdsOf(merged)).toStrictEqual(['1', '3', '4'])
+      expect(Option.getOrThrow(merged).lines[0]).toMatchObject({
+        from: 0.4,
+        to: 5,
+      })
+      const deleted = yield* run(store =>
+        store.editClipLines(clip.id, { _tag: 'Delete', lineId: '4' }, track),
+      )
+      expect(lineIdsOf(deleted)).toStrictEqual(['1', '3'])
+      expect(asked).toHaveLength(2)
+      const again = yield* run(store =>
+        store.editClipLines(
+          clip.id,
+          { _tag: 'Split', lineId: '1', seconds: 2 },
+          track,
+        ),
+      )
+      expect(lineIdsOf(again)).toStrictEqual(['1', '5', '3'])
+    }),
+  )
+
+  it.effect(
+    'undoes the last change once, with the curves it had, and nothing more',
+    () =>
+      Effect.gen(function* () {
+        const { run, factory } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        const { track } = tracker()
+        yield* run(store =>
+          store.editClipLines(clip.id, { _tag: 'Merge', lineId: '1' }, track),
+        )
+        const undone = yield* run(store => store.undoClipEdit(clip.id))
+        expect(Option.getOrThrow(undone).lines).toStrictEqual(clip.lines)
+        expect(Option.getOrThrow(undone).undo).toBeUndefined()
+        const twice = yield* run(store => store.undoClipEdit(clip.id))
+        expect(twice).toStrictEqual(undone)
+        expect(yield* nativeIdsIn(factory)).toStrictEqual(
+          new Set([recordingId(lineCurve(1)), recordingId(lineCurve(2))]),
+        )
+      }),
+  )
+
+  it.effect(
+    'deletes a curve once nothing names it, and keeps one a take was scored against',
+    () =>
+      Effect.gen(function* () {
+        const { run, factory } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        yield* run(store => store.keep(takeOf(clip.id, '3', lineCurve(2))))
+        const { track } = tracker()
+        const first = yield* run(store =>
+          store.editClipLines(
+            clip.id,
+            { _tag: 'Move', lineId: '1', edge: 'from', seconds: 0.2 },
+            track,
+          ),
+        )
+        const movedNative = Option.getOrThrow(first).lines[0]?.native
+        yield* run(store =>
+          store.editClipLines(
+            clip.id,
+            { _tag: 'Move', lineId: '3', edge: 'to', seconds: 9 },
+            track,
+          ),
+        )
+        yield* run(store =>
+          store.editClipLines(
+            clip.id,
+            { _tag: 'Move', lineId: '1', edge: 'from', seconds: 0.3 },
+            track,
+          ),
+        )
+        const natives = yield* nativeIdsIn(factory)
+        // Line 1's cut curve went two changes ago, with nothing naming it.
+        expect(natives.has(recordingId(lineCurve(1)))).toBe(false)
+        // Its first move is the change that can be undone.
+        expect(
+          movedNative?._tag === 'Tracked' && natives.has(movedNative.nativeId),
+        ).toBe(true)
+        // Line 3's cut curve has a take scored against it.
+        expect(natives.has(recordingId(lineCurve(2)))).toBe(true)
+        const takes = (yield* run(store => store.entries)).entries
+        expect(takes.map(take => take.lineId)).toStrictEqual(['3'])
+      }),
+  )
+
+  it.effect('changes nothing when an edit cannot be made', () =>
+    Effect.gen(function* () {
+      const { run } = harness()
+      const clip = yield* run(store => store.addClip(newClip()))
+      const { asked, track } = tracker()
+      const unchanged = yield* run(store =>
+        store.editClipLines(clip.id, { _tag: 'Merge', lineId: '3' }, track),
+      )
+      expect(unchanged).toStrictEqual(Option.some(clip))
+      expect(asked).toStrictEqual([])
+      expect(
+        yield* run(store =>
+          store.editClipLines(
+            'nothing',
+            { _tag: 'Delete', lineId: '1' },
+            track,
+          ),
+        ),
+      ).toStrictEqual(Option.none())
+    }),
+  )
+
+  it.effect(
+    'writes nothing when the clip changed while its lines were tracked',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        const { track } = tracker()
+        const meanwhile = (
+          spans: ReadonlyArray<Readonly<{ from: number; to: number }>>,
+        ) =>
+          run(store =>
+            store.editClipLines(
+              clip.id,
+              { _tag: 'Delete', lineId: '2' },
+              track,
+            ),
+          ).pipe(Effect.andThen(track(spans)))
+        const error = yield* Effect.flip(
+          run(store =>
+            store.editClipLines(
+              clip.id,
+              { _tag: 'Merge', lineId: '1' },
+              meanwhile,
+            ),
+          ),
+        )
+        expect(error.reason).toContain('changed or deleted elsewhere')
+        expect(
+          lineIdsOf(yield* run(store => store.clip(clip.id))),
+        ).toStrictEqual(['1', '3'])
+      }),
+  )
+
+  it.effect('a deleted clip takes the curves its undo kept with it', () =>
+    Effect.gen(function* () {
+      const { run, factory } = harness()
+      const clip = yield* run(store => store.addClip(newClip()))
+      const { track } = tracker()
+      yield* run(store =>
+        store.editClipLines(clip.id, { _tag: 'Merge', lineId: '1' }, track),
+      )
+      yield* run(store => store.removeClip(clip.id))
+      expect((yield* nativeIdsIn(factory)).size).toBe(0)
+    }),
   )
 })

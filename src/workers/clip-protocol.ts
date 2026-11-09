@@ -19,10 +19,24 @@ export const Load = Schema.TaggedStruct('Load', {
 // The whole clip, mono at 16 kHz.
 export const Cut = Schema.TaggedStruct('Cut', { samples: Samples })
 
+// The whole clip, mono at 16 kHz, kept for the line editor to track its
+// lines again from (`Track`); answered by `Held`, with its waveform.
+export const Hold = Schema.TaggedStruct('Hold', { samples: Samples })
+
+// The lines at these spans of the held clip, each tracked as a cut line
+// is; answered by `TrackDone` with the same `request`.
+export const Track = Schema.TaggedStruct('Track', {
+  request: Schema.Finite,
+  // Samples of the 16 kHz clip, from `from` up to `to`.
+  spans: Schema.Array(
+    Schema.Struct({ from: Schema.Finite, to: Schema.Finite }),
+  ),
+})
+
 // Stop at once, whatever is under way, free the models and close.
 export const Close = Schema.TaggedStruct('Close', {})
 
-export const ToClip = Schema.Union([Load, Cut, Close])
+export const ToClip = Schema.Union([Load, Cut, Hold, Track, Close])
 export type ToClip = typeof ToClip.Type
 
 // FROM THE WORKER
@@ -36,8 +50,17 @@ export const Progress = Schema.TaggedStruct('Progress', {
 })
 export type Progress = typeof Progress.Type
 
+// How far a line's curve can be trusted (../engine/cut/quality.ts).
+export const LineQuality = Schema.Struct({
+  speechFrames: Schema.Finite,
+  confidentShare: Schema.Finite,
+  pauseFrames: Schema.Finite,
+  pausePitchedShare: Schema.Finite,
+})
+
 // A line's native curve and the spectral features of the same audio, as
-// the tracker Worker sends a take's (./tracker-protocol.ts, `Tracked`).
+// the tracker Worker sends a take's (./tracker-protocol.ts, `Tracked`),
+// and its quality.
 export const LineCurve = Schema.TaggedStruct('Tracked', {
   frameHz: Schema.Finite,
   f0Hz: Samples,
@@ -46,6 +69,7 @@ export const LineCurve = Schema.TaggedStruct('Tracked', {
   onsetFrame: Schema.Finite,
   featureDims: Schema.Finite,
   features: Samples,
+  quality: LineQuality,
 })
 export type LineCurve = typeof LineCurve.Type
 
@@ -65,6 +89,16 @@ export const CutDone = Schema.TaggedStruct('CutDone', {
   lines: Schema.Array(CutLine),
 })
 
+// The clip is held, and this is its waveform (../engine/audio/peaks.ts).
+export const Held = Schema.TaggedStruct('Held', {
+  peaks: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
+})
+
+export const TrackDone = Schema.TaggedStruct('TrackDone', {
+  request: Schema.Finite,
+  lines: Schema.Array(CutLine),
+})
+
 export const Failed = Schema.TaggedStruct('Failed', { reason: Schema.String })
 
 // The Worker has released its models and is about to close itself.
@@ -74,6 +108,8 @@ export const FromClip = Schema.Union([
   Loaded,
   Progress,
   CutDone,
+  Held,
+  TrackDone,
   Failed,
   Closed,
 ])
@@ -83,10 +119,13 @@ export type FromClip = typeof FromClip.Type
 export const transferables = (
   message: ToClip | FromClip,
 ): ReadonlyArray<Transferable> => {
-  if (message._tag === 'Cut') {
+  if (message._tag === 'Cut' || message._tag === 'Hold') {
     return [message.samples.buffer]
   }
-  if (message._tag === 'CutDone') {
+  if (message._tag === 'Held') {
+    return [message.peaks.buffer]
+  }
+  if (message._tag === 'CutDone' || message._tag === 'TrackDone') {
     // NOTE: a buffer named twice in a transfer list throws, so each is
     // named once even if two arrays share one.
     return [

@@ -84,6 +84,80 @@ describe('the history’s sums', () => {
   })
 })
 
+describe('a line of the learner’s clip whose span changed', () => {
+  const clipLine = {
+    clipId: 'c1',
+    lineId: '4',
+    lineText: 'reading.mp3, line 4',
+  }
+  const takes = [
+    entryOf({
+      id: 'old-1',
+      takenAt: nov9,
+      score: scoredAt(0.9),
+      nativeId: 'cut',
+      ...clipLine,
+    }),
+    entryOf({
+      id: 'old-2',
+      takenAt: nov9 + dayMs,
+      score: scoredAt(0.95),
+      nativeId: 'cut',
+      ...clipLine,
+    }),
+    entryOf({
+      id: 'new-1',
+      takenAt: nov9 + 2 * dayMs,
+      score: scoredAt(0.4),
+      nativeId: 'moved',
+      ...clipLine,
+    }),
+  ]
+  const now = { _tag: 'Current' as const, maybeNativeId: Option.some('moved') }
+
+  test('keeps its takes before the change apart, and draws only the takes since', () => {
+    const found = Option.getOrThrow(lineTakesOf(takes, 'c1', '4', now))
+    expect(found.lineNow).toBe('Changed')
+    expect(found.takes.map(take => take.id)).toEqual(['new-1'])
+    expect(found.earlier.map(take => take.id)).toEqual(['old-1', 'old-2'])
+    expect(found.drawnFrom).toBe('Now')
+    expect(Option.map(found.maybeBest, best => best.id)).toEqual(
+      Option.some('new-1'),
+    )
+    expect(trendOf(found.takes).map(point => point.maybeMatch)).toEqual([
+      Option.some(0.4),
+    ])
+  })
+
+  test('with no take since, draws the earlier ones, still apart from its trend', () => {
+    const found = Option.getOrThrow(
+      lineTakesOf(takes.slice(0, 2), 'c1', '4', now),
+    )
+    expect(found.takes).toEqual([])
+    expect(found.drawnFrom).toBe('Earlier')
+    expect(found.first.id).toBe('old-1')
+    expect(Option.map(found.maybeBest, best => best.id)).toEqual(
+      Option.some('old-2'),
+    )
+  })
+
+  test('a line moved back to where it was copies the same audio again, so its takes join', () => {
+    const back = { _tag: 'Current' as const, maybeNativeId: Option.some('cut') }
+    const found = Option.getOrThrow(lineTakesOf(takes, 'c1', '4', back))
+    expect(found.takes.map(take => take.id)).toEqual(['old-1', 'old-2'])
+    expect(found.earlier.map(take => take.id)).toEqual(['new-1'])
+  })
+
+  test('a line gone from its clip keeps every take, with nothing apart', () => {
+    const found = Option.getOrThrow(
+      lineTakesOf(takes, 'c1', '4', { _tag: 'Gone' }),
+    )
+    expect(found.lineNow).toBe('Gone')
+    expect(found.takes).toHaveLength(3)
+    expect(found.earlier).toEqual([])
+  })
+})
+
 describe('the trend', () => {
   const trend = trendOf([
     entryOf({ id: 'a', takenAt: 1, score: scoredAt(0.25) }),

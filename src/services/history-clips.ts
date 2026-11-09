@@ -1,13 +1,16 @@
 import { Array, Effect, Option, Order, Random, Schema } from 'effect'
 
 import type { Recording } from '../score/score'
+import { type LineEdit, planEdit, undoneOf } from './clip-edits'
 import type { ClipStore } from './clip-store'
 import {
   ClipEntry,
   type ClipLine,
   type LineNative,
+  type LineQuality,
   NativeEntry,
   TakeEntry,
+  clipNativeIds,
   historyFormat,
   recordingId,
   recordingOfStored,
@@ -21,7 +24,12 @@ import { type IndexedDbError, stores, transact } from './indexed-db'
 // each line's native curve in `natives`, by its content, as a take's
 // native is; and the clip's file in the clip store. A clip is deleted
 // with everything of it: its lines, their curves, its takes and their
-// kept audio, and its file.
+// kept audio, and its file. Its lines can be changed (./clip-edits.ts):
+// the lines a change moves are tracked again before anything is written,
+// the clip's entry is rewritten only if no one else changed it meanwhile,
+// and the last change can be undone once, so the curves of the lines
+// before it are kept until then; a curve nothing names any more, no
+// clip's lines, no undo and no take, is deleted.
 
 // A line as the clip analyser cut it (./clip-analyser.ts): seconds from
 // the clip's start, and its native curve and features or why it has
@@ -30,9 +38,19 @@ export type NewClipLine = Readonly<{
   from: number
   to: number
   native:
-    | Readonly<{ _tag: 'Tracked'; recording: Recording }>
+    | Readonly<{
+        _tag: 'Tracked'
+        recording: Recording
+        quality: LineQuality
+      }>
     | Readonly<{ _tag: 'TooQuiet' | 'TooNoisy' }>
 }>
+
+// Tracks the lines at `spans`, seconds from the clip's start, as a cut
+// does: the line editor's clip Worker (./clip-analyser.ts, `edit`).
+export type TrackSpans<E> = (
+  spans: ReadonlyArray<Readonly<{ from: number; to: number }>>,
+) => Effect.Effect<ReadonlyArray<NewClipLine>, E>
 
 export type NewClip = Readonly<{
   // The file's own name, and its media type as the browser named it.
@@ -73,6 +91,18 @@ export type ClipOperations = Readonly<{
   // Deletes a clip with all its lines, their curves, its takes and its
   // files.
   readonly removeClip: (id: string) => Effect.Effect<void, HistoryError>
+  // Changes clip `clipId`'s lines by `edit`, the lines it moves tracked
+  // again by `track`, and gives the clip as it is then: unchanged when
+  // the edit changes nothing, none when there is no such clip.
+  readonly editClipLines: <E>(
+    clipId: string,
+    edit: LineEdit,
+    track: TrackSpans<E>,
+  ) => Effect.Effect<Option.Option<ClipEntry>, HistoryError | E>
+  // Undoes clip `clipId`'s last change, and gives the clip as it is then.
+  readonly undoClipEdit: (
+    clipId: string,
+  ) => Effect.Effect<Option.Option<ClipEntry>, HistoryError>
 }>
 
 export type WithDatabase = <A>(
@@ -109,6 +139,73 @@ const nativeOf = (native: NewClipLine['native']): LineNative =>
     ? { _tag: 'Tracked', nativeId: recordingId(native.recording) }
     : { _tag: native._tag }
 
+// A line of a clip as kept, from what the cut or a track made of it.
+const clipLineOf = (
+  id: string,
+  span: Readonly<{ from: number; to: number }>,
+  native: NewClipLine['native'],
+): ClipLine =>
+  native._tag === 'Tracked'
+    ? {
+        id,
+        from: span.from,
+        to: span.to,
+        native: nativeOf(native),
+        quality: native.quality,
+      }
+    : { id, from: span.from, to: span.to, native: nativeOf(native) }
+
+const nativeEntriesOf = (
+  lines: ReadonlyArray<NewClipLine>,
+): ReadonlyArray<NativeEntry> =>
+  Array.getSomes(
+    lines.map(({ native }) =>
+      native._tag === 'Tracked'
+        ? Option.some<NativeEntry>({
+            format: historyFormat,
+            id: recordingId(native.recording),
+            recording: storedRecordingOf(native.recording),
+          })
+        : Option.none(),
+    ),
+  )
+
+// Two readings of a clip's lines are the same lines.
+const sameLines = (
+  a: ReadonlyArray<ClipLine>,
+  b: ReadonlyArray<ClipLine>,
+): boolean => JSON.stringify(a) === JSON.stringify(b)
+
+// In `transaction`, once its earlier writes are made: deletes each of
+// `candidates` that no clip's records and no take name.
+const deleteUnusedNatives = (
+  transaction: IDBTransaction,
+  candidates: ReadonlySet<string>,
+): void => {
+  if (candidates.size === 0) {
+    return
+  }
+  const allClips = transaction.objectStore(stores.clips).getAll()
+  const allTakes = transaction.objectStore(stores.takes).getAll()
+  allTakes.onsuccess = () => {
+    const clipValues: ReadonlyArray<unknown> = allClips.result
+    const takeValues: ReadonlyArray<unknown> = allTakes.result
+    const named = new Set([
+      ...Array.getSomes(clipValues.map(value => decodeClip(value))).flatMap(
+        clipNativeIds,
+      ),
+      ...Array.getSomes(takeValues.map(value => decodeEntry(value))).map(
+        take => take.nativeId,
+      ),
+    ])
+    candidates.forEach(nativeId => {
+      if (!named.has(nativeId)) {
+        transaction.objectStore(stores.natives).delete(nativeId)
+      }
+    })
+  }
+}
+
 export const makeClipOperations = (
   withDatabase: WithDatabase,
   files: ClipStore['Service'],
@@ -131,24 +228,11 @@ export const makeClipOperations = (
         addedAt: clip.addedAt,
         seconds: clip.seconds,
         audio: { file, type: clip.type, bytes },
-        lines: clip.lines.map((line, k) => ({
-          id: String(k + 1),
-          from: line.from,
-          to: line.to,
-          native: nativeOf(line.native),
-        })),
-      }
-      const natives = Array.getSomes(
-        clip.lines.map(({ native }) =>
-          native._tag === 'Tracked'
-            ? Option.some<NativeEntry>({
-                format: historyFormat,
-                id: recordingId(native.recording),
-                recording: storedRecordingOf(native.recording),
-              })
-            : Option.none(),
+        lines: clip.lines.map((line, k) =>
+          clipLineOf(String(k + 1), line, line.native),
         ),
-      )
+      }
+      const natives = nativeEntriesOf(clip.lines)
       yield* withDatabase('The clip was not kept.', database =>
         transact(
           database,
@@ -260,18 +344,14 @@ export const makeClipOperations = (
             const otherTakes = everyTake.filter(take => take.clipId !== id)
             const itsClips = everyClip.filter(found => found.id === id)
             const otherClips = everyClip.filter(found => found.id !== id)
-            const nativesOf = (lines: ReadonlyArray<ClipLine>) =>
-              lines.flatMap(line =>
-                line.native._tag === 'Tracked' ? [line.native.nativeId] : [],
-              )
             const kept = new Set([
               ...otherTakes.map(take => take.nativeId),
-              ...otherClips.flatMap(other => nativesOf(other.lines)),
+              ...otherClips.flatMap(clipNativeIds),
             ])
             const unused = new Set(
               [
                 ...itsTakes.map(take => take.nativeId),
-                ...itsClips.flatMap(found => nativesOf(found.lines)),
+                ...itsClips.flatMap(clipNativeIds),
               ].filter(nativeId => !kept.has(nativeId)),
             )
             itsTakes.forEach(take => {
@@ -302,5 +382,143 @@ export const makeClipOperations = (
       ),
     )
 
-  return { addClip, clips, clip, clipLine, removeClip }
+  // Writes `next` over `before` in one transaction, unless the clip was
+  // changed meanwhile, with `natives`, and deletes the curves `before`
+  // named that nothing names any more.
+  const rewrite = (
+    lead: string,
+    before: ClipEntry,
+    next: ClipEntry,
+    natives: ReadonlyArray<NativeEntry>,
+  ) =>
+    withDatabase(lead, database =>
+      transact(
+        database,
+        [stores.clips, stores.natives, stores.takes],
+        'readwrite',
+        transaction => {
+          const clipStore = transaction.objectStore(stores.clips)
+          const current = clipStore.get(before.id)
+          const outcome = { written: false }
+          current.onsuccess = () => {
+            const found = decodeClip(current.result)
+            if (
+              Option.isNone(found) ||
+              !sameLines(found.value.lines, before.lines)
+            ) {
+              return
+            }
+            natives.forEach(native =>
+              transaction.objectStore(stores.natives).put(native),
+            )
+            clipStore.put(next)
+            outcome.written = true
+            const named = new Set(clipNativeIds(next))
+            deleteUnusedNatives(
+              transaction,
+              new Set(
+                clipNativeIds(before).filter(nativeId => !named.has(nativeId)),
+              ),
+            )
+          }
+          return () => outcome.written
+        },
+      ),
+    ).pipe(
+      Effect.flatMap(written =>
+        written
+          ? Effect.succeed(next)
+          : Effect.fail(
+              failWith(lead)({
+                reason:
+                  'The clip was changed or deleted elsewhere, perhaps in another tab. Open it again.',
+              }),
+            ),
+      ),
+    )
+
+  const editClipLines = <E>(
+    clipId: string,
+    edit: LineEdit,
+    track: TrackSpans<E>,
+  ): Effect.Effect<Option.Option<ClipEntry>, HistoryError | E> =>
+    Effect.gen(function* () {
+      const maybeClip = yield* clip(clipId)
+      if (Option.isNone(maybeClip)) {
+        return Option.none()
+      }
+      const before = maybeClip.value
+      const maybePlan = planEdit(before, edit)
+      if (Option.isNone(maybePlan)) {
+        return maybeClip
+      }
+      const plan = maybePlan.value
+      const spans = plan.lines.flatMap(line =>
+        line._tag === 'Retrack' ? [{ from: line.from, to: line.to }] : [],
+      )
+      const tracked = Array.isArrayNonEmpty(spans) ? yield* track(spans) : []
+      if (tracked.length !== spans.length) {
+        return yield* failWith('The lines were not changed.')({
+          reason: `${spans.length} lines were to be tracked again, and ${tracked.length} were.`,
+        })
+      }
+      const queue = [...tracked]
+      const lines = plan.lines.map(line => {
+        if (line._tag === 'Kept') {
+          return line.line
+        }
+        const made = queue.shift()
+        return clipLineOf(line.id, line, made?.native ?? { _tag: 'TooQuiet' })
+      })
+      const next: ClipEntry = {
+        format: before.format,
+        id: before.id,
+        name: before.name,
+        addedAt: before.addedAt,
+        seconds: before.seconds,
+        audio: before.audio,
+        lines,
+        nextLineId: plan.nextLineId,
+        undo: plan.undo,
+      }
+      return Option.some(
+        yield* rewrite(
+          'The lines were not changed.',
+          before,
+          next,
+          nativeEntriesOf(tracked),
+        ),
+      )
+    })
+
+  const undoClipEdit = (clipId: string) =>
+    Effect.gen(function* () {
+      const maybeClip = yield* clip(clipId)
+      if (Option.isNone(maybeClip)) {
+        return Option.none()
+      }
+      const before = maybeClip.value
+      const maybeUndone = undoneOf(before)
+      if (Option.isNone(maybeUndone)) {
+        return maybeClip
+      }
+      return Option.some(
+        yield* rewrite(
+          'The change was not undone.',
+          before,
+          maybeUndone.value,
+          [],
+        ),
+      )
+    })
+
+  return {
+    addClip,
+    clips,
+    clip,
+    clipLine,
+    removeClip,
+    editClipLines,
+    undoClipEdit,
+  }
 }

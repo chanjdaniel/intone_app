@@ -1,3 +1,5 @@
+import { Option } from 'effect'
+
 import type { LevelClip, LevelLine } from './level'
 
 // A clip as the Model knows it, with `count` lines of about 2.5 s each,
@@ -10,8 +12,19 @@ export const sampleClip = (count: number, hasAudio = true): LevelClip => ({
   hasAudio,
   lines: Array.from({ length: count }, (_, k): LevelLine => ({
     id: String(k + 1),
+    number: k + 1,
     from: k * 3 + 0.4,
     to: k * 3 + 2.9,
     native: k === 1 ? 'TooQuiet' : 'Tracked',
+    maybeQuality:
+      k === 1
+        ? Option.none()
+        : Option.some({
+            speechFrames: 120,
+            confidentShare: 0.68,
+            pauseFrames: 18,
+            pausePitchedShare: 0,
+          }),
   })),
+  maybeUndo: Option.none(),
 })

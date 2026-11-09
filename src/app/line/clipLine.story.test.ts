@@ -24,6 +24,12 @@ const clip = {
   audio: { file: 'clips/c1.mp3', type: 'audio/mpeg', bytes: 900 },
   lines: [
     {
+      id: '1',
+      from: 0.4,
+      to: 3.1,
+      native: { _tag: 'Tracked' as const, nativeId: 'n1' },
+    },
+    {
       id: '2',
       from: 3.5,
       to: 6.25,
@@ -31,7 +37,7 @@ const clip = {
     },
   ],
 }
-const [clipLine] = clip.lines
+const [, clipLine] = clip.lines
 
 const onClipLine = (take: Take): Model => ({
   ...initialModel(AppRoute.Line({ clipId: 'c1', lineId: '2' })),
