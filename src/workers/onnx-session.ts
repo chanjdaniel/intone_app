@@ -47,3 +47,23 @@ export const openSession = (
       opened => Effect.promise(() => opened.release()),
     )
   })
+
+// A model file, fetched from the app's own origin; `what` names it in the
+// reason it did not load.
+export const fetchModel = (
+  url: string,
+  what: string,
+): Effect.Effect<Uint8Array, ModelLoadError> =>
+  Effect.tryPromise({
+    try: async () => {
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`the server answered ${response.status}`)
+      }
+      return new Uint8Array(await response.arrayBuffer())
+    },
+    catch: error =>
+      new ModelLoadError({
+        reason: `The ${what} did not load: ${reasonOf(error)}`,
+      }),
+  })

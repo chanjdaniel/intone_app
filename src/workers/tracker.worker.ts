@@ -8,6 +8,7 @@ import {
   swiftF0SampleRate,
 } from '../engine/pitch/swift-f0'
 import { analyseTake } from '../engine/pitch/take'
+import { fetchModel } from './onnx-session'
 import { openSwiftF0 } from './swift-f0-session'
 import { type FromTracker, ToTracker, transferables } from './tracker-protocol'
 
@@ -27,11 +28,6 @@ const post = (message: FromTracker): Effect.Effect<void> =>
 
 const reasonOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
-
-class ModelFetchError extends Schema.TaggedError<
-  ModelFetchError,
-  { readonly brand: unique symbol }
->()('ModelFetchError', { reason: Schema.String }) {}
 
 class TrackError extends Schema.TaggedError<
   TrackError,
@@ -54,21 +50,6 @@ const incoming = Stream.callback<unknown>(queue =>
       }),
   ),
 )
-
-const fetchModel = (url: string): Effect.Effect<Uint8Array, ModelFetchError> =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error(`the server answered ${response.status}`)
-      }
-      return new Uint8Array(await response.arrayBuffer())
-    },
-    catch: error =>
-      new ModelFetchError({
-        reason: `The pitch model did not load: ${reasonOf(error)}`,
-      }),
-  })
 
 const concatenate = (parts: ReadonlyArray<Float32Array>): Float32Array => {
   const whole = new Float32Array(
@@ -101,7 +82,7 @@ const program = Effect.gen(function* () {
 
   const load = (message: Extract<ToTracker, { _tag: 'Load' }>) =>
     Effect.gen(function* () {
-      const model = yield* fetchModel(message.modelUrl)
+      const model = yield* fetchModel(message.modelUrl, 'pitch model')
       const run = yield* openSwiftF0(model, message.wasmPaths).pipe(
         Scope.provide(modelScope),
       )
