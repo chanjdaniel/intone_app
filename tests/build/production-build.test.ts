@@ -168,4 +168,23 @@ describe('the production build', () => {
       expect(code).toContain(`${base}ort/${version}/`)
     }
   })
+
+  // The app claims only what it compared (report section 3): no text it
+  // ships says "accuracy", or that a take is correct. Every text file the
+  // build writes is read, libraries and ONNX Runtime's loader included.
+  test('ships no text that says "accuracy" or that a take is correct', () => {
+    const texts = files().filter(file => /\.(js|mjs|html|css)$/.test(file))
+    expect(texts.length).toBeGreaterThan(3)
+    for (const file of texts) {
+      const code = readFileSync(join(dist, file), 'utf8')
+      expect(code, file).not.toMatch(/accura/i)
+      expect(code, file).not.toMatch(/\b(in)?correct/i)
+    }
+    // The score's own words are there to be read.
+    expect(
+      texts.some(file =>
+        readFileSync(join(dist, file), 'utf8').includes('match to this clip'),
+      ),
+    ).toBe(true)
+  })
 })

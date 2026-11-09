@@ -197,3 +197,29 @@ export const withFallback = (primary: Aligner, fallback: Aligner): Aligner => ({
   align: (native, take) =>
     primary.align(native, take) ?? fallback.align(native, take),
 })
+
+// The take's pitch at each of `nativeFrames` frames of the native,
+// through `path` (in each curve's own frames): the mean, in octaves, of
+// the voiced take frames paired with each native frame, and 0 where none
+// is. For drawing the take over the native where it was compared; the
+// score never reads it.
+export const alignedTakeF0 = (
+  path: AlignmentPath,
+  takeF0Hz: Float32Array,
+  nativeFrames: number,
+): Float32Array => {
+  const octaves = new Float64Array(nativeFrames)
+  const counts = new Int32Array(nativeFrames)
+  for (let k = 0; k < path.native.length; k++) {
+    const i = path.native[k] ?? -1
+    const hz = takeF0Hz[path.take[k] ?? -1] ?? 0
+    if (i >= 0 && i < nativeFrames && hz > 0) {
+      octaves[i] = (octaves[i] ?? 0) + Math.log2(hz)
+      counts[i] = (counts[i] ?? 0) + 1
+    }
+  }
+  return Float32Array.from(octaves, (sum, i) => {
+    const count = counts[i] ?? 0
+    return count > 0 ? 2 ** (sum / count) : 0
+  })
+}

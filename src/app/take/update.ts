@@ -8,6 +8,7 @@ import type { Model } from '../model'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
 import type { TakeResourceServices } from './resources'
 import {
+  type Extent,
   type FinishedTake,
   Take,
   type TakeResult,
@@ -15,6 +16,7 @@ import {
   canStartTake,
   levelMeterFloorDb,
   longestTakeSeconds,
+  worstStretchOf,
 } from './take'
 
 // The take's transitions. Each is a fact about the take that update reads
@@ -73,13 +75,29 @@ export const endedNativeBeforeTake = (
     : moveTo(model, Take.Preparing({ takeNumber }))
 }
 
-export const clickedStop = (model: Model): TakeUpdate =>
-  model.take._tag === 'Recording'
+// The take has ended: it is tracked, then scored against the line's
+// native curve, which a take never starts without.
+const analyse = (model: Model, takeNumber: number): TakeUpdate =>
+  model.native._tag === 'Ready'
     ? moveTo(
         model,
-        Take.Analysing({ takeNumber: model.take.takeNumber }),
-        AnalyseTake({ takeNumber: model.take.takeNumber }),
+        Take.Analysing({ takeNumber }),
+        AnalyseTake({
+          takeNumber,
+          native: {
+            curve: model.native.curve,
+            features: model.native.features,
+          },
+        }),
       )
+    : moveTo(
+        model,
+        Take.AnalysisFailed({ reason: "The line's curve is not loaded." }),
+      )
+
+export const clickedStop = (model: Model): TakeUpdate =>
+  model.take._tag === 'Recording'
+    ? analyse(model, model.take.takeNumber)
     : unchanged(model)
 
 export const clickedCancelTake = (model: Model): TakeUpdate =>
@@ -172,11 +190,7 @@ export const tickedTakeMeter = (
     return unchanged(model)
   }
   if (elapsedSeconds >= longestTakeSeconds) {
-    return moveTo(
-      model,
-      Take.Analysing({ takeNumber }),
-      AnalyseTake({ takeNumber }),
-    )
+    return analyse(model, takeNumber)
   }
   return {
     model: modifyFields(model, {
@@ -263,21 +277,42 @@ const finishedTakeOf = (take: Take): Option.Option<FinishedTake> =>
   )
 
 // Whether `voice` can be listened to from here: the line once its curve
-// is ready, the take once one has finished; never during a take.
-export const canListenTo = (model: Model, voice: Voice): boolean =>
-  canStartTake(model.take) &&
-  (voice === 'Line'
-    ? model.native._tag === 'Ready'
-    : Option.isSome(finishedTakeOf(model.take)))
+// is ready, the take once one has finished, and either's worst stretch
+// once a take has been scored; never during a take.
+export const canListenTo = (
+  model: Model,
+  voice: Voice,
+  extent: Extent = 'Whole',
+): boolean => {
+  const maybeFinished = finishedTakeOf(model.take)
+  return (
+    canStartTake(model.take) &&
+    (voice === 'Line'
+      ? model.native._tag === 'Ready'
+      : Option.isSome(maybeFinished)) &&
+    (extent === 'Whole' ||
+      Option.isSome(
+        Option.flatMap(maybeFinished, ({ result }) => worstStretchOf(result)),
+      ))
+  )
+}
 
 // Listening changes no focus: the control that started it stays where it
 // is, and says it now stops it.
-export const clickedListen = (model: Model, voice: Voice): TakeUpdate =>
-  canListenTo(model, voice)
+export const clickedListen = (
+  model: Model,
+  voice: Voice,
+  extent: Extent,
+): TakeUpdate =>
+  canListenTo(model, voice, extent)
     ? {
         model: modifyFields(model, {
           take: () =>
-            Take.Listening({ voice, maybeTake: finishedTakeOf(model.take) }),
+            Take.Listening({
+              voice,
+              extent,
+              maybeTake: finishedTakeOf(model.take),
+            }),
           maybePlaybackFailure: () => Option.none(),
         }),
       }
@@ -301,8 +336,14 @@ export const clickedStopListening = (model: Model): TakeUpdate =>
     ? { model: backFromListening(model, model.take.maybeTake) }
     : unchanged(model)
 
-export const endedListening = (model: Model, voice: Voice): TakeUpdate =>
-  model.take._tag === 'Listening' && model.take.voice === voice
+export const endedListening = (
+  model: Model,
+  voice: Voice,
+  extent: Extent,
+): TakeUpdate =>
+  model.take._tag === 'Listening' &&
+  model.take.voice === voice &&
+  model.take.extent === extent
     ? { model: backFromListening(model, model.take.maybeTake) }
     : unchanged(model)
 

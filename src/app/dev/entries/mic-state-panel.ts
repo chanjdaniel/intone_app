@@ -5,9 +5,9 @@ import { defineMessageUnion } from 'foldkit/message'
 import { modifyFields } from 'foldkit/struct'
 
 import { takePanel } from '../../take/panel'
-import { Take, TakeResult } from '../../take/take'
+import { Extent, Take, TakeResult, Voice } from '../../take/take'
 import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
-import { sampleCurves } from '../sampleCurves'
+import { sampleScores } from '../sampleScores'
 
 // The mic state panel in every state a take can be in, each picked from
 // the list, with the button it offers read out when pressed.
@@ -31,22 +31,18 @@ export const samples: ReadonlyArray<Readonly<{ name: string; take: Take }>> = [
     }),
   },
   { name: 'Analysing', take: Take.Analysing({ takeNumber: 1 }) },
-  {
-    name: 'Curve',
-    take: Take.ShowingResult({
-      takeNumber: 1,
-      result: TakeResult.Tracked({ curve: sampleCurves.middle }),
-    }),
-  },
+  { name: 'Scored', take: Take.ShowingResult(sampleScores.Provisional) },
   {
     name: 'Listening',
     take: Take.Listening({
       voice: 'Line',
-      maybeTake: Option.some({
-        takeNumber: 1,
-        result: TakeResult.Tracked({ curve: sampleCurves.middle }),
-      }),
+      extent: 'Whole',
+      maybeTake: Option.some(sampleScores.Provisional),
     }),
+  },
+  {
+    name: "Couldn't compare",
+    take: Take.ShowingResult(sampleScores['Length far off']),
   },
   {
     name: 'Too quiet',
@@ -91,6 +87,8 @@ export const Message = defineMessageUnion({
   ClickedRecord: {},
   ClickedStop: {},
   ClickedCancelTake: {},
+  ClickedListen: { voice: Voice, extent: Extent },
+  ClickedStopListening: {},
 })
 export type Message = typeof Message.Type
 
@@ -117,6 +115,12 @@ export const update = (model: Model, message: Message) =>
     ClickedRecord: () => pressed(model, 'record'),
     ClickedStop: () => pressed(model, 'stop'),
     ClickedCancelTake: () => pressed(model, 'cancel'),
+    ClickedListen: ({ voice, extent }) =>
+      pressed(
+        model,
+        `${voice === 'Line' ? 'the line' : 'your take'}${extent === 'WorstStretch' ? ' there' : ''}`,
+      ),
+    ClickedStopListening: () => pressed(model, 'stop listening'),
   })
 
 // VIEW
@@ -185,6 +189,8 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
             record: Message.ClickedRecord(),
             stop: Message.ClickedStop(),
             cancel: Message.ClickedCancelTake(),
+            listen: (voice, extent) => Message.ClickedListen({ voice, extent }),
+            stopListening: Message.ClickedStopListening(),
           },
           h,
         ),

@@ -7,8 +7,8 @@ import { AppRoute, Message, type Model, initialModel, update } from '../main'
 import { FocusTakeControl, WaitForMicAnswer } from './commands'
 import { managedResources } from './resources'
 import { playOf } from './subscriptions'
-import { Take, TakeResult, levelMeterFloorDb } from './take'
-import { sampleCurve } from './testCurves'
+import { Take, TakeResult, TakeScore, levelMeterFloorDb } from './take'
+import { sampleCurve, sampleFeatures, sampleScore } from './testCurves'
 
 // Listening and recording, by the Model: a voice plays only while the
 // Model is in a playing state, the microphone is held only while it is in
@@ -22,6 +22,7 @@ const onLine = (take: Take = Take.Idle(), takesStarted = 1): Model => ({
     clipId: 'ame-ga-suki',
     lineId: '1',
     curve: sampleCurve,
+    features: sampleFeatures,
   }),
   take,
   takesStarted,
@@ -36,7 +37,7 @@ const plays = (state: Model): string =>
 const holdsMicrophone = (state: Model): boolean =>
   Option.isSome(managedResources.microphone.modelToMaybeRequirements(state))
 
-const tracked = TakeResult.Tracked({ curve: sampleCurve })
+const tracked = TakeResult.Tracked({ curve: sampleCurve, score: sampleScore })
 const finished = Take.ShowingResult({ takeNumber: 1, result: tracked })
 
 // One of every state a take can be in.
@@ -55,9 +56,20 @@ const everyState: ReadonlyArray<Take> = [
   }),
   Take.Analysing({ takeNumber: 1 }),
   finished,
-  Take.Listening({ voice: 'Line', maybeTake: Option.none() }),
+  Take.Listening({ voice: 'Line', extent: 'Whole', maybeTake: Option.none() }),
   Take.Listening({
     voice: 'Take',
+    extent: 'Whole',
+    maybeTake: Option.some({ takeNumber: 1, result: tracked }),
+  }),
+  Take.Listening({
+    voice: 'Line',
+    extent: 'WorstStretch',
+    maybeTake: Option.some({ takeNumber: 1, result: tracked }),
+  }),
+  Take.Listening({
+    voice: 'Take',
+    extent: 'WorstStretch',
     maybeTake: Option.some({ takeNumber: 1, result: tracked }),
   }),
   Take.MicDenied(),
@@ -74,7 +86,7 @@ const focused = Command.resolve(
 describe('playing and recording', () => {
   test('never happen at once, in any state a take can be in', () => {
     const states = everyState.map(take => onLine(take))
-    expect(states.filter(state => plays(state) !== 'nothing')).toHaveLength(4)
+    expect(states.filter(state => plays(state) !== 'nothing')).toHaveLength(6)
     expect(states.filter(holdsMicrophone)).toHaveLength(3)
     states.forEach(state => {
       expect(plays(state) !== 'nothing' && holdsMicrophone(state)).toBe(false)
@@ -82,15 +94,17 @@ describe('playing and recording', () => {
   })
 
   test.each(['Line', 'Take'] as const)(
-    'listening to the %s is refused while the microphone is open',
+    'listening to the %s, whole or its worst stretch, is refused while the microphone is open',
     voice => {
       everyState
         .map(take => onLine(take))
         .filter(holdsMicrophone)
         .forEach(state => {
-          expect(update(state, Message.ClickedListen({ voice }))).toStrictEqual(
-            { model: state },
-          )
+          ;(['Whole', 'WorstStretch'] as const).forEach(extent => {
+            expect(
+              update(state, Message.ClickedListen({ voice, extent })),
+            ).toStrictEqual({ model: state })
+          })
         })
     },
   )
@@ -102,6 +116,7 @@ describe('playing and recording', () => {
         onLine(
           Take.Listening({
             voice: 'Take',
+            extent: 'Whole',
             maybeTake: Option.some({ takeNumber: 1, result: tracked }),
           }),
         ),
@@ -158,7 +173,7 @@ describe('listening again', () => {
       update,
       given(onLine(finished)),
       message(Message.SelectedListenSpeed({ speed: 0.5 })),
-      message(Message.ClickedListen({ voice: 'Line' })),
+      message(Message.ClickedListen({ voice: 'Line', extent: 'Whole' })),
       model(state => {
         expect(playOf(state)).toStrictEqual(
           Option.some({
@@ -168,7 +183,7 @@ describe('listening again', () => {
           }),
         )
       }),
-      message(Message.EndedListening({ voice: 'Line' })),
+      message(Message.EndedListening({ voice: 'Line', extent: 'Whole' })),
       model(state => expect(state.take).toStrictEqual(finished)),
       Command.expectNone(),
     )
@@ -178,7 +193,7 @@ describe('listening again', () => {
     story(
       update,
       given(onLine(finished)),
-      message(Message.ClickedListen({ voice: 'Take' })),
+      message(Message.ClickedListen({ voice: 'Take', extent: 'Whole' })),
       model(state =>
         expect(playOf(state)).toStrictEqual(
           Option.some({ _tag: 'Take', takeNumber: 1 }),
@@ -195,7 +210,7 @@ describe('listening again', () => {
   test('has no take to hear before one has finished', () => {
     const idle = onLine()
     expect(
-      update(idle, Message.ClickedListen({ voice: 'Take' })),
+      update(idle, Message.ClickedListen({ voice: 'Take', extent: 'Whole' })),
     ).toStrictEqual({ model: idle })
   })
 
@@ -216,7 +231,7 @@ describe('listening again', () => {
           ),
         ).toBe(false)
       }),
-      message(Message.ClickedListen({ voice: 'Line' })),
+      message(Message.ClickedListen({ voice: 'Line', extent: 'Whole' })),
       model(state =>
         expect(state.maybePlaybackFailure).toStrictEqual(Option.none()),
       ),
@@ -230,6 +245,7 @@ describe('listening again', () => {
         onLine(
           Take.Listening({
             voice: 'Take',
+            extent: 'Whole',
             maybeTake: Option.some({ takeNumber: 1, result: tracked }),
           }),
         ),
@@ -244,5 +260,86 @@ describe('listening again', () => {
         )
       }),
     )
+  })
+})
+
+describe('the worst stretch', () => {
+  // sampleScore's worst stretch: 0.032 to 0.064 s of the line, 0.048 to
+  // 0.08 s of the take.
+  test('plays from the line at the chosen speed, then goes back to the result', () => {
+    story(
+      update,
+      given({ ...onLine(finished), listenSpeed: 0.5 }),
+      message(Message.ClickedListen({ voice: 'Line', extent: 'WorstStretch' })),
+      model(state => {
+        expect(state.take).toStrictEqual(
+          Take.Listening({
+            voice: 'Line',
+            extent: 'WorstStretch',
+            maybeTake: Option.some({ takeNumber: 1, result: tracked }),
+          }),
+        )
+        expect(Option.getOrThrow(playOf(state))).toStrictEqual({
+          _tag: 'LineStretch',
+          audioUrl: expect.stringMatching(/right.*\.wav$/),
+          rate: 0.5,
+          stretch: { from: 0.032, to: 0.064 },
+        })
+      }),
+      // The whole line's end is not the stretch's.
+      message(Message.EndedListening({ voice: 'Line', extent: 'Whole' })),
+      model(state => expect(state.take._tag).toBe('Listening')),
+      message(
+        Message.EndedListening({ voice: 'Line', extent: 'WorstStretch' }),
+      ),
+      model(state => expect(state.take).toStrictEqual(finished)),
+    )
+  })
+
+  test('plays from the take, from memory, and stops on request', () => {
+    story(
+      update,
+      given(onLine(finished)),
+      message(Message.ClickedListen({ voice: 'Take', extent: 'WorstStretch' })),
+      model(state =>
+        expect(Option.getOrThrow(playOf(state))).toStrictEqual({
+          _tag: 'TakeStretch',
+          takeNumber: 1,
+          stretch: { from: 0.048, to: 0.08 },
+        }),
+      ),
+      // Straight from one voice's stretch to the other's.
+      message(Message.ClickedListen({ voice: 'Line', extent: 'WorstStretch' })),
+      model(state => expect(plays(state)).toBe('LineStretch')),
+      message(Message.ClickedStopListening()),
+      model(state => {
+        expect(state.take).toStrictEqual(finished)
+        expect(plays(state)).toBe('nothing')
+      }),
+    )
+  })
+
+  test('cannot be heard from a take that could not be compared', () => {
+    const uncompared = Take.ShowingResult({
+      takeNumber: 1,
+      result: TakeResult.Tracked({
+        curve: sampleCurve,
+        score: TakeScore.CouldNotCompare({
+          version: 1,
+          reason: 'LengthMismatch',
+        }),
+      }),
+    })
+    const state = onLine(uncompared)
+    ;(['Line', 'Take'] as const).forEach(voice => {
+      expect(
+        update(state, Message.ClickedListen({ voice, extent: 'WorstStretch' })),
+      ).toStrictEqual({ model: state })
+      // The whole voices still play.
+      expect(
+        update(state, Message.ClickedListen({ voice, extent: 'Whole' })).model
+          .take._tag,
+      ).toBe('Listening')
+    })
   })
 })

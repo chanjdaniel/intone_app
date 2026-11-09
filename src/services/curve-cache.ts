@@ -1,10 +1,11 @@
 import { Context, Effect, Layer, Option, Schema } from 'effect'
 
-import type { Curve } from '../score/curve'
+import type { Recording } from '../score/score'
 import { getRecord, openDatabase, putRecord, stores } from './indexed-db'
 
 // Native curves kept on the device, so each line is tracked once: in
-// IndexedDB, as a versioned record decoded by its Schema on every read.
+// IndexedDB, each with its features, as a versioned record decoded by its
+// Schema on every read.
 // A record that does not decode (an older format, or a damaged one) reads
 // as no record, so the line is tracked again and the record replaced.
 
@@ -15,46 +16,59 @@ export class CurveCacheError extends Schema.TaggedError<
 
 const Frames = Schema.instanceOf(Float32Array<ArrayBufferLike>)
 
-// Format 1: the curve's fields as the tracker gave them.
+// Format 2: the curve's fields as the tracker gave them, and its
+// features (`featureDims` values per frame). Format 1 had no features,
+// so its records read as none and their lines are tracked again.
 export const StoredCurve = Schema.Struct({
-  format: Schema.Literal(1),
+  format: Schema.Literal(2),
   frameHz: Schema.Finite,
   f0Hz: Frames,
   confidence: Frames,
   levelDb: Frames,
   onsetFrame: Schema.Finite,
+  featureDims: Schema.Finite,
+  features: Frames,
 })
 export type StoredCurve = typeof StoredCurve.Type
 
 const decode = Schema.decodeUnknownOption(StoredCurve)
 
-export const storedCurveOf = (curve: Curve): StoredCurve => ({
-  format: 1,
+export const storedCurveOf = ({ curve, features }: Recording): StoredCurve => ({
+  format: 2,
   frameHz: curve.frameHz,
   f0Hz: curve.f0Hz,
   confidence: curve.confidence,
   levelDb: curve.levelDb,
   onsetFrame: curve.onsetFrame,
+  featureDims: features.dims,
+  features: features.data,
 })
 
-const curveOf = (stored: StoredCurve): Curve => ({
-  frameHz: stored.frameHz,
-  f0Hz: stored.f0Hz,
-  confidence: stored.confidence,
-  levelDb: stored.levelDb,
-  onsetFrame: stored.onsetFrame,
+const recordingOf = (stored: StoredCurve): Recording => ({
+  curve: {
+    frameHz: stored.frameHz,
+    f0Hz: stored.f0Hz,
+    confidence: stored.confidence,
+    levelDb: stored.levelDb,
+    onsetFrame: stored.onsetFrame,
+  },
+  features: {
+    frameHz: stored.frameHz,
+    dims: stored.featureDims,
+    data: stored.features,
+  },
 })
 
 export class CurveCache extends Context.Service<
   CurveCache,
   {
-    // The curve kept at `key`, if one is and it decodes.
+    // The curve and features kept at `key`, if they are and decode.
     readonly get: (
       key: string,
-    ) => Effect.Effect<Option.Option<Curve>, CurveCacheError>
+    ) => Effect.Effect<Option.Option<Recording>, CurveCacheError>
     readonly put: (
       key: string,
-      curve: Curve,
+      recording: Recording,
     ) => Effect.Effect<void, CurveCacheError>
   }
 >()('intone/services/CurveCache') {
@@ -70,12 +84,12 @@ export class CurveCache extends Context.Service<
             ),
           ),
         ).pipe(
-          Effect.map(record => Option.map(decode(record), curveOf)),
+          Effect.map(record => Option.map(decode(record), recordingOf)),
           Effect.mapError(
             error => new CurveCacheError({ reason: error.reason }),
           ),
         ),
-      put: (key, curve) =>
+      put: (key, recording) =>
         Effect.scoped(
           openDatabase(indexedDB).pipe(
             Effect.flatMap(database =>
@@ -83,7 +97,7 @@ export class CurveCache extends Context.Service<
                 database,
                 stores.nativeCurves,
                 key,
-                storedCurveOf(curve),
+                storedCurveOf(recording),
               ),
             ),
           ),
@@ -104,10 +118,10 @@ export class CurveCache extends Context.Service<
       CurveCache,
       CurveCache.of({
         get: key =>
-          Effect.sync(() => Option.map(decode(records.get(key)), curveOf)),
-        put: (key, curve) =>
+          Effect.sync(() => Option.map(decode(records.get(key)), recordingOf)),
+        put: (key, recording) =>
           Effect.sync(() => {
-            records.set(key, storedCurveOf(curve))
+            records.set(key, storedCurveOf(recording))
           }),
       }),
     )

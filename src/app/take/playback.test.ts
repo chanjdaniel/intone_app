@@ -47,7 +47,7 @@ describe('playing a voice', () => {
         expect(fiber.pollUnsafe()).toBeUndefined()
         yield* TestClock.adjust('1 millis')
         expect(yield* Fiber.join(fiber)).toStrictEqual([
-          Message.EndedListening({ voice: 'Line' }),
+          Message.EndedListening({ voice: 'Line', extent: 'Whole' }),
         ])
         expect(heard).toStrictEqual([
           { voice: 'Line', url: '/line.wav', rate: 0.5 },
@@ -65,7 +65,7 @@ describe('playing a voice', () => {
       )
       yield* TestClock.adjust('500 millis')
       expect(yield* Fiber.join(fiber)).toStrictEqual([
-        Message.EndedListening({ voice: 'Take' }),
+        Message.EndedListening({ voice: 'Take', extent: 'Whole' }),
       ])
       expect(heard).toStrictEqual([
         { voice: 'Take', samples: 24_000, sampleRate: 48_000 },

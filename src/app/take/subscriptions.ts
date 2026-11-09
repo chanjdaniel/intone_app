@@ -24,7 +24,7 @@ import {
   type TakeResourceServices,
   TrackerResource,
 } from './resources'
-import { levelMeterFloorDb, recordingTake } from './take'
+import { levelMeterFloorDb, recordingTake, worstStretchOf } from './take'
 import { keepTakeAudio, takeAudioOf } from './takeAudio'
 
 // While a take records: the microphone's batches go to the tracker Worker
@@ -125,6 +125,9 @@ const recordTake = (
     ),
   )
 
+// Seconds from a recording's start.
+const Stretch = Schema.Struct({ from: Schema.Finite, to: Schema.Finite })
+
 // What the Model is playing now.
 export const Play = Schema.Union([
   // The line, at its own speed, before take `takeNumber`.
@@ -136,6 +139,17 @@ export const Play = Schema.Union([
   Schema.TaggedStruct('Line', { audioUrl: Schema.String, rate: Schema.Finite }),
   // The learner's take `takeNumber`, from memory.
   Schema.TaggedStruct('Take', { takeNumber: Schema.Finite }),
+  // A scored take's worst stretch of the line, `rate` times its speed.
+  Schema.TaggedStruct('LineStretch', {
+    audioUrl: Schema.String,
+    rate: Schema.Finite,
+    stretch: Stretch,
+  }),
+  // The part of take `takeNumber` paired with that stretch, from memory.
+  Schema.TaggedStruct('TakeStretch', {
+    takeNumber: Schema.Finite,
+    stretch: Stretch,
+  }),
 ])
 export type Play = typeof Play.Type
 
@@ -152,17 +166,40 @@ export const playOf = (model: Model): Option.Option<Play> => {
         audioUrl: line.audioUrl,
       })),
     ),
-    Match.tag('Listening', ({ voice, maybeTake }) =>
-      voice === 'Line'
-        ? Option.map(maybeLine, line => ({
-            _tag: 'Line' as const,
-            audioUrl: line.audioUrl,
-            rate: model.listenSpeed,
-          }))
-        : Option.map(maybeTake, ({ takeNumber }) => ({
-            _tag: 'Take' as const,
-            takeNumber,
-          })),
+    Match.tag(
+      'Listening',
+      ({ voice, extent, maybeTake }): Option.Option<Play> => {
+        if (extent === 'WorstStretch') {
+          return Option.flatMap(maybeTake, ({ takeNumber, result }) =>
+            Option.flatMap(
+              worstStretchOf(result),
+              (worst): Option.Option<Play> =>
+                voice === 'Line'
+                  ? Option.map(maybeLine, line => ({
+                      _tag: 'LineStretch' as const,
+                      audioUrl: line.audioUrl,
+                      rate: model.listenSpeed,
+                      stretch: { from: worst.nativeFrom, to: worst.nativeTo },
+                    }))
+                  : Option.some({
+                      _tag: 'TakeStretch' as const,
+                      takeNumber,
+                      stretch: { from: worst.takeFrom, to: worst.takeTo },
+                    }),
+            ),
+          )
+        }
+        return voice === 'Line'
+          ? Option.map(maybeLine, line => ({
+              _tag: 'Line' as const,
+              audioUrl: line.audioUrl,
+              rate: model.listenSpeed,
+            }))
+          : Option.map(maybeTake, ({ takeNumber }) => ({
+              _tag: 'Take' as const,
+              takeNumber,
+            }))
+      },
     ),
     Match.orElse(() => Option.none()),
   )
@@ -176,6 +213,24 @@ export const playbackEvents = (
   Stream.fromEffect(
     Effect.gen(function* () {
       const playback = yield* Playback
+      const playTake = (
+        takeNumber: number,
+        stretch?: Readonly<{ from: number; to: number }>,
+      ) =>
+        takeAudioOf(takeNumber).pipe(
+          Effect.flatMap(
+            Option.match({
+              onNone: () =>
+                Effect.fail(
+                  new PlaybackError({
+                    reason: 'Your take is no longer in memory.',
+                  }),
+                ),
+              onSome: audio =>
+                playback.playTake(audio.samples, audio.sampleRate, stretch),
+            }),
+          ),
+        )
       return yield* Match.value(play).pipe(
         Match.tagsExhaustive({
           LineBeforeTake: ({ takeNumber, audioUrl }) =>
@@ -185,22 +240,34 @@ export const playbackEvents = (
           Line: ({ audioUrl, rate }) =>
             playback
               .playLine(audioUrl, rate)
-              .pipe(Effect.as(Message.EndedListening({ voice: 'Line' }))),
+              .pipe(
+                Effect.as(
+                  Message.EndedListening({ voice: 'Line', extent: 'Whole' }),
+                ),
+              ),
           Take: ({ takeNumber }) =>
-            takeAudioOf(takeNumber).pipe(
-              Effect.flatMap(
-                Option.match({
-                  onNone: () =>
-                    Effect.fail(
-                      new PlaybackError({
-                        reason: 'Your take is no longer in memory.',
-                      }),
-                    ),
-                  onSome: audio =>
-                    playback.playTake(audio.samples, audio.sampleRate),
+            playTake(takeNumber).pipe(
+              Effect.as(
+                Message.EndedListening({ voice: 'Take', extent: 'Whole' }),
+              ),
+            ),
+          LineStretch: ({ audioUrl, rate, stretch }) =>
+            playback.playLine(audioUrl, rate, stretch).pipe(
+              Effect.as(
+                Message.EndedListening({
+                  voice: 'Line',
+                  extent: 'WorstStretch',
                 }),
               ),
-              Effect.as(Message.EndedListening({ voice: 'Take' })),
+            ),
+          TakeStretch: ({ takeNumber, stretch }) =>
+            playTake(takeNumber, stretch).pipe(
+              Effect.as(
+                Message.EndedListening({
+                  voice: 'Take',
+                  extent: 'WorstStretch',
+                }),
+              ),
             ),
         }),
       )

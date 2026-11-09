@@ -27,7 +27,10 @@ import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
 import { DrawCurvePair } from './curvePair'
 import { managedResources } from './resources'
 import { Take, TakeResult, levelMeterFloorDb } from './take'
-import { sampleCurve } from './testCurves'
+import { sampleCurve, sampleFeatures, sampleScore } from './testCurves'
+
+// The native as the take is scored against it.
+const nativeRecording = { curve: sampleCurve, features: sampleFeatures }
 
 // The bundled line's practice screen, its native curve ready.
 const onLine = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
@@ -36,6 +39,7 @@ const onLine = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
     clipId: 'ame-ga-suki',
     lineId: '1',
     curve: sampleCurve,
+    features: sampleFeatures,
   }),
   take,
   takesStarted,
@@ -118,7 +122,9 @@ describe('a take', () => {
       ),
       expect(text(/^Your curve, as you speak\. Each curve starts/)).toExist(),
       click(stopButton),
-      Command.expectHas(AnalyseTake({ takeNumber: 1 })),
+      Command.expectHas(
+        AnalyseTake({ takeNumber: 1, native: nativeRecording }),
+      ),
       focused,
       expect(role('heading', { name: 'Finding your pitch' })).toExist(),
       // The live curve stays while the take is tracked, without the
@@ -129,15 +135,16 @@ describe('a take', () => {
         AnalyseTake,
         Message.SucceededAnalyseTake({
           takeNumber: 1,
-          result: TakeResult.Tracked({ curve }),
+          result: TakeResult.Tracked({ curve, score: sampleScore }),
         }),
       ),
       focused,
       ManagedResource.release(managedResources.microphone),
       expect(role('heading', { name: 'Your copy' })).toExist(),
+      expect(text('82% match to this clip')).toExist(),
       expect(
         role('img', {
-          name: "Your pitch curve, 0.10 s from your voice onset, in semitones around your typical pitch of 105 Hz, over the line's, coloured blue where it is close to the line and orange where it is far.",
+          name: "Your pitch curve, lined up with the line's where the two were compared, in semitones around your typical pitch of 105 Hz, coloured blue where it is close to the line and orange where it is far. The stretch where it differed most is shaded.",
         }),
       ).toExist(),
       expect(lineCurve).toExist(),

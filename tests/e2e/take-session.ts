@@ -21,14 +21,17 @@ export type Session = Readonly<{
 }>
 
 // A page at 1280 px and two device pixels to each CSS pixel, which
-// records every request, console problem and microphone track.
+// records every request, console problem and microphone track; with
+// `hasTouch`, it can be tapped.
 export const withPage = async <A>(
   browser: Browser,
   use: (session: Session) => Promise<A>,
+  options: Readonly<{ hasTouch?: boolean }> = {},
 ): Promise<A> => {
   const context = await browser.newContext({
     viewport: { width: 1280, height: 900 },
     deviceScaleFactor: 2,
+    hasTouch: options.hasTouch ?? false,
   })
   const page = await context.newPage()
   const session: Session = { context, page, requests: [], problems: [] }

@@ -351,13 +351,16 @@ export type AxisColours = Readonly<{
 
 // Clears a `width` by `height` CSS-pixel context and paints the semitone
 // axis: a line every 3 semitones, the median's darker, labels every 6.
+// `beneath` paints on the cleared plot before the axis's lines.
 export const paintAxis = (
   context: CanvasRenderingContext2D,
   size: Readonly<{ width: number; height: number }>,
   colours: AxisColours,
+  beneath?: (area: PlotArea) => void,
 ): PlotArea => {
   const area = plotArea(size.width, size.height)
   context.clearRect(0, 0, size.width, size.height)
+  beneath?.(area)
 
   context.font = '11px system-ui, sans-serif'
   context.textAlign = 'right'

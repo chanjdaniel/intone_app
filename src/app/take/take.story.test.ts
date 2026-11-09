@@ -14,7 +14,10 @@ import {
 import { managedResources } from './resources'
 import { playOf } from './subscriptions'
 import { Take, TakeResult, levelMeterFloorDb } from './take'
-import { sampleCurve } from './testCurves'
+import { sampleCurve, sampleFeatures } from './testCurves'
+
+// The native as the take is scored against it.
+const nativeRecording = { curve: sampleCurve, features: sampleFeatures }
 
 // The bundled line's practice screen, its native curve ready.
 const onLine = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
@@ -23,6 +26,7 @@ const onLine = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
     clipId: 'ame-ga-suki',
     lineId: '1',
     curve: sampleCurve,
+    features: sampleFeatures,
   }),
   take,
   takesStarted,
@@ -222,7 +226,10 @@ describe('the take, by its Model', () => {
           levelDb: -20,
         }),
       ),
-      Command.expectExact(AnalyseTake({ takeNumber: 1 }), FocusTakeControl()),
+      Command.expectExact(
+        AnalyseTake({ takeNumber: 1, native: nativeRecording }),
+        FocusTakeControl(),
+      ),
       model(state => {
         expect(state.take).toStrictEqual(Take.Analysing({ takeNumber: 1 }))
         expect(holds(state).microphone).toBe(false)

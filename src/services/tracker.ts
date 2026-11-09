@@ -15,6 +15,7 @@ import { modelUrls } from 'virtual:intone/models'
 import { onnxRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'
 
 import type { LiveFrames } from '../engine/pitch/live'
+import type { Recording } from '../score/score'
 import {
   FromTracker,
   type ToTracker,
@@ -30,6 +31,24 @@ import {
 
 export type { LiveFrames } from '../engine/pitch/live'
 export type { TrackerResult } from '../workers/tracker-protocol'
+
+// A tracked recording's curve and features, as the score reads them.
+export const recordingOfTracked = (
+  tracked: Extract<TrackerResult, { _tag: 'Tracked' }>,
+): Recording => ({
+  curve: {
+    frameHz: tracked.frameHz,
+    f0Hz: tracked.f0Hz,
+    confidence: tracked.confidence,
+    levelDb: tracked.levelDb,
+    onsetFrame: tracked.onsetFrame,
+  },
+  features: {
+    frameHz: tracked.frameHz,
+    dims: tracked.featureDims,
+    data: tracked.features,
+  },
+})
 
 export class TrackerError extends Schema.TaggedError<
   TrackerError,

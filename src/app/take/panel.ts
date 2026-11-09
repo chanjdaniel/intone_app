@@ -3,7 +3,14 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { takeFocusAttribute } from './commands'
 import { levelMeter } from './levelMeter'
-import { Take, type TakeResult, longestTakeSeconds } from './take'
+import { couldNotCompareText, scoreSummary, worstStretch } from './scoreCard'
+import {
+  type Extent,
+  Take,
+  type TakeResult,
+  type Voice,
+  longestTakeSeconds,
+} from './take'
 
 // The mic state panel: one clear screen for every state of a take, from
 // the record button through playing the line, asking for the microphone,
@@ -12,11 +19,18 @@ import { Take, type TakeResult, longestTakeSeconds } from './take'
 // the heading, when there is none) carries `takeFocusAttribute`, so focus
 // follows the take. Listening again shows the screen it was started from.
 // The curves themselves are drawn above the panel (./curvePair.ts).
+//
+// What a state says goes in one live region, which stays in place from
+// state to state, so a screen reader hears each change once: the take's
+// score among them, when it comes, and not again while its voices play.
 
 export type TakePanelEvents<ViewMessage> = Readonly<{
   record: ViewMessage
   stop: ViewMessage
   cancel: ViewMessage
+  // A scored take's worst stretch, in either voice.
+  listen: (voice: Voice, extent: Extent) => ViewMessage
+  stopListening: ViewMessage
 }>
 
 const focusRing =
@@ -40,6 +54,9 @@ type Screen<ViewMessage> = Readonly<{
   tone: Tone
   heading: string
   lines: ReadonlyArray<string>
+  // Said in the live region after the lines.
+  summary?: Html
+  // Shown after the live region, out of it.
   body?: Html
   action?: Readonly<{
     label: string
@@ -103,11 +120,17 @@ const screenOf = <ViewMessage>(
       heading: 'Finding your pitch',
       lines: ['The microphone is off. Tracking your take now.'],
     }),
-    ShowingResult: ({ result }) => resultScreen(result, events),
-    Listening: ({ maybeTake }) =>
+    ShowingResult: ({ result }) => resultScreen(result, 'Nothing', events, h),
+    Listening: ({ voice, extent, maybeTake }) =>
       Option.match(maybeTake, {
         onNone: () => idleScreen(events),
-        onSome: ({ result }) => resultScreen(result, events),
+        onSome: ({ result }) =>
+          resultScreen(
+            result,
+            extent === 'WorstStretch' ? voice : 'Nothing',
+            events,
+            h,
+          ),
       }),
     MicDenied: () => ({
       tone: 'problem',
@@ -178,9 +201,13 @@ const recordingBody = <ViewMessage>(
     ],
   )
 
+// A finished take: its score, or why it has none. `stretchPlaying` is the
+// voice whose worst stretch plays now, if either.
 const resultScreen = <ViewMessage>(
   result: TakeResult,
+  stretchPlaying: Voice | 'Nothing',
   events: TakePanelEvents<ViewMessage>,
+  h: HtmlBuilder<ViewMessage>,
 ): Screen<ViewMessage> => {
   const again: Screen<ViewMessage>['action'] = {
     label: 'Record again',
@@ -188,12 +215,25 @@ const resultScreen = <ViewMessage>(
     kind: 'primary',
   }
   if (result._tag === 'Tracked') {
+    const score = result.score
+    if (score._tag === 'CouldNotCompare') {
+      const { heading, lines } = couldNotCompareText[score.reason]
+      return { tone: 'problem', heading, lines, action: again }
+    }
     return {
       tone: 'neutral',
       heading: 'Your copy',
-      lines: [
-        "Your curve is drawn over the line's. Listen to both, then record again when you are ready.",
-      ],
+      lines: [],
+      summary: scoreSummary(score, h),
+      body: worstStretch(
+        score,
+        {
+          playing: stretchPlaying,
+          hear: voice => events.listen(voice, 'WorstStretch'),
+          stop: events.stopListening,
+        },
+        h,
+      ),
       action: again,
     }
   }
@@ -253,10 +293,13 @@ export const takePanel = <ViewMessage>(
         ],
       ),
       h.div(
-        [h.AriaLive('polite'), h.Class('flex flex-col gap-2 empty:hidden')],
-        screen.lines.map(line =>
-          h.p([h.Class('text-base text-muted break-words')], [line]),
-        ),
+        [h.Role('status'), h.Class('flex flex-col gap-2 empty:hidden')],
+        [
+          ...screen.lines.map(line =>
+            h.p([h.Class('text-base text-muted break-words')], [line]),
+          ),
+          ...(screen.summary === undefined ? [] : [screen.summary]),
+        ],
       ),
       ...(screen.body === undefined ? [] : [screen.body]),
       ...(action === undefined

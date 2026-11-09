@@ -2,10 +2,11 @@ import { Match, Option } from 'effect'
 import type { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
+import { swiftF0FrameHz } from '../../engine/pitch/swift-f0'
 import { homeRouter } from '../route'
-import { PairLearner, curvePairView } from '../take/curvePair'
+import { PairLearner, curvePairView, describeCurve } from '../take/curvePair'
 import { type TakePanelEvents, takePanel } from '../take/panel'
-import type { Take, TakeCurve } from '../take/take'
+import type { FinishedTake, Take, TakeCurve } from '../take/take'
 import { type BundledLine, lineKey } from './lines'
 import { type ListenControls, listenControls } from './listenControls'
 import type { NativeCurve } from './native'
@@ -14,9 +15,8 @@ import type { NativeCurve } from './native'
 // it, listening again at a chosen speed, and the take.
 
 export type PracticeEvents<ViewMessage> = TakePanelEvents<ViewMessage> &
-  Pick<ListenControls<ViewMessage>, 'listen' | 'selectSpeed'> &
+  Pick<ListenControls<ViewMessage>, 'selectSpeed'> &
   Readonly<{
-    stopListening: ViewMessage
     retryNative: ViewMessage
     draw: (args: {
       native: TakeCurve
@@ -38,6 +38,43 @@ const focusRing =
 
 const spanNote =
   "Each curve starts at its voice onset, around its speaker's own typical pitch; the lines are 3 semitones apart, and dashes bridge short pauses."
+
+const alignedNote =
+  "Your curve is lined up with the line's by how each part of it sounds, so each part sits over the part of the line it was compared with, around your own typical pitch. The lines are 3 semitones apart."
+
+// The upper canvas for a finished take: lined up with the native's when
+// it was scored, else from its own onset; nothing when it has no curve.
+const finishedLearnerOf = (
+  finished: FinishedTake,
+): Option.Option<
+  Readonly<{ key: string; learner: PairLearner; note: string }>
+> => {
+  const { takeNumber, result } = finished
+  if (result._tag !== 'Tracked') {
+    return Option.none()
+  }
+  const score = result.score
+  if (score._tag === 'CouldNotCompare') {
+    return Option.some({
+      key: `result-${takeNumber}`,
+      learner: PairLearner.Finished({ curve: result.curve }),
+      note: spanNote,
+    })
+  }
+  const { nativeFrom, nativeTo } = score.worstStretch
+  return Option.some({
+    key: `aligned-${takeNumber}`,
+    learner: PairLearner.Aligned({
+      f0Hz: score.alignedF0,
+      medianHz: describeCurve(result.curve).medianHz,
+      mark: {
+        fromFrame: nativeFrom * swiftF0FrameHz,
+        toFrame: nativeTo * swiftF0FrameHz,
+      },
+    }),
+    note: alignedNote,
+  })
+}
 
 // What the upper canvas shows for `take`, its key, and the note under it.
 export const learnerOf = (
@@ -66,30 +103,19 @@ export const learnerOf = (
           : stillTake._tag === 'Listening'
             ? stillTake.maybeTake
             : Option.none()
-      return Option.match(
-        Option.flatMap(maybeFinished, ({ takeNumber, result }) =>
-          result._tag === 'Tracked'
-            ? Option.some({ takeNumber, curve: result.curve })
-            : Option.none(),
-        ),
-        {
-          onNone: () => ({
-            key: 'line',
-            learner: PairLearner.None(),
-            note: `Press record to draw your curve over the line's. ${spanNote}`,
-          }),
-          onSome: ({ takeNumber, curve }) => ({
-            key: `result-${takeNumber}`,
-            learner: PairLearner.Finished({ curve }),
-            note: spanNote,
-          }),
-        },
-      )
+      return Option.match(Option.flatMap(maybeFinished, finishedLearnerOf), {
+        onNone: () => ({
+          key: 'line',
+          learner: PairLearner.None(),
+          note: `Press record to draw your curve over the line's. ${spanNote}`,
+        }),
+        onSome: shown => shown,
+      })
     }),
   )
 
 const playingOf = (take: Take): ListenControls<never>['playing'] =>
-  take._tag === 'Listening' ? take.voice : 'Nothing'
+  take._tag === 'Listening' && take.extent === 'Whole' ? take.voice : 'Nothing'
 
 const nativeBox = 'h-56 w-full rounded-md border border-line bg-raised sm:h-64'
 
@@ -226,7 +252,7 @@ const readyBody = <ViewMessage>(
               canPlayLine: state.canPlayLine,
               canPlayTake: state.canPlayTake,
               speed: state.speed,
-              listen: events.listen,
+              listen: voice => events.listen(voice, 'Whole'),
               stop: events.stopListening,
               selectSpeed: events.selectSpeed,
             },

@@ -1,5 +1,6 @@
 import {
   type Aligner,
+  type AlignmentPath,
   dtwAligner,
   normaliseFeatures,
   stretchAligner,
@@ -83,6 +84,9 @@ export type ScoreDetail = Readonly<{
   pitchSkill: number
   tempoDeviation: number
   gain: number
+  // The pairs of frames the score lined up, in each curve's own frames,
+  // or null when it could not compare.
+  alignment: AlignmentPath | null
 }>
 
 export const scoreDetail = (
@@ -97,6 +101,7 @@ export const scoreDetail = (
     pitchSkill: Number.NaN,
     tempoDeviation: Number.NaN,
     gain: Number.NaN,
+    alignment: null,
   })
   const nativeTrack = pitchTrack(native.curve)
   const takeTrack = pitchTrack(take.curve)
@@ -196,9 +201,23 @@ export const scoreDetail = (
     pitchSkill: fit.skill,
     tempoDeviation: deviation,
     gain: fit.gain,
+    alignment: {
+      native: path.native.map(frame => frame + nativeTrack.from),
+      take: path.take.map(frame => frame + takeTrack.from),
+    },
   }
 }
 
 // The score of `take` copying `native`.
 export const scoreTake = (native: Recording, take: Recording): Score =>
   scoreDetail(native, take).score
+
+// The score, and the pairs of frames it lined up, for drawing the take
+// over the native where it was compared (`alignedTakeF0`).
+export const scoreWithAlignment = (
+  native: Recording,
+  take: Recording,
+): Readonly<{ score: Score; alignment: AlignmentPath | null }> => {
+  const { score, alignment } = scoreDetail(native, take)
+  return { score, alignment }
+}

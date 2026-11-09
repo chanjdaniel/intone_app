@@ -234,8 +234,9 @@ test.describe('the live curve', () => {
             'Microphone level',
           )
           await page.getByRole('button', { name: 'Stop' }).click()
+          // Every result screen, scored or not, offers another take.
           await expect(
-            page.getByRole('heading', { name: 'Your copy' }),
+            page.getByRole('button', { name: 'Record again' }),
           ).toBeVisible({ timeout: 30_000 })
 
           const watched = await watchedOf(page)

@@ -10,6 +10,7 @@ import {
   paintAxis,
   plotArea,
   semitoneReach,
+  xOfFrame,
 } from './curve'
 import type { LiveCurve } from './live-curve'
 
@@ -108,11 +109,19 @@ export type PairColours = AxisColours &
     native: string
     // From the closest to the farthest, `closenessSteps` of them.
     ramp: ReadonlyArray<string>
+    // The shading of a marked stretch.
+    mark: string
   }>
 
 type Size = Readonly<{ width: number; height: number }>
 
-// Paints the axis and the native's curve across `spanFrames` frames.
+// A stretch of the native's frames to shade, `fromFrame` to `toFrame`:
+// the worst stretch of a take lined up with it.
+export type MarkedStretch = Readonly<{ fromFrame: number; toFrame: number }>
+
+// Paints the marked stretch if any, the axis, and the native's curve
+// across `spanFrames` frames. The shading is on the lower canvas, under
+// the axis's lines, so it lies behind both curves.
 export const paintNativeLayer = (
   context: CanvasRenderingContext2D,
   size: Size,
@@ -120,8 +129,27 @@ export const paintNativeLayer = (
   native: CurveWindow,
   spanFrames: number,
   stroke = createCurveStroker(),
+  mark: MarkedStretch | null = null,
 ): void => {
-  const area = paintAxis(context, size, colours)
+  const area = paintAxis(context, size, colours, plot => {
+    if (mark !== null) {
+      // A stretch can start before the native's onset, where the score's
+      // speech span begins, or run past the width: shaded over the plot
+      // only.
+      const from = Math.max(
+        plot.left,
+        xOfFrame(plot, native.firstFrame, spanFrames, mark.fromFrame),
+      )
+      const to = Math.min(
+        plot.left + plot.width,
+        xOfFrame(plot, native.firstFrame, spanFrames, mark.toFrame),
+      )
+      if (to > from) {
+        context.fillStyle = colours.mark
+        context.fillRect(from, plot.top, to - from, plot.height)
+      }
+    }
+  })
   stroke(context, area, native, spanFrames, onePen(nativeWidth, colours.native))
 }
 
@@ -177,8 +205,9 @@ export type CurvePairDrawing = Readonly<{
 // Draws the native's curve on `canvases.native` and `learner` on
 // `canvases.learner` on each animation frame that changes either, at the
 // canvases' size and the device's pixel ratio, until stopped. With no
-// learner, only the native's line is drawn. `colours` is read again when
-// the canvases change size; `painted` hears each paint of the learner's.
+// learner, only the native's line is drawn; `mark` is shaded behind both.
+// `colours` is read again when the canvases change size; `painted` hears
+// each paint of the learner's.
 export const drawCurvePair = (
   canvases: Readonly<{
     native: HTMLCanvasElement
@@ -188,6 +217,7 @@ export const drawCurvePair = (
   learner: LiveCurve | null,
   colours: () => PairColours,
   painted: (painting: PairPainting) => void,
+  mark: MarkedStretch | null = null,
 ): CurvePairDrawing => {
   const nativeContext = canvases.native.getContext('2d')
   const learnerContext = canvases.learner.getContext('2d')
@@ -239,6 +269,7 @@ export const drawCurvePair = (
         native,
         spanFrames,
         strokeNative,
+        mark,
       )
     }
     const pixelsPerSemitone =

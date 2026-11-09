@@ -21,7 +21,11 @@ import {
 // A take in the built app, end to end: Chromium's fake microphone plays a
 // synthetic voice into the real capture worklet, the tracker Worker runs
 // SwiftF0, and the curve the app draws is read back off its canvas and
-// compared with the F0 the voice was made from. docs/fake-microphone.md
+// compared with the F0 the voice was made from. It is read off the live
+// canvas once the voice has ended, before stop: the result draws the take
+// lined up with the line instead, where its own timing no longer shows,
+// and a loud take's live frames are its finished curve's
+// (./live-curve.spec.ts). docs/fake-microphone.md
 // says what the fake microphone delivers and what a test must allow for.
 
 const fixtures = join(import.meta.dirname, '..', '..', 'fixtures', 'synthetic')
@@ -32,7 +36,9 @@ const voiceStartSeconds = 0.5
 // Measured on all three voices, six runs each at a load average of 22 to
 // 30, with the lag fitted to the RMS error: a median of 0.015 to 0.054, a
 // 95th percentile of 0.04 to 0.11 and a largest of 0.17, every frame
-// drawn.
+// drawn. Read off the live canvas at 4 s, as now, two runs each at a load
+// average of 3: a median of 0.017 to 0.055, a 95th percentile of 0.05 to
+// 0.11 and a largest of 0.14, every frame drawn.
 // The allowance above that is for a slip of the fake microphone, which
 // moves the rest of a take 10 ms, up to 0.4 semitones on the fastest glide
 // and two frames lost near it (docs/fake-microphone.md).
@@ -43,7 +49,8 @@ const wavOf = (name: VoiceName): string => join(fixtures, `${name}.wav`)
 const labelsOf = (name: VoiceName): SyntheticVoiceLabels =>
   JSON.parse(readFileSync(join(fixtures, `${name}.json`), 'utf8'))
 
-const recordTake = async (page: Page, seconds: number): Promise<void> => {
+// Records until the clock shows `seconds`, still recording.
+const recordFor = async (page: Page, seconds: number): Promise<void> => {
   await page.getByRole('button', { name: 'Record' }).click()
   await expect(page.getByRole('heading', { name: 'Recording' })).toBeVisible({
     timeout: 30_000,
@@ -52,17 +59,18 @@ const recordTake = async (page: Page, seconds: number): Promise<void> => {
   await expect(
     page.getByText(new RegExp(`^0:0${seconds} of 0:30`)),
   ).toBeVisible({ timeout: (seconds + 5) * 1000 })
-  await page.getByRole('button', { name: 'Stop' }).click()
 }
 
-// The curve as drawn on the learner's canvas, which holds nothing else:
-// for each column, the centre of its solid pixels, as seconds from the
-// onset and semitones from the median, by the painter's own axis.
+// The curve as drawn on the learner's live canvas, which holds nothing
+// else: for each column, the centre of its solid pixels, as seconds from
+// the onset and semitones from the median, by the painter's own axis.
 const readDrawnCurve = async (page: Page) => {
-  const canvas = page.getByRole('img', { name: /^Your pitch curve/ })
+  const canvas = page.getByRole('img', {
+    name: /^Your pitch, drawn as you speak/,
+  })
   await expect(canvas).toBeVisible()
   await expect(canvas).toHaveAttribute('data-span-seconds', /\d/)
-  const seconds = Number(await canvas.getAttribute('data-span-seconds'))
+  // The span and the pixels are read at once, between two paints.
   const drawn = await canvas.evaluate(canvas => {
     if (!(canvas instanceof HTMLCanvasElement)) {
       throw new Error('the curve is not a canvas')
@@ -91,11 +99,13 @@ const readDrawnCurve = async (page: Page) => {
       columns.push(count === 0 ? null : sum / count)
     }
     return {
+      seconds: Number(canvas.getAttribute('data-span-seconds')),
       columns,
       backing: { width: canvas.width, height: canvas.height },
       css: { width: canvas.clientWidth, height: canvas.clientHeight },
     }
   })
+  const seconds = drawn.seconds
   const ratio = drawn.backing.width / drawn.css.width
   const area = plotArea(drawn.css.width, drawn.css.height)
   const points = drawn.columns.flatMap((y, column) => {
@@ -109,7 +119,7 @@ const readDrawnCurve = async (page: Page) => {
           },
         ]
   })
-  return { seconds, points, ...drawn }
+  return { points, ...drawn }
 }
 
 const median = (values: ReadonlyArray<number>): number => {
@@ -195,14 +205,17 @@ for (const voice of voiceNames) {
       await withPage(browser, async ({ page, requests, problems }) => {
         await openLine(page)
         const beforeTake = requests.length
-        await recordTake(page, 3)
+        // The voice ends 1.9 s into the file; by 4 s its last frames are
+        // drawn and the drawn median has settled on its own.
+        await recordFor(page, 4)
+        const drawn = await readDrawnCurve(page)
+        await page.getByRole('button', { name: 'Stop' }).click()
         await expect(
-          page.getByRole('heading', { name: 'Your copy' }),
+          page.getByRole('button', { name: 'Record again' }),
         ).toBeVisible({ timeout: 30_000 })
         // Released on stop.
         expect(await trackStates(page)).toStrictEqual(['ended'])
 
-        const drawn = await readDrawnCurve(page)
         // Crisp: two device pixels behind each CSS pixel.
         expect(drawn.backing).toStrictEqual({
           width: drawn.css.width * 2,

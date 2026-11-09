@@ -5,7 +5,7 @@ import { Url } from 'foldkit/url'
 
 import { MicrophoneFailure } from '../services/microphone'
 import { ListenSpeed } from './line/native'
-import { TakeCurve, TakeResult, Voice } from './take/take'
+import { Extent, TakeCurve, TakeFeatures, TakeResult, Voice } from './take/take'
 
 const takeNumber = Schema.Finite
 
@@ -22,6 +22,7 @@ export const Message = defineMessageUnion({
     clipId: Schema.String,
     lineId: Schema.String,
     curve: TakeCurve,
+    features: TakeFeatures,
   },
   FailedLoadNativeCurve: {
     clipId: Schema.String,
@@ -29,9 +30,9 @@ export const Message = defineMessageUnion({
     reason: Schema.String,
   },
   ClickedRetryNativeCurve: {},
-  ClickedListen: { voice: Voice },
+  ClickedListen: { voice: Voice, extent: Extent },
   ClickedStopListening: {},
-  EndedListening: { voice: Voice },
+  EndedListening: { voice: Voice, extent: Extent },
   SelectedListenSpeed: { speed: ListenSpeed },
   FailedPlayback: { reason: Schema.String },
   CompletedForgetTakeAudio: {},

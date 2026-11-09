@@ -47,6 +47,15 @@ The test also checks that the live frames are the finished curve's frames, to 0.
 
 Run it with `npm run build`, then `npx playwright test tests/e2e/live-curve.spec.ts`; each take attaches its stages as `<voice>-delays.json`.
 
+## From the take's end to its score
+
+When the learner presses stop, the tracker Worker tracks the whole take and finds its features, and the Scorer scores it against the line; the score card then shows the match.
+`tests/e2e/practice.spec.ts` times it inside the page, from the press of stop to the score's words in the panel's live region, by the page's own clock.
+
+Measured on 2026-11-09 in the same Chromium on the same machine (load average 2), six takes of the bundled line in 玄野武宏's voice, three right and three with the fall moved: 50 to 53 ms.
+That includes loading the score's own chunk, which the first take on a page fetches (`src/services/compare-take.ts`), and the score itself, under a millisecond for a line this short (`docs/score.md`, "Time to score").
+The test fails above 2 s.
+
 ## The frame rate
 
 `tests/e2e/frame-rate.spec.ts` records a 20 s take with the CPU slowed six times (`Emulation.setCPUThrottlingRate`) and times every animation frame: it must hold 58 frames a second or more, with at most 5 frames longer than 34 ms (a frame that misses one refresh lasts 33.3 ms), and the curve must keep drawing to the end.

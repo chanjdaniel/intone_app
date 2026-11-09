@@ -4,7 +4,7 @@ import type { Recording } from './score'
 // Seeded synthetic recordings for the score's own tests: a line of morae,
 // each high or low, its pitch gliding between them, its features one
 // sound per mora, so a take can differ from the native in exactly one way
-// at a time. Imported only by tests.
+// at a time. Imported only by tests and by the /dev library's samples.
 
 export type SyntheticTake = Readonly<{
   // High or low per mora: the accent.

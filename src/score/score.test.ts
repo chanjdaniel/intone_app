@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
+import { alignedTakeF0 } from './align'
 import { SCORE_VERSION, gainBand, worstStretchSeconds } from './constants'
-import { type Score, scoreDetail, scoreTake } from './score'
+import { type Score, scoreDetail, scoreTake, scoreWithAlignment } from './score'
 import {
   type SyntheticTake,
   frameHz,
@@ -271,5 +272,85 @@ describe('scoreTake', () => {
       12,
     )
     expect(gainBand).toStrictEqual({ least: 0.5, most: 2 })
+  })
+})
+
+describe('scoreWithAlignment', () => {
+  it('gives the score and the path that lined the take up, in each curve’s own frames', () => {
+    const lineNative = syntheticTake(native)
+    for (const seed of seeds) {
+      const take = rightTake(seed, { leadFrames: 30 })
+      const { score, alignment } = scoreWithAlignment(lineNative, take)
+      expect(score).toStrictEqual(scoreTake(lineNative, take))
+      if (alignment === null) {
+        throw new Error('no alignment')
+      }
+      const pairs = alignment.native.length
+      expect(alignment.take.length).toBe(pairs)
+      for (let k = 1; k < pairs; k++) {
+        expect(alignment.native[k] ?? 0).toBeGreaterThanOrEqual(
+          alignment.native[k - 1] ?? 0,
+        )
+        expect(alignment.take[k] ?? 0).toBeGreaterThanOrEqual(
+          alignment.take[k - 1] ?? 0,
+        )
+      }
+      // From the start of each one's speech to its end: the native's
+      // lead is 20 frames, the take's 30.
+      expect(alignment.native[0]).toBe(20)
+      expect(alignment.take[0]).toBe(30)
+      expect(alignment.native[pairs - 1]).toBe(20 + 45 - 1)
+      expect(alignment.take[pairs - 1]).toBe(take.curve.f0Hz.length - 20 - 1)
+    }
+  })
+
+  it('has no path when it cannot compare', () => {
+    const refused = scoreWithAlignment(
+      syntheticTake(native),
+      rightTake(1, { moraFrames: 30 }),
+    )
+    expect(refused.score._tag).toBe('CouldNotCompare')
+    expect(refused.alignment).toBeNull()
+  })
+})
+
+describe('alignedTakeF0', () => {
+  it('draws a take said more slowly at the native’s own frames', () => {
+    const lineNative = syntheticTake(native)
+    // The same voice and accent, each mora half again as long.
+    const slower = syntheticTake({ ...native, moraFrames: 14, seed: 7 })
+    const { alignment } = scoreWithAlignment(lineNative, slower)
+    if (alignment === null) {
+      throw new Error('no alignment')
+    }
+    const aligned = alignedTakeF0(
+      alignment,
+      slower.curve.f0Hz,
+      lineNative.curve.f0Hz.length,
+    )
+    expect(aligned.length).toBe(lineNative.curve.f0Hz.length)
+    // Unpaired frames, before and after the speech, stay unvoiced.
+    expect(Array.from(aligned.slice(0, 20)).every(hz => hz === 0)).toBe(true)
+    expect(Array.from(aligned.slice(65)).every(hz => hz === 0)).toBe(true)
+    // Each speech frame within a semitone of the native's.
+    const misses = Array.from(aligned.slice(20, 65)).filter(
+      (hz, i) =>
+        Math.abs(12 * Math.log2(hz / (lineNative.curve.f0Hz[20 + i] ?? 1))) > 1,
+    )
+    expect(misses.length).toBeLessThan(4)
+  })
+
+  it('reads each native frame from the voiced take frames paired with it, unvoiced when none is', () => {
+    const alignment = {
+      native: Int32Array.of(0, 1, 1, 2, 3, 3),
+      take: Int32Array.of(0, 1, 2, 3, 4, 5),
+    }
+    const aligned = alignedTakeF0(
+      alignment,
+      Float32Array.of(100, 200, 800, 0, 0, 300),
+      5,
+    )
+    // Frame 1 pairs with 200 and 800 Hz: their mean in octaves, 400.
+    expect(Array.from(aligned)).toStrictEqual([100, 400, 0, 300, 0])
   })
 })

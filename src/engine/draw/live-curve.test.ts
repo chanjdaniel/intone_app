@@ -6,6 +6,7 @@ import {
   createLiveCurve,
   finishedLiveCurve,
   medianSettleMs,
+  windowCurve,
 } from './live-curve'
 
 const frames = (firstFrame: number, hz: ReadonlyArray<number>) => ({
@@ -129,5 +130,25 @@ describe('the live curve', () => {
     expect(window?.lastFrame).toBe(finished?.lastFrame)
     expect(window?.medianHz).toBeCloseTo(finished?.medianHz ?? Number.NaN, 4)
     expect(window?.f0At(6)).toBe(130)
+  })
+
+  it('shows a curve in a window it is given, as one that has ended', () => {
+    const f0Hz = Float32Array.of(0, 0, 100, 110, 0, 130, 0, 0)
+    const curve = windowCurve({
+      f0At: frame => f0Hz[frame] ?? 0,
+      firstFrame: 1,
+      lastFrame: 6,
+      medianHz: 115,
+    })
+    expect(curve.advance(0)).toBe(true)
+    expect(curve.advance(16)).toBe(false)
+    expect(curve.window()).toMatchObject({
+      firstFrame: 1,
+      lastFrame: 6,
+      medianHz: 115,
+    })
+    expect(curve.window()?.f0At(5)).toBe(130)
+    expect(curve.framesIn()).toBe(7)
+    expect(curve.newestVoicedFrame()).toBe(5)
   })
 })

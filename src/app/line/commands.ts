@@ -3,10 +3,12 @@ import { Command } from 'foldkit'
 
 import { NativeCurves } from '../../services/native-curves'
 import { Message } from '../message'
+import { takeCurveOf, takeFeaturesOf } from '../take/take'
 import { lineKey, lineOf } from './lines'
 
-// Finds the line's native curve: from the device, or tracked from its
-// audio by the take's own tracker and kept on the device.
+// Finds the line's native curve and features: from the device, or
+// tracked from its audio by the take's own tracker and kept on the
+// device.
 export const LoadNativeCurve = Command.define('LoadNativeCurve', {
   args: { clipId: Schema.String, lineId: Schema.String },
   messages: [Message.SucceededLoadNativeCurve, Message.FailedLoadNativeCurve],
@@ -22,20 +24,15 @@ export const LoadNativeCurve = Command.define('LoadNativeCurve', {
       }
       const line = maybeLine.value
       const native = yield* NativeCurves
-      const curve = yield* native.curveOf({
+      const recording = yield* native.recordingOf({
         key: lineKey(line),
         audioUrl: line.audioUrl,
       })
       return Message.SucceededLoadNativeCurve({
         clipId,
         lineId,
-        curve: {
-          frameHz: curve.frameHz,
-          f0Hz: Array.from(curve.f0Hz),
-          confidence: Array.from(curve.confidence),
-          levelDb: Array.from(curve.levelDb),
-          onsetFrame: curve.onsetFrame,
-        },
+        curve: takeCurveOf(recording.curve),
+        features: takeFeaturesOf(recording.features),
       })
     }).pipe(
       Effect.provide(NativeCurves.layer),

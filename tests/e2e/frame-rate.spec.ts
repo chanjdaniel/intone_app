@@ -64,8 +64,10 @@ test('holds 60 frames a second through a 20 s take at 6x CPU throttle', async ({
           .getAttribute('data-drawn-frames'),
       )
       await page.getByRole('button', { name: 'Stop' }).click()
+      // A 20 s take is far longer than the line, so it is not scored:
+      // every result screen offers another take.
       await expect(
-        page.getByRole('heading', { name: 'Your copy' }),
+        page.getByRole('button', { name: 'Record again' }),
       ).toBeVisible({ timeout: 60_000 })
       await devTools.send('Emulation.setCPUThrottlingRate', { rate: 1 })
 

@@ -24,6 +24,8 @@ const tracked = (samples: Float32Array): TrackerResult => ({
   onsetFrame: 1,
   peakDb: -6,
   gainDb: 0,
+  featureDims: 2,
+  features: Float32Array.of(1, 2, 3, 4, 5, 6, 7, 8),
 })
 
 // The services with `respond` as the tracker, an in-memory cache, and a
@@ -46,23 +48,28 @@ const harness = (respond: (samples: Float32Array) => TrackerResult) => {
       CurveCache.layerMemory(records),
     ]),
   )
-  const curveOf = NativeCurves.use(native => native.curveOf(line)).pipe(
+  const recordingOf = NativeCurves.use(native => native.recordingOf(line)).pipe(
     Effect.provide(layer),
   )
-  return { records, tracked, loads, curveOf }
+  return { records, tracked, loads, recordingOf }
 }
 
 describe('a line’s native curve', () => {
   it.effect(
-    'is tracked from the line’s audio by the take’s tracker, then kept',
+    'is tracked from the line’s audio by the take’s tracker, with its features, then kept',
     () =>
       Effect.gen(function* () {
-        const { records, tracked: runs, loads, curveOf } = harness(tracked)
-        const curve = yield* curveOf
+        const { records, tracked: runs, loads, recordingOf } = harness(tracked)
+        const { curve, features } = yield* recordingOf
         expect(runs).toStrictEqual([{ samples: 480, sampleRate: 24_000 }])
         expect(loads).toStrictEqual([line.audioUrl])
         expect(Array.from(curve.f0Hz)).toStrictEqual([0, 200, 210, 480])
         expect(curve.onsetFrame).toBe(1)
+        expect(features.frameHz).toBe(62.5)
+        expect(features.dims).toBe(2)
+        expect(Array.from(features.data)).toStrictEqual([
+          1, 2, 3, 4, 5, 6, 7, 8,
+        ])
         expect([...records.keys()]).toStrictEqual([
           cacheKeyOf(line, 'swift-f0 1234'),
         ])
@@ -71,9 +78,9 @@ describe('a line’s native curve', () => {
 
   it.effect('is read from the device after its first run', () =>
     Effect.gen(function* () {
-      const { tracked: runs, loads, curveOf } = harness(tracked)
-      const first = yield* curveOf
-      const second = yield* curveOf
+      const { tracked: runs, loads, recordingOf } = harness(tracked)
+      const first = yield* recordingOf
+      const second = yield* recordingOf
       expect(runs).toHaveLength(1)
       expect(loads).toHaveLength(1)
       expect(second).toStrictEqual(first)
@@ -82,14 +89,35 @@ describe('a line’s native curve', () => {
 
   it.effect('is tracked again when the kept record does not decode', () =>
     Effect.gen(function* () {
-      const { records, tracked: runs, curveOf } = harness(tracked)
+      const { records, tracked: runs, recordingOf } = harness(tracked)
       const key = cacheKeyOf(line, 'swift-f0 1234')
       records.set(key, { format: 0, f0Hz: [1, 2, 3] })
-      yield* curveOf
+      yield* recordingOf
       expect(runs).toHaveLength(1)
-      const stored = yield* curveOf
+      const stored = yield* recordingOf
       expect(records.get(key)).toStrictEqual(storedCurveOf(stored))
     }),
+  )
+
+  it.effect(
+    'is tracked again from a record of format 1, which kept no features',
+    () =>
+      Effect.gen(function* () {
+        const { records, tracked: runs, recordingOf } = harness(tracked)
+        const key = cacheKeyOf(line, 'swift-f0 1234')
+        records.set(key, {
+          format: 1,
+          frameHz: 62.5,
+          f0Hz: Float32Array.of(0, 200),
+          confidence: Float32Array.of(0, 0.9),
+          levelDb: Float32Array.of(-80, -20),
+          onsetFrame: 1,
+        })
+        const { features } = yield* recordingOf
+        expect(runs).toHaveLength(1)
+        expect(features.dims).toBe(2)
+        expect(records.get(key)).toMatchObject({ format: 2, featureDims: 2 })
+      }),
   )
 
   it('is keyed by the line, its audio and the tracker', () => {
@@ -103,11 +131,11 @@ describe('a line’s native curve', () => {
 
   it.effect('fails, keeping nothing, when the line is too quiet to track', () =>
     Effect.gen(function* () {
-      const { records, curveOf } = harness(() => ({
+      const { records, recordingOf } = harness(() => ({
         _tag: 'TooQuiet',
         peakDb: -70,
       }))
-      const error = yield* Effect.flip(curveOf)
+      const error = yield* Effect.flip(recordingOf)
       expect(error).toBeInstanceOf(NativeCurveError)
       expect(error.reason).toBe(
         'The line could not be tracked: it was too quiet.',

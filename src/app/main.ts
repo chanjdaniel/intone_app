@@ -125,14 +125,22 @@ export const update = (model: Model, message: Message) =>
       }),
     }),
 
-    SucceededLoadNativeCurve: ({ clipId, lineId, curve }) =>
-      LineUpdate.succeededLoadNativeCurve(model, clipId, lineId, curve),
+    SucceededLoadNativeCurve: ({ clipId, lineId, curve, features }) =>
+      LineUpdate.succeededLoadNativeCurve(
+        model,
+        clipId,
+        lineId,
+        curve,
+        features,
+      ),
     FailedLoadNativeCurve: ({ clipId, lineId, reason }) =>
       LineUpdate.failedLoadNativeCurve(model, clipId, lineId, reason),
     ClickedRetryNativeCurve: () => LineUpdate.clickedRetryNativeCurve(model),
-    ClickedListen: ({ voice }) => TakeUpdate.clickedListen(model, voice),
+    ClickedListen: ({ voice, extent }) =>
+      TakeUpdate.clickedListen(model, voice, extent),
     ClickedStopListening: () => TakeUpdate.clickedStopListening(model),
-    EndedListening: ({ voice }) => TakeUpdate.endedListening(model, voice),
+    EndedListening: ({ voice, extent }) =>
+      TakeUpdate.endedListening(model, voice, extent),
     SelectedListenSpeed: ({ speed }) => ({
       model: modifyFields(model, { listenSpeed: () => speed }),
     }),
@@ -230,7 +238,7 @@ const lineView = (model: Model, line: BundledLine, h: HtmlBuilder<Message>) =>
       stop: Message.ClickedStop(),
       cancel: Message.ClickedCancelTake(),
       retryNative: Message.ClickedRetryNativeCurve(),
-      listen: voice => Message.ClickedListen({ voice }),
+      listen: (voice, extent) => Message.ClickedListen({ voice, extent }),
       stopListening: Message.ClickedStopListening(),
       selectSpeed: speed => Message.SelectedListenSpeed({ speed }),
       draw: DrawCurvePair,

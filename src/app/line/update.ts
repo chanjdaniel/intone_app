@@ -4,7 +4,7 @@ import { modifyFields } from 'foldkit/struct'
 import type { Message } from '../message'
 import type { Model } from '../model'
 import type { TakeResourceServices } from '../take/resources'
-import type { TakeCurve } from '../take/take'
+import type { TakeCurve, TakeFeatures } from '../take/take'
 import { LoadNativeCurve, isKnownLine } from './commands'
 import { NativeCurve, isNativeFor } from './native'
 
@@ -35,11 +35,12 @@ export const succeededLoadNativeCurve = (
   clipId: string,
   lineId: string,
   curve: TakeCurve,
+  features: TakeFeatures,
 ): LineUpdate =>
   model.native._tag === 'Loading' && isNativeFor(model.native, clipId, lineId)
     ? {
         model: modifyFields(model, {
-          native: () => NativeCurve.Ready({ clipId, lineId, curve }),
+          native: () => NativeCurve.Ready({ clipId, lineId, curve, features }),
         }),
       }
     : { model }

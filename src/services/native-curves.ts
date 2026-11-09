@@ -2,13 +2,13 @@ import { Context, Effect, Layer, Option, Schema } from 'effect'
 import { modelUrls } from 'virtual:intone/models'
 
 import { decodeWav } from '../engine/audio/wav'
-import type { Curve } from '../score/curve'
+import type { Recording } from '../score/score'
 import { CurveCache } from './curve-cache'
-import { Tracker } from './tracker'
+import { Tracker, recordingOfTracked } from './tracker'
 
-// A line's native curve: tracked from the line's own audio by the same
-// tracker a take goes through, once per device, then read from the
-// device. The cache's key names the line, its audio file and the tracker
+// A line's native curve and its features, for the score: tracked from
+// the line's own audio by the same tracker a take goes through, once per
+// device, then read from the device. The cache's key names the line, its audio file and the tracker
 // model, so a new recording or a new model is tracked afresh.
 
 export class NativeCurveError extends Schema.TaggedError<
@@ -61,10 +61,11 @@ export const fetchLineAudio = (
 export class NativeCurves extends Context.Service<
   NativeCurves,
   {
-    // The line's native curve, from the device or tracked now.
-    readonly curveOf: (
+    // The line's native curve and features, from the device or tracked
+    // now.
+    readonly recordingOf: (
       line: NativeLine,
-    ) => Effect.Effect<Curve, NativeCurveError>
+    ) => Effect.Effect<Recording, NativeCurveError>
   }
 >()('intone/services/NativeCurves') {
   // Tracks with the tracker in `Tracker`, keeps curves in `CurveCache`,
@@ -103,30 +104,24 @@ export class NativeCurves extends Context.Service<
                 reason: `The line could not be tracked: it was ${result._tag === 'TooQuiet' ? 'too quiet' : 'too noisy'}.`,
               })
             }
-            return {
-              frameHz: result.frameHz,
-              f0Hz: result.f0Hz,
-              confidence: result.confidence,
-              levelDb: result.levelDb,
-              onsetFrame: result.onsetFrame,
-            }
+            return recordingOfTracked(result)
           })
 
         return NativeCurves.of({
-          curveOf: line =>
+          recordingOf: line =>
             Effect.gen(function* () {
               const key = cacheKeyOf(line, trackerId)
               // NOTE: a cache that cannot be read or written (storage
               // turned off, or full) only costs tracking the line again.
               const kept = yield* cache
                 .get(key)
-                .pipe(Effect.orElseSucceed(() => Option.none<Curve>()))
+                .pipe(Effect.orElseSucceed(() => Option.none<Recording>()))
               if (Option.isSome(kept)) {
                 return kept.value
               }
-              const curve = yield* track(line)
-              yield* cache.put(key, curve).pipe(Effect.ignore)
-              return curve
+              const recording = yield* track(line)
+              yield* cache.put(key, recording).pipe(Effect.ignore)
+              return recording
             }),
         })
       }),
@@ -139,9 +134,12 @@ export class NativeCurves extends Context.Service<
     modelUrls['swift-f0'],
   ).pipe(Layer.provide([Tracker.layer, CurveCache.layer]))
 
-  // Answers each line with `curveOf`, with no tracker, audio or storage.
+  // Answers each line with `recordingOf`, with no tracker, audio or
+  // storage.
   static readonly layerTest = (
-    curveOf: (line: NativeLine) => Effect.Effect<Curve, NativeCurveError>,
+    recordingOf: (
+      line: NativeLine,
+    ) => Effect.Effect<Recording, NativeCurveError>,
   ): Layer.Layer<NativeCurves> =>
-    Layer.succeed(NativeCurves, NativeCurves.of({ curveOf }))
+    Layer.succeed(NativeCurves, NativeCurves.of({ recordingOf }))
 }

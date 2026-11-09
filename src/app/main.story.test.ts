@@ -16,7 +16,7 @@ import {
 } from './main'
 import { ForgetTakeAudio } from './take/commands'
 import { Take, TakeResult } from './take/take'
-import { sampleCurve } from './take/testCurves'
+import { sampleCurve, sampleFeatures, sampleScore } from './take/testCurves'
 
 const url = (path: string) =>
   Option.getOrThrow(fromString(`http://localhost${path}`))
@@ -133,6 +133,7 @@ describe('opening a line', () => {
           clipId: 'ame-ga-suki',
           lineId: '1',
           curve: sampleCurve,
+          features: sampleFeatures,
         }),
       ),
       model(current =>
@@ -141,6 +142,7 @@ describe('opening a line', () => {
             clipId: 'ame-ga-suki',
             lineId: '1',
             curve: sampleCurve,
+            features: sampleFeatures,
           }),
         ),
       ),
@@ -158,7 +160,10 @@ describe('opening a line', () => {
         ...on(line),
         take: Take.ShowingResult({
           takeNumber: 1,
-          result: TakeResult.Tracked({ curve: sampleCurve }),
+          result: TakeResult.Tracked({
+            curve: sampleCurve,
+            score: sampleScore,
+          }),
         }),
       }),
       message(Message.ChangedUrl({ url: url('/') })),

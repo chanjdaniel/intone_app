@@ -40,6 +40,7 @@ const colours: PairColours = {
   label: 'label',
   native: 'native',
   ramp: ['closest', 'close', 'middle', 'far', 'farthest'],
+  mark: 'mark',
 }
 
 // Each drawn frame's step on the ramp, in order.
@@ -139,8 +140,61 @@ describe('painting the pair', () => {
       stroke: () => undefined,
       fill: () => undefined,
       fillText: () => undefined,
+      fillRect: () => undefined,
       setLineDash: () => undefined,
     })
+
+  it('shades a marked stretch of the native behind both curves, across the plot', () => {
+    vi.stubGlobal(
+      'Path2D',
+      class {
+        moveTo(): void {}
+        lineTo(): void {}
+      },
+    )
+    const filled: Array<Readonly<{ style: unknown; rect: Array<number> }>> = []
+    const context = Object.assign(quiet(), {
+      fillStyle: '',
+      fillRect(...rect: Array<number>) {
+        filled.push({ style: this.fillStyle, rect })
+      },
+    })
+    const native = windowOf(nativeShape, 0)
+    const size = { width: 400, height: 200 }
+    const area = plotArea(size.width, size.height)
+    paintNativeLayer(context, size, colours, native, 60, undefined, {
+      fromFrame: 15,
+      toFrame: 27,
+    })
+    expect(filled).toStrictEqual([
+      {
+        style: 'mark',
+        rect: [
+          area.left + (15 / 60) * area.width,
+          area.top,
+          (12 / 60) * area.width,
+          area.height,
+        ],
+      },
+    ])
+    // A stretch that starts before the native's onset, or runs past the
+    // width, is shaded only over the plot.
+    filled.length = 0
+    paintNativeLayer(context, size, colours, native, 60, undefined, {
+      fromFrame: -8,
+      toFrame: 70,
+    })
+    expect(filled).toStrictEqual([
+      {
+        style: 'mark',
+        rect: [area.left, area.top, area.width, area.height],
+      },
+    ])
+    filled.length = 0
+    paintNativeLayer(context, size, colours, native, 60)
+    expect(filled).toStrictEqual([])
+    vi.unstubAllGlobals()
+  })
 
   it('keeps the raw frames for scoring as the tracker gave them', () => {
     // happy-dom has no Path2D; one that draws nothing stands in.

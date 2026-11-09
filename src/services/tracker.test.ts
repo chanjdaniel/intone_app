@@ -56,6 +56,8 @@ const tracked: FromTracker = {
   onsetFrame: 1,
   peakDb: -6,
   gainDb: 0,
+  featureDims: 2,
+  features: Float32Array.of(1, 2, 3, 4, 5, 6),
 }
 
 const assets = { modelUrl: '/model/url', wasmPaths: '/wasm/' }

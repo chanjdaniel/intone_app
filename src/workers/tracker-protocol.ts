@@ -44,6 +44,9 @@ export const Frames = Schema.TaggedStruct('Frames', {
 // The take's last frames have been sent: its curve follows.
 export const FramesEnded = Schema.TaggedStruct('FramesEnded', {})
 
+// The finished take: its curve, and the spectral features of the same
+// audio on the same frames, for the score's aligner (`featureDims` values
+// per frame, frame by frame).
 export const Tracked = Schema.TaggedStruct('Tracked', {
   frameHz: Schema.Finite,
   f0Hz: Samples,
@@ -52,6 +55,8 @@ export const Tracked = Schema.TaggedStruct('Tracked', {
   onsetFrame: Schema.Finite,
   peakDb: Schema.Finite,
   gainDb: Schema.Finite,
+  featureDims: Schema.Finite,
+  features: Samples,
 })
 
 export const TooQuiet = Schema.TaggedStruct('TooQuiet', {
@@ -100,6 +105,7 @@ export const transferables = (
       message.f0Hz.buffer,
       message.confidence.buffer,
       message.levelDb.buffer,
+      message.features.buffer,
     ]
   }
   return []

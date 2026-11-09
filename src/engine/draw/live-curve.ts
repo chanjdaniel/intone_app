@@ -152,3 +152,27 @@ export const finishedLiveCurve = (f0Hz: Float32Array): LiveCurve => {
   curve.finish()
   return curve
 }
+
+// A curve shown in a window it is given, as a live one that has ended:
+// a take lined up with the native, drawn across the native's own window.
+export const windowCurve = (window: CurveWindow): LiveCurve => {
+  let newestVoiced = -1
+  for (let frame = window.firstFrame; frame <= window.lastFrame; frame++) {
+    if (window.f0At(frame) > 0) {
+      newestVoiced = frame
+    }
+  }
+  let changed = true
+  return {
+    append: () => undefined,
+    finish: () => undefined,
+    advance: () => {
+      const wasChanged = changed
+      changed = false
+      return wasChanged
+    },
+    window: () => window,
+    framesIn: () => window.lastFrame + 1,
+    newestVoicedFrame: () => newestVoiced,
+  }
+}

@@ -1,14 +1,19 @@
-import { Array, Effect, Option, Schema, Stream } from 'effect'
+import { Array, Effect, Match, Option, Schema, Stream } from 'effect'
 import { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 import { defineTaggedUnion } from 'foldkit/schema'
 
-import { finishedWindow } from '../../engine/draw/curve'
-import { type PairColours, drawCurvePair } from '../../engine/draw/curve-pair'
+import { type CurveWindow, finishedWindow } from '../../engine/draw/curve'
+import {
+  type MarkedStretch,
+  type PairColours,
+  drawCurvePair,
+} from '../../engine/draw/curve-pair'
 import {
   type LiveCurve,
   createLiveCurve,
   finishedLiveCurve,
+  windowCurve,
 } from '../../engine/draw/live-curve'
 import { swiftF0FrameHz } from '../../engine/pitch/swift-f0'
 import { medianVoicedHz } from '../../score/curve'
@@ -20,17 +25,27 @@ import { TakeCurve, longestTakeSeconds } from './take'
 // The native's curve and the learner's, stacked: the native's drawn once
 // on the lower canvas, the learner's on the upper one, live during a take
 // (its frames fed to the plain painter's ring buffer as the tracker finds
-// them, never through the Model) or whole once it has finished. Both are
-// drawn by the plain painter on each animation frame that changes the
-// picture (../../engine/draw/curve-pair.ts).
+// them, never through the Model), whole once it has finished, and lined
+// up with the native's once it has been scored, with the worst stretch
+// shaded behind both. Both are drawn by the plain painter on each
+// animation frame that changes the picture
+// (../../engine/draw/curve-pair.ts).
 
 export const PairLearner = defineTaggedUnion({
   // The line alone, before a take.
   None: {},
   // Take `takeNumber`, drawn as its frames come.
   Live: { takeNumber: Schema.Finite },
-  // A finished take's curve.
+  // A finished take's curve, from its own onset.
   Finished: { curve: TakeCurve },
+  // A scored take's pitch at each of the native's frames, through the
+  // score's alignment, around the take's own median; the native's frames
+  // `fromFrame` to `toFrame` are its worst stretch.
+  Aligned: {
+    f0Hz: Schema.Array(Schema.Finite),
+    medianHz: Schema.Finite,
+    mark: Schema.Struct({ fromFrame: Schema.Finite, toFrame: Schema.Finite }),
+  },
 })
 export type PairLearner = typeof PairLearner.Type
 
@@ -52,6 +67,7 @@ export const pairColoursFrom = (element: Element): PairColours => {
   return {
     native: colourOf(style, 'native'),
     ramp: Array.makeBy(5, step => colourOf(style, `closeness-${step + 1}`)),
+    mark: colourOf(style, 'mark'),
     grid: colourOf(style, 'line'),
     median: colourOf(style, 'muted'),
     label: colourOf(style, 'muted'),
@@ -72,11 +88,13 @@ const canvasesIn = (element: Element) => {
     : Option.none()
 }
 
-// Starts drawing `learner` over `native` in `element`'s two canvases.
+// Starts drawing the learner `learnerIn` makes for the native's window
+// over `native` in `element`'s two canvases, `mark` shaded behind them.
 const startDrawing = (
   element: Element,
   native: TakeCurve,
-  learner: LiveCurve | null,
+  learnerIn: (nativeWindow: CurveWindow) => LiveCurve | null,
+  mark: MarkedStretch | null = null,
 ) => {
   const nativeWindow = finishedWindow(plainOf(native))
   return Option.flatMap(canvasesIn(element), canvases =>
@@ -86,7 +104,7 @@ const startDrawing = (
           drawCurvePair(
             canvases,
             nativeWindow,
-            learner,
+            learnerIn(nativeWindow),
             () => pairColoursFrom(element),
             painted => {
               canvases.learner.setAttribute(
@@ -102,10 +120,41 @@ const startDrawing = (
                 (painted.spanFrames / swiftF0FrameHz).toFixed(3),
               )
             },
+            mark,
           ),
         ),
   )
 }
+
+// What the upper canvas draws for a learner that is not live.
+const stillLearner = (
+  learner: Exclude<PairLearner, { _tag: 'Live' }>,
+): Readonly<{
+  learnerIn: (nativeWindow: CurveWindow) => LiveCurve | null
+  mark: MarkedStretch | null
+}> =>
+  Match.value(learner).pipe(
+    Match.tagsExhaustive({
+      None: () => ({ learnerIn: () => null, mark: null }),
+      Finished: ({ curve }) => ({
+        learnerIn: () => finishedLiveCurve(Float32Array.from(curve.f0Hz)),
+        mark: null,
+      }),
+      Aligned: ({ f0Hz, medianHz, mark }) => {
+        const aligned = Float32Array.from(f0Hz)
+        return {
+          learnerIn: (nativeWindow: CurveWindow) =>
+            windowCurve({
+              f0At: frame => aligned[frame] ?? 0,
+              firstFrame: nativeWindow.firstFrame,
+              lastFrame: nativeWindow.lastFrame,
+              medianHz,
+            }),
+          mark,
+        }
+      },
+    }),
+  )
 
 const stopDrawing = (
   drawing: Option.Option<Readonly<{ stop: () => void }>>,
@@ -126,16 +175,9 @@ export const defineDrawCurvePair = <const Completed extends Schema.Top>(
     execute: ({ element, native, learner }) =>
       Effect.gen(function* () {
         if (learner._tag !== 'Live') {
+          const { learnerIn, mark } = stillLearner(learner)
           yield* Effect.acquireRelease(
-            Effect.sync(() =>
-              startDrawing(
-                element,
-                native,
-                learner._tag === 'Finished'
-                  ? finishedLiveCurve(Float32Array.from(learner.curve.f0Hz))
-                  : null,
-              ),
-            ),
+            Effect.sync(() => startDrawing(element, native, learnerIn, mark)),
             stopDrawing,
           )
           return makeCompleted()
@@ -150,7 +192,7 @@ export const defineDrawCurvePair = <const Completed extends Schema.Top>(
               return {
                 frames,
                 curve,
-                drawing: startDrawing(element, native, curve),
+                drawing: startDrawing(element, native, () => curve),
               }
             }),
           ),
@@ -204,9 +246,16 @@ const learnerLabel = (learner: PairLearner): Option.Option<string> =>
         `Your pitch curve, ${seconds.toFixed(2)} s from your voice onset, in semitones around your typical pitch of ${hzText(medianHz)}, over the line's, ${closenessWords}.`,
       )
     },
+    Aligned: ({ medianHz }) =>
+      Option.some(
+        `Your pitch curve, lined up with the line's where the two were compared, in semitones around your typical pitch of ${hzText(medianHz)}, ${closenessWords}. The stretch where it differed most is shaded.`,
+      ),
   })
 
-const legend = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
+const legend = <ViewMessage>(
+  marked: boolean,
+  h: HtmlBuilder<ViewMessage>,
+): Html =>
   h.div(
     [
       h.AriaHidden(true),
@@ -237,6 +286,17 @@ const legend = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
           'far',
         ],
       ),
+      ...(marked
+        ? [
+            h.span(
+              [h.Class('inline-flex items-center gap-2')],
+              [
+                h.span([h.Class('h-3.5 w-5 rounded-sm bg-mark')]),
+                'Where it differed most',
+              ],
+            ),
+          ]
+        : []),
     ],
   )
 
@@ -289,7 +349,10 @@ export const curvePairView = <ViewMessage>(
       ),
       h.figcaption(
         [h.Class('flex flex-col gap-2')],
-        [legend(h), h.p([h.Class('text-sm text-muted')], [note])],
+        [
+          legend(learner._tag === 'Aligned', h),
+          h.p([h.Class('text-sm text-muted')], [note]),
+        ],
       ),
     ],
   )

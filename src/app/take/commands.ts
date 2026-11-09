@@ -1,9 +1,18 @@
 import { Duration, Effect, Schema } from 'effect'
 import { Command, Dom } from 'foldkit'
 
+import { Scorer } from '../../services/scorer'
+import { recordingOfTracked } from '../../services/tracker'
 import { Message } from '../message'
 import { TrackerResource } from './resources'
-import { micPromptPatienceSeconds, takeResultOf } from './take'
+import {
+  NativeRecording,
+  TakeResult,
+  micPromptPatienceSeconds,
+  recordingOfNative,
+  takeCurveOf,
+  takeScoreOf,
+} from './take'
 import { forgetTakeAudio } from './takeAudio'
 
 // The element each take state puts focus on when it appears, marked by
@@ -19,20 +28,39 @@ export const WaitForMicAnswer = Command.define('WaitForMicAnswer', {
     ),
 })
 
-// Asks the tracker for the finished take's curve: the one Message that
-// brings it into the Model.
+// Asks the tracker for the finished take's curve and features, and the
+// Scorer for its score against `native`: the one Message that brings the
+// take's curve into the Model, with its score. The take's features go
+// from the tracker to the score and no further.
 export const AnalyseTake = Command.define('AnalyseTake', {
-  args: { takeNumber: Schema.Finite },
+  args: { takeNumber: Schema.Finite, native: NativeRecording },
   messages: [Message.SucceededAnalyseTake, Message.FailedAnalyseTake],
-  execute: ({ takeNumber }) =>
+  execute: ({ takeNumber, native }) =>
     Effect.gen(function* () {
       const tracker = yield* TrackerResource.get
       const result = yield* tracker.finish
+      if (result._tag !== 'Tracked') {
+        return Message.SucceededAnalyseTake({
+          takeNumber,
+          result:
+            result._tag === 'TooQuiet'
+              ? TakeResult.TooQuiet()
+              : TakeResult.TooNoisy(),
+        })
+      }
+      const scorer = yield* Scorer
+      const nativeRecording = recordingOfNative(native)
+      const take = recordingOfTracked(result)
+      const comparison = yield* scorer.score(nativeRecording, take)
       return Message.SucceededAnalyseTake({
         takeNumber,
-        result: takeResultOf(result),
+        result: TakeResult.Tracked({
+          curve: takeCurveOf(take.curve),
+          score: takeScoreOf(comparison, nativeRecording),
+        }),
       })
     }).pipe(
+      Effect.provide(Scorer.layer),
       Effect.catchTag('ResourceNotAvailable', () =>
         Effect.succeed(
           Message.FailedAnalyseTake({

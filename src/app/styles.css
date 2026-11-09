@@ -31,6 +31,8 @@
   --color-closeness-3: #9e3e99;
   --color-closeness-4: #ba3663;
   --color-closeness-5: #c2410c;
+  /* The stretch where a take differed most, shaded behind both curves. */
+  --color-mark: #fbe6bd;
   --color-good: #1d7038;
   --color-warn: #8f5100;
   --color-bad: #b4232a;

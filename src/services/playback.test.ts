@@ -19,12 +19,13 @@ const fakeElement = (play: () => Promise<void> = () => Promise.resolve()) => {
   const did: Array<string> = []
   const element: MediaElement = {
     src: '',
+    currentTime: 0,
     playbackRate: 1,
     defaultPlaybackRate: 1,
     preservesPitch: false,
     play: () => {
       did.push(
-        `play ${element.src} at ${element.playbackRate}, pitch ${element.preservesPitch ? 'kept' : 'moved'}`,
+        `play ${element.src}${element.currentTime > 0 ? ` from ${element.currentTime}` : ''} at ${element.playbackRate}, pitch ${element.preservesPitch ? 'kept' : 'moved'}`,
       )
       return play()
     },
@@ -85,6 +86,47 @@ describe('playing the line', () => {
         'remove src',
         'load',
       ])
+    }),
+  )
+
+  it.effect(
+    'plays a stretch from its start for as long as it lasts at that speed',
+    () =>
+      Effect.gen(function* () {
+        const fake = fakeElement()
+        const fiber = yield* playMedia(() => fake.element)('/line.wav', 0.5, {
+          from: 0.25,
+          to: 0.65,
+        }).pipe(Effect.forkChild)
+        yield* settled
+        expect(fake.did).toStrictEqual([
+          'play /line.wav from 0.25 at 0.5, pitch kept',
+        ])
+        // The clock starts when the sound does.
+        yield* TestClock.adjust('2 seconds')
+        expect(fiber.pollUnsafe()).toBeUndefined()
+        fake.dispatch('playing')
+        yield* TestClock.adjust('799 millis')
+        expect(fiber.pollUnsafe()).toBeUndefined()
+        yield* TestClock.adjust('1 millis')
+        const exit = yield* Fiber.await(fiber)
+        expect(Exit.isSuccess(exit)).toBe(true)
+        expect(fake.did.slice(1)).toStrictEqual(['pause', 'remove src', 'load'])
+      }),
+  )
+
+  it.effect('ends a stretch early if the line itself ends first', () =>
+    Effect.gen(function* () {
+      const fake = fakeElement()
+      const fiber = yield* playMedia(() => fake.element)('/line.wav', 1, {
+        from: 1,
+        to: 1.4,
+      }).pipe(Effect.forkChild)
+      yield* settled
+      fake.dispatch('playing')
+      fake.dispatch('ended')
+      const exit = yield* Fiber.await(fiber)
+      expect(Exit.isSuccess(exit)).toBe(true)
     }),
   )
 
@@ -161,6 +203,24 @@ describe('playing the take', () => {
     }),
   )
 
+  it.effect('plays only a stretch of the samples when asked', () =>
+    Effect.gen(function* () {
+      const fake = fakeContext()
+      const fiber = yield* playSamples(() => fake.context)(
+        new Float32Array(48_000),
+        48_000,
+        { from: 0.25, to: 0.65 },
+      ).pipe(Effect.forkChild)
+      yield* settled
+      expect(fake.did.slice(0, 2)).toStrictEqual([
+        'buffer 1x19200 at 48000',
+        'copy 19200',
+      ])
+      fake.end()
+      yield* Fiber.join(fiber)
+    }),
+  )
+
   it.effect('is silenced when stopped', () =>
     Effect.gen(function* () {
       const fake = fakeContext()
@@ -183,14 +243,35 @@ describe('the test layer', () => {
         const playback = yield* Playback
         yield* playback.playLine('/line.wav', 0.5)
         yield* playback.playTake(new Float32Array(48_000), 48_000)
+        yield* playback.playLine('/line.wav', 0.5, { from: 0.5, to: 0.9 })
+        yield* playback.playTake(new Float32Array(48_000), 48_000, {
+          from: 0.2,
+          to: 0.6,
+        })
       }).pipe(Effect.provide(Playback.layerTest(heard, 1.5)), Effect.forkChild)
       yield* TestClock.adjust('2999 millis')
       expect(heard).toHaveLength(1)
       yield* TestClock.adjust('1001 millis')
+      expect(heard).toHaveLength(3)
+      yield* TestClock.adjust('800 millis')
+      expect(heard).toHaveLength(4)
+      yield* TestClock.adjust('400 millis')
       yield* Fiber.join(fiber)
       expect(heard).toStrictEqual([
         { voice: 'Line', url: '/line.wav', rate: 0.5 },
         { voice: 'Take', samples: 48_000, sampleRate: 48_000 },
+        {
+          voice: 'Line',
+          url: '/line.wav',
+          rate: 0.5,
+          stretch: { from: 0.5, to: 0.9 },
+        },
+        {
+          voice: 'Take',
+          samples: 48_000,
+          sampleRate: 48_000,
+          stretch: { from: 0.2, to: 0.6 },
+        },
       ])
     }),
   )

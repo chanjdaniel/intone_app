@@ -1,10 +1,11 @@
 import { Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
-import { TakeCurve } from '../take/take'
+import { TakeCurve, TakeFeatures } from '../take/take'
 
-// The practice screen's line: its native curve, which is tracked once on
-// the device, then read from it (../../services/native-curves.ts).
+// The practice screen's line: its native curve and features, which are
+// tracked once on the device, then read from it
+// (../../services/native-curves.ts).
 
 const clipId = Schema.String
 const lineId = Schema.String
@@ -13,7 +14,7 @@ export const NativeCurve = defineTaggedUnion({
   // No line is open.
   NoLine: {},
   Loading: { clipId, lineId },
-  Ready: { clipId, lineId, curve: TakeCurve },
+  Ready: { clipId, lineId, curve: TakeCurve, features: TakeFeatures },
   Failed: { clipId, lineId, reason: Schema.String },
 })
 export type NativeCurve = typeof NativeCurve.Type

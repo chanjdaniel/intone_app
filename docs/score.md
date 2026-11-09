@@ -118,7 +118,7 @@ A reading of the path's slope symmetric in the two recordings, and the root mean
 
 The match is the spec's starting weights, 0.6 pitch accent and 0.4 timing, kept for ticket 22 to fit to a native speaker's ratings.
 The timing part does not see accent, so a wrong accent said in time keeps about 0.4 of the match (median 0.39 to 0.58 by phrase and condition), and so does a flat take: its pitch accent part is near 0 at any length, but its timing part is not.
-Ticket 11 shows the parts beside the headline, which tells such a take apart; ticket 22 decides whether the weights, or a headline that needs the pitch part, should change.
+The score card shows the parts beside the headline, which tells such a take apart (a fall moved by one mora in 玄野武宏's voice reads 40% with its pitch accent at 0%); ticket 22 decides whether the weights, or a headline that needs the pitch part, should change.
 
 ## The worst stretch
 
@@ -146,6 +146,7 @@ The score says `provisional: true` until then.
 ## Time to score
 
 Scoring the study's 3,528 takes of 5 to 19 morae takes 0.23 to 0.48 ms a take in Node 24.22.1 on Daniel's machine (11 cores, at load averages of 2 to 9), and two 29 s readings against each other 36 to 60 ms (`npm run score:study -- --time`).
+In the app the Scorer runs it on the main thread when a take ends; `docs/latency.md` gives the time from stop to the score on the screen.
 
 ## Changing the score
 

@@ -1,5 +1,6 @@
 import { Effect, Exit, Match, Queue, Schema, Scope, Stream } from 'effect'
 
+import { spectralFeatures } from '../engine/features/spectral'
 import { type LiveTracker, createLiveTracker } from '../engine/pitch/live'
 import { type Resampler, createResampler } from '../engine/pitch/resample'
 import {
@@ -14,9 +15,10 @@ import { type FromTracker, ToTracker, transferables } from './tracker-protocol'
 // inside a scope on `Load` and learns the take's rate on `Start`. It
 // resamples each `Batch` to 16 kHz as it comes and posts the `Frames` it
 // completes, for the live curve. On `Finish` it posts the take's last
-// frames and `FramesEnded`, then tracks the whole take. On `Close` it
-// releases the model, says `Closed` and closes itself. Tracking never runs
-// on the main thread.
+// frames and `FramesEnded`, then tracks the whole take and finds its
+// spectral features, for the score. On `Close` it releases the model,
+// says `Closed` and closes itself. Tracking never runs on the main
+// thread.
 
 const post = (message: FromTracker): Effect.Effect<void> =>
   Effect.sync(() => {
@@ -149,6 +151,7 @@ const program = Effect.gen(function* () {
       catch: error => new TrackError({ reason: reasonOf(error) }),
     })
     if (analysis._tag === 'Tracked') {
+      const features = spectralFeatures(samples)
       return yield* post({
         _tag: 'Tracked',
         frameHz: analysis.curve.frameHz,
@@ -158,6 +161,8 @@ const program = Effect.gen(function* () {
         onsetFrame: analysis.curve.onsetFrame,
         peakDb: analysis.peakDb,
         gainDb: analysis.gainDb,
+        featureDims: features.dims,
+        features: features.data,
       })
     }
     return yield* post(analysis)
