@@ -25,9 +25,11 @@
       { "ignoreDeclarationSort": true, "ignoreCase": false }
     ]
   },
-  // The folder line (AGENTS.md). Later overrides replace a rule's options,
-  // so each one lists every pattern its folder refuses. The globs start with
-  // `**/` so that the fixtures under tests/lint/fixtures/src/ match too.
+  // The folder line (AGENTS.md). A later override replaces a rule's options,
+  // so each lists every pattern its folder refuses. The globs start with
+  // `**/` so that the fixtures under tests/lint/fixtures/src/ match too, and
+  // the folder patterns match relative imports that climb out to a sibling
+  // folder (`../app`, `../../services/x`), never a package path.
   "overrides": [
     {
       // Only src/app imports Foldkit, and nothing below it imports src/app.
@@ -42,7 +44,7 @@
                 "message": "Only src/app imports Foldkit (AGENTS.md, the folder line)."
               },
               {
-                "group": ["**/app", "**/app/**"],
+                "regex": "^(\\.\\./)+app(/|$)",
                 "message": "Nothing below src/app imports it (AGENTS.md, the folder line)."
               }
             ]
@@ -57,9 +59,9 @@
       }
     },
     {
-      // The engine and the score run per audio block, per frame or in Node,
-      // so they import neither Effect nor Foldkit.
-      "files": ["**/src/engine/**", "**/src/score/**"],
+      // The engine runs per audio block and per frame, so it imports nothing
+      // from Effect or Foldkit, nor from the folders that do.
+      "files": ["**/src/engine/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -74,11 +76,11 @@
                   "foldkit/*",
                   "@foldkit/*"
                 ],
-                "message": "src/engine and src/score import nothing from Effect or Foldkit (AGENTS.md, the folder line)."
+                "message": "src/engine imports nothing from Effect or Foldkit (AGENTS.md, the folder line)."
               },
               {
-                "group": ["**/app", "**/app/**"],
-                "message": "Nothing below src/app imports it (AGENTS.md, the folder line)."
+                "regex": "^(\\.\\./)+(app|services|workers)(/|$)",
+                "message": "src/engine imports only itself and src/score (AGENTS.md, the folder line)."
               }
             ]
           }
@@ -86,7 +88,8 @@
       }
     },
     {
-      // The score runs anywhere, Node included: only the language's own
+      // The score runs anywhere, Node included. It imports nothing from
+      // Effect, Foldkit or another src folder, and only the language's own
       // built-ins are defined there, so any browser or host global (window,
       // document, navigator, AudioContext, fetch, console, process, ...) is
       // refused, and globalThis with them.
@@ -95,6 +98,28 @@
         "builtin": true
       },
       "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "effect",
+                  "effect/*",
+                  "@effect/*",
+                  "foldkit",
+                  "foldkit/*",
+                  "@foldkit/*"
+                ],
+                "message": "src/score imports nothing from Effect or Foldkit (AGENTS.md, the folder line)."
+              },
+              {
+                "regex": "^(\\.\\./)+(app|services|workers|engine)(/|$)",
+                "message": "src/score imports only itself (AGENTS.md, the folder line)."
+              }
+            ]
+          }
+        ],
         "no-undef": "error",
         "no-restricted-globals": [
           "error",
