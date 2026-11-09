@@ -21,7 +21,7 @@ export type ListenControls<ViewMessage> = Readonly<{
 const focusRing =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
-const buttonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink disabled:cursor-not-allowed disabled:text-muted disabled:opacity-60 ${focusRing}`
+const buttonClass = `inline-flex min-h-12 min-w-48 items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink disabled:cursor-not-allowed disabled:text-muted disabled:opacity-60 ${focusRing}`
 
 export const speedLabel = (speed: ListenSpeed): string => `${speed}×`
 
@@ -63,14 +63,14 @@ export const listenControls = <ViewMessage>(
           h.Role('radiogroup'),
           h.AriaLabel('Speed of the line'),
           h.Class(
-            'inline-flex min-h-11 items-stretch overflow-hidden rounded-md border border-line bg-surface',
+            'inline-flex min-h-12 min-w-48 items-stretch overflow-hidden rounded-md border border-line bg-surface',
           ),
         ],
         Array.map(listenSpeeds, speed =>
           h.label(
             [
               h.Class(
-                'relative flex min-w-14 cursor-pointer items-center justify-center border-line px-3 text-sm font-semibold text-muted not-first:border-l has-checked:bg-accent has-checked:text-on-accent has-focus-visible:outline-2 has-focus-visible:-outline-offset-4 has-focus-visible:outline-accent has-checked:has-focus-visible:outline-on-accent',
+                'relative flex min-w-14 flex-1 cursor-pointer items-center justify-center border-line px-3 text-base font-semibold text-muted not-first:border-l has-checked:bg-accent has-checked:text-on-accent has-focus-visible:outline-2 has-focus-visible:-outline-offset-4 has-focus-visible:outline-accent has-checked:has-focus-visible:outline-on-accent',
               ),
             ],
             [

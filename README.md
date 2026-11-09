@@ -49,7 +49,7 @@ The original Xcode project, its test targets and Swift files are kept on the [`l
 ## Licence
 
 All rights reserved; see [LICENSE](LICENSE).
-The third-party packages and models the app ships, and their licences, are in [NOTICES.md](NOTICES.md).
+The third-party packages and models the app ships, and their licences, are in [NOTICES.md](NOTICES.md), and the recordings it brings and their credits in [CREDITS.md](CREDITS.md).
 
 ## Thanks
 

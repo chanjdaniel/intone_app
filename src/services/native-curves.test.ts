@@ -37,10 +37,7 @@ const harness = (respond: (samples: Float32Array) => TrackerResult) => {
       loads.push(url)
       return { samples: new Float32Array(480).fill(0.1), sampleRate: 24_000 }
     })
-  const layer = NativeCurves.make(
-    loadAudio,
-    '/models/swift-f0/1234/model.onnx',
-  ).pipe(
+  const layer = NativeCurves.make(loadAudio, 'swift-f0 1234').pipe(
     Layer.provide([
       Tracker.layerTest((samples, sampleRate) => {
         tracked.push({ samples: samples.length, sampleRate })
@@ -67,7 +64,7 @@ describe('a line’s native curve', () => {
         expect(Array.from(curve.f0Hz)).toStrictEqual([0, 200, 210, 480])
         expect(curve.onsetFrame).toBe(1)
         expect([...records.keys()]).toStrictEqual([
-          cacheKeyOf(line, '/models/swift-f0/1234/model.onnx'),
+          cacheKeyOf(line, 'swift-f0 1234'),
         ])
       }),
   )
@@ -86,7 +83,7 @@ describe('a line’s native curve', () => {
   it.effect('is tracked again when the kept record does not decode', () =>
     Effect.gen(function* () {
       const { records, tracked: runs, curveOf } = harness(tracked)
-      const key = cacheKeyOf(line, '/models/swift-f0/1234/model.onnx')
+      const key = cacheKeyOf(line, 'swift-f0 1234')
       records.set(key, { format: 0, f0Hz: [1, 2, 3] })
       yield* curveOf
       expect(runs).toHaveLength(1)

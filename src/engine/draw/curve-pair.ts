@@ -9,6 +9,7 @@ import {
   onePen,
   paintAxis,
   plotArea,
+  semitoneReach,
 } from './curve'
 import type { LiveCurve } from './live-curve'
 
@@ -32,6 +33,10 @@ export const closenessReachFrames = 9
 // so a missed fall lands two or more steps from the right one.
 export const closenessSteps = 5
 export const closenessStepSemitones = 1
+
+// A settling median that moves the curve less than this, in CSS pixels,
+// with no new frame, waits for the next paint that changes more.
+const smallestMovePixels = 0.2
 
 const nativeWidth = 5
 const learnerWidth = 2.5
@@ -195,6 +200,12 @@ export const drawCurvePair = (
   let nativeSize: Size | null = null
   let learnerSize: Size | null = null
   let paintedSpan = -1
+  // What the learner's canvas shows now, to skip a paint that would
+  // change it by less than a fifth of a pixel.
+  let paintedFrames = -1
+  let paintedFirst = -1
+  let paintedLast = -1
+  let paintedMedianHz = Number.NaN
   const observer = new ResizeObserver(() => {
     resized = true
   })
@@ -230,7 +241,25 @@ export const drawCurvePair = (
         strokeNative,
       )
     }
-    if (resized || rescaled || moved) {
+    const pixelsPerSemitone =
+      plotArea(learnerSize.width, learnerSize.height).height /
+      (2 * semitoneReach)
+    const visiblyMoved =
+      moved &&
+      (window === null ||
+        learner?.framesIn() !== paintedFrames ||
+        window.firstFrame !== paintedFirst ||
+        window.lastFrame !== paintedLast ||
+        !(
+          Math.abs(semitonesFrom(paintedMedianHz, window.medianHz)) *
+            pixelsPerSemitone <
+          smallestMovePixels
+        ))
+    if (resized || rescaled || visiblyMoved) {
+      paintedFrames = learner?.framesIn() ?? 0
+      paintedFirst = window?.firstFrame ?? -1
+      paintedLast = window?.lastFrame ?? -1
+      paintedMedianHz = window?.medianHz ?? Number.NaN
       paintLearnerLayer(
         learnerContext,
         learnerSize,

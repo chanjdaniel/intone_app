@@ -56,7 +56,7 @@ The voice, its timbre and its timing are VOICEVOX's; the pitch targets are this 
 | `hashi-o-watarimasu`: 橋を渡ります               | 8     | はし↓を わたりま↓す                               | は↓しを, as 箸を | はしを, as 端を | し said す   |
 | `kyou-wa-eki-de`: 今日は駅で古い友達に会いました | 19    | きょ↓うは、え↓きで ふる↓い ともだちに あいま↓した | えき↓で          | えきで          | だ said ら   |
 
-雨が好き is ticket 09's bundled line.
+雨が好き in 冥鳴ひまり, `voices/ame-ga-suki/meimei-himari/right.wav`, is the app's bundled line, served with its credit (`CREDITS.md`).
 Each phrase has a devoiced mora: す in すき, す in ます, し in ました.
 
 ### Variants

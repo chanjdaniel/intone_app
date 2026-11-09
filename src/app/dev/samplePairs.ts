@@ -41,21 +41,33 @@ const flattened = (curve: TakeCurve, fraction: number): TakeCurve => {
   }
 }
 
-// Said `factor` times as slowly, from the same onset.
+// Said `factor` times as slowly, from the same onset: each frame read
+// between the two it falls between, and unvoiced where either is.
 const slowed = (curve: TakeCurve, factor: number): TakeCurve => {
   const frames = Math.round(curve.f0Hz.length * factor)
-  const at = (values: ReadonlyArray<number>) =>
-    Array.makeBy(frames, frame => {
-      const source = curve.onsetFrame + (frame - curve.onsetFrame) / factor
-      return frame < curve.onsetFrame
-        ? (values[frame] ?? 0)
-        : (values[Math.round(source)] ?? 0)
-    })
+  const sourceOf = (frame: number): number =>
+    frame < curve.onsetFrame
+      ? frame
+      : curve.onsetFrame + (frame - curve.onsetFrame) / factor
+  const between = (values: ReadonlyArray<number>, source: number): number => {
+    const before = values[Math.floor(source)] ?? 0
+    const after = values[Math.ceil(source)] ?? 0
+    return before + (after - before) * (source - Math.floor(source))
+  }
+  const voicedAt = (source: number): boolean =>
+    (curve.f0Hz[Math.floor(source)] ?? 0) > 0 &&
+    (curve.f0Hz[Math.ceil(source)] ?? 0) > 0
   return {
     ...curve,
-    f0Hz: at(curve.f0Hz),
-    confidence: at(curve.confidence),
-    levelDb: at(curve.levelDb),
+    f0Hz: Array.makeBy(frames, frame =>
+      voicedAt(sourceOf(frame)) ? between(curve.f0Hz, sourceOf(frame)) : 0,
+    ),
+    confidence: Array.makeBy(frames, frame =>
+      between(curve.confidence, sourceOf(frame)),
+    ),
+    levelDb: Array.makeBy(frames, frame =>
+      between(curve.levelDb, sourceOf(frame)),
+    ),
   }
 }
 

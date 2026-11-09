@@ -154,10 +154,16 @@ export const practiceView = <ViewMessage>(
                 [
                   h.Href(homeRouter()),
                   h.Class(
-                    `inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 ${focusRing}`,
+                    `inline-flex min-h-11 items-center gap-1.5 rounded-md text-accent ${focusRing}`,
                   ),
                 ],
-                ['← All lines'],
+                [
+                  h.span([h.AriaHidden(true)], ['←']),
+                  h.span(
+                    [h.Class('underline underline-offset-4')],
+                    ['All lines'],
+                  ),
+                ],
               ),
             ],
           ),
@@ -206,9 +212,14 @@ const readyBody = <ViewMessage>(
         events.draw,
         h,
       ),
+      takePanel(state.take, events, h),
       h.section(
-        [h.AriaLabel('Listen again'), h.Class('flex flex-col gap-3')],
+        [h.AriaLabelledBy('listen-heading'), h.Class('flex flex-col gap-3')],
         [
+          h.h2(
+            [h.Id('listen-heading'), h.Class('text-lg font-bold')],
+            ['Listen again'],
+          ),
           listenControls(
             {
               playing: playingOf(state.take),
@@ -231,7 +242,6 @@ const readyBody = <ViewMessage>(
           }),
         ],
       ),
-      takePanel(state.take, events, h),
     ],
   )
 }
