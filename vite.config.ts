@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defaultClientConditions, defineConfig } from 'vite'
 
 import { foldkit } from '@foldkit/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
@@ -17,6 +17,12 @@ export default defineConfig({
     onnxRuntime(),
     devLibraryGuard(),
   ],
+  resolve: {
+    // ONNX Runtime's build that loads its WebAssembly from `wasmPaths`, the
+    // copy build/onnx-runtime.ts serves, rather than one with the loader
+    // inlined and the 15 MB binary emitted again as a hashed asset.
+    conditions: ['onnxruntime-web-use-extern-wasm', ...defaultClientConditions],
+  },
   optimizeDeps: {
     entries: ['src/app/entry.ts'],
   },

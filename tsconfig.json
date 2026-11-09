@@ -39,6 +39,7 @@
     "tests/build",
     "tests/scripts",
     "tests/support",
+    "tests/tracker",
     "tests/e2e/probe/vite.config.ts"
   ]
 }

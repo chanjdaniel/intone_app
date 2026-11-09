@@ -107,7 +107,8 @@ Write test audio as 48 kHz 16-bit mono, as the fixtures are; never 24-bit.
 `src/engine/audio/buffer-source.ts` plays decoded audio into the same capture worklet: `audioBufferOf` makes an `AudioBuffer` from a decoded WAV and `playBuffer` starts it into a node.
 Rendered by an `OfflineAudioContext`, the worklet's batches hold the source sample for sample, from the first sample, for all three voices.
 In a running `AudioContext` they hold it sample for sample too, 10.7 ms late: the context had rendered that much into the worklet before the source started.
-Tests that need audio through the worklet use it, with no browser microphone, and the Microphone service's test layer is to use it too.
+Tests that need audio through the worklet use it, with no browser microphone.
+The Microphone service's test layer, `Microphone.layerBuffer(wav)` in `src/services/microphone.ts`, plays through it too, in an AudioContext at the recording's own rate, and the probe's test of it finds the batches equal to the source, sample for sample.
 
 ## Running it
 

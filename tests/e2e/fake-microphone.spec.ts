@@ -274,6 +274,25 @@ test.describe('the buffer source', () => {
     expect(measurement?.maxDifference).toBe(0)
     expect(measurement?.gain).toBe(1)
   })
+
+  test("is the Microphone service's test layer, which plays it sample for sample", async ({
+    page,
+  }, testInfo) => {
+    const source = fixture('middle')
+    await openProbe(page)
+    const capture = await page.evaluate(
+      request => window.intoneProbe.fromMicrophoneService(request),
+      {
+        wav: readFileSync(source.file).toString('base64'),
+        seconds: captureSeconds,
+      },
+    )
+    const measurement = measure(capture, source)
+    await report(testInfo, 'microphone-service-buffer-middle.json', measurement)
+    expect(capture.sampleRate).toBe(source.sampleRate)
+    expect(measurement?.maxDifference).toBe(0)
+    expect(measurement?.gain).toBe(1)
+  })
 })
 
 test.describe('the fake microphone', () => {

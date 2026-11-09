@@ -11,6 +11,7 @@ import {
   init,
   update,
 } from './main'
+import { Take } from './take/take'
 
 const url = (path: string) =>
   Option.getOrThrow(fromString(`http://localhost${path}`))
@@ -18,6 +19,8 @@ const url = (path: string) =>
 const on = (route: AppRoute): Model => ({
   route,
   maybeDevLibraryFailure: Option.none(),
+  take: Take.Idle(),
+  takesStarted: 0,
 })
 
 describe('init', () => {

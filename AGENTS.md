@@ -71,6 +71,7 @@ When a folder's rule changes, change its fixtures with it.
   The build fetches each into the git-ignored `.cache/models/`, reuses a cached copy whose hash matches, fails naming the file on a size or hash mismatch, and copies it to `dist/models/<id>/<first 16 hex of its SHA-256>/<file>`; the dev server serves the same paths.
   Code reads a model's URL only from `modelUrls` in `virtual:intone/models`, typed by the ids in the list; nothing hard-codes a model path, and no model file is committed.
 - **ONNX Runtime:** the build copies `onnxruntime-web`'s single-threaded CPU build (`ort-wasm-simd-threaded.wasm` and `.mjs`) to `dist/ort/<version>/`; code points `wasmPaths` at `onnxRuntimeWasmPaths` from `virtual:intone/onnx-runtime`.
+  `vite.config.ts` resolves the package with its `onnxruntime-web-use-extern-wasm` condition, so the bundle loads those files rather than inlining the loader and emitting the 15 MB binary again under `assets/`.
 - **Bundle budget:** `bundle-budget.json` caps the entry chunk's gzip size, and `npm run check:budget` reads a build's `dist/` against it in CI; `docs/bundle-budget.md` says how it was set and how a raise is justified.
 - **Notices:** `NOTICES.md` names every package a production install keeps, with its version and licence, and every model's licence; `npm run generate` writes it from the lockfile and `models.json`.
 
@@ -105,7 +106,7 @@ Write Effect's GA names, as the installed source spells them:
 | `Effect.forkChild`                                                    | `Effect.fork`                         |
 | `Schema.Union([a, b])`                                                | `Schema.Union(a, b)`                  |
 
-Errors are `Schema.TaggedError<Self>()("Tag", { ...fields })` classes.
+Errors are `Schema.TaggedError<Self, { readonly brand: unique symbol }>()("Tag", { ...fields })` classes; the brand is what the lint's Effect pass asks for, and it denies warnings.
 When a name fails to type check, look it up in `node_modules/effect/src/` rather than taking the compiler's "did you mean".
 
 Use only the modules Effect marks stable.
@@ -113,6 +114,13 @@ Use only the modules Effect marks stable.
 The rule `unstable-api-usage` is an error in both `effect-tsgo tsc` and the lint's Effect pass; `tsconfig.json` allows `@effect/vitest` by name, since it marks its whole module unstable and only tests import it.
 
 An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquireRelease` with `{ interruptible: true }`, since `Stream.callback` starts its setup at once in 4.1.
+
+## The take's audio path
+
+- `src/app/take/` holds the take: its Model (`take.ts`), its two ManagedResources (`resources.ts`: the tracker Worker from `Preparing` to `Analysing`, the microphone from `AwaitingMic` to `Recording`, both only on the home screen), the Subscription that hands batches to the tracker while `Recording` (`subscriptions.ts`), the Commands, the mic state panel and the curve view.
+- `src/services/microphone.ts` (`Microphone`, with `layer` and the buffer test layer `layerBuffer(wav)`) and `src/services/tracker.ts` (`Tracker`, with `layer` and `layerTest(respond)`) are the services; the ManagedResources provide them.
+- `src/workers/tracker.worker.ts` runs SwiftF0 from `src/workers/swift-f0-session.ts` in a scope, speaking `src/workers/tracker-protocol.ts`: `Load`, `Start`, `Batch`, `Finish`, `Close` in, `Loaded`, `Tracked`, `TooQuiet`, `TooNoisy`, `Failed`, `Closed` out, every array transferred.
+- `src/engine/pitch/` is the plain loop (resample to 16 kHz, SwiftF0's windows, the quiet-take gain, onset, too quiet or noisy) and `src/engine/draw/curve.ts` the painter; `tests/tracker/` runs that loop on the real model in Node.
 
 ## Audio in tests
 
@@ -122,6 +130,8 @@ A test that needs the exact samples plays them through the capture worklet with 
 - `fixtures/synthetic/` holds the synthetic voices and their labels, written by `npm run fixtures:synthetic` from a seed; never edit them by hand, and rerun the script after changing `tests/support/synthetic-voice.ts`, since a test fails on any byte of difference.
 - `tests/e2e/probe/` is a test-only page that drives the capture worklet; Playwright builds it to `.cache/e2e-probe` and serves it on the port after the app's, and it never ships.
 - `tests/support/` holds the measuring code the end-to-end tests share (the comparison, a plain pitch estimate, the voices), tested in the `tooling` project.
+- `tests/e2e/take.spec.ts` records each voice in the built app and reads the drawn curve back off the canvas by the painter's own axis (`plotArea`, `semitonesOfY`, and the canvas's `data-curve-seconds`).
+- The headless shell, Playwright's default, cannot show a permission prompt, so `getUserMedia` there fails `NotSupportedError` unless `--use-fake-ui-for-media-stream` answers it; a test of a refused microphone runs full Chromium (`channel: 'chromium'`) with `--deny-permission-prompts`.
 - Write test audio as 48 kHz 16-bit mono WAV; the fake device plays 24-bit as silence.
 - Open the microphone only once the capture worklet has posted its first batch: the fake device plays its file from `getUserMedia` on, and audio before the context renders is lost.
 
@@ -138,7 +148,7 @@ npm test
 
 `npm run check:effect` runs the `effect-tsgo` check on both tsconfigs, `npm run format:check` the formatter, `npm run generate:check` that the generated files are current, `npm run check:budget` the bundle budget against `dist/`, and `npm run test:e2e` builds and runs Playwright against the production build; CI runs all of them.
 The build and its tests fetch the listed model files once, so they need the network until `.cache/models/` holds them.
-`npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, `tests/support`, in Node, type checked by `tsconfig.node.json`).
+`npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, `tests/support`, `tests/tracker`, in Node, type checked by `tsconfig.node.json`).
 
 ## Content and privacy
 

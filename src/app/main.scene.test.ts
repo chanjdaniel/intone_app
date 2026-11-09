@@ -4,10 +4,13 @@ import { describe, test } from 'vitest'
 
 import { MountDevLibrary } from './devLibrary'
 import { AppRoute, Message, type Model, tagline, update, view } from './main'
+import { Take } from './take/take'
 
 const on = (route: AppRoute): Model => ({
   route,
   maybeDevLibraryFailure: Option.none(),
+  take: Take.Idle(),
+  takesStarted: 0,
 })
 
 describe('home screen', () => {

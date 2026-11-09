@@ -7,25 +7,31 @@ import { Url, toString as urlToString } from 'foldkit/url'
 
 import { MountDevLibrary } from './devLibrary'
 import { Message } from './message'
+import { type Model } from './model'
 import { AppRoute, homeRouter, urlToAppRoute } from './route'
+import { PaintCurve } from './take/curveView'
+import { takePanel } from './take/panel'
+import type { TakeResourceServices } from './take/resources'
+import { Take } from './take/take'
+import * as TakeUpdate from './take/update'
 
 export { AppRoute } from './route'
 export { Message } from './message'
-
-// MODEL
-
-export const Model = Schema.Struct({
-  route: AppRoute,
-  maybeDevLibraryFailure: Schema.Option(Schema.String),
-})
-export type Model = typeof Model.Type
+export { Model } from './model'
+export { managedResources } from './take/resources'
+export { subscriptions } from './take/subscriptions'
 
 // INIT
 
 export const init: Runtime.RoutingApplicationInit<Model, Message> = (
   url: Url,
 ) => ({
-  model: { route: urlToAppRoute(url), maybeDevLibraryFailure: Option.none() },
+  model: {
+    route: urlToAppRoute(url),
+    maybeDevLibraryFailure: Option.none(),
+    take: Take.Idle(),
+    takesStarted: 0,
+  },
 })
 
 // COMMAND
@@ -46,10 +52,12 @@ export const LoadExternal = Command.define('LoadExternal', {
 
 // UPDATE
 
+type UpdateReturn = Update.Return<Model, Message, TakeResourceServices>
+
 export const update = (model: Model, message: Message) =>
-  Message.match<Update.Return<Model, Message>>(message, {
+  Message.match<UpdateReturn>(message, {
     ClickedLink: ({ request }) =>
-      UrlRequest.match<Update.Return<Model, Message>>(request, {
+      UrlRequest.match<UpdateReturn>(request, {
         Internal: ({ url }) => ({
           model,
           commands: [NavigateInternal({ url: urlToString(url) })],
@@ -60,12 +68,16 @@ export const update = (model: Model, message: Message) =>
         }),
       }),
 
-    ChangedUrl: ({ url }) => ({
-      model: modifyFields(model, {
-        route: () => urlToAppRoute(url),
+    ChangedUrl: ({ url }) => {
+      const route = urlToAppRoute(url)
+      const routed = modifyFields(model, {
+        route: () => route,
         maybeDevLibraryFailure: () => Option.none(),
-      }),
-    }),
+      })
+      return {
+        model: route._tag === 'Home' ? routed : TakeUpdate.leftScreen(routed),
+      }
+    },
 
     CompletedNavigateInternal: () => ({ model }),
     CompletedLoadExternal: () => ({ model }),
@@ -76,6 +88,30 @@ export const update = (model: Model, message: Message) =>
         maybeDevLibraryFailure: () => Option.some(reason),
       }),
     }),
+
+    ClickedRecord: () => TakeUpdate.clickedRecord(model),
+    ClickedStop: () => TakeUpdate.clickedStop(model),
+    ClickedCancelTake: () => TakeUpdate.clickedCancelTake(model),
+    AcquiredTracker: () => TakeUpdate.acquiredTracker(model),
+    FailedAcquireTracker: ({ reason }) =>
+      TakeUpdate.failedAcquireTracker(model, reason),
+    ReleasedTracker: () => ({ model }),
+    AcquiredMicrophone: () => TakeUpdate.acquiredMicrophone(model),
+    FailedAcquireMicrophone: ({ failure, reason }) =>
+      TakeUpdate.failedAcquireMicrophone(model, failure, reason),
+    ReleasedMicrophone: () => ({ model }),
+    CompletedWaitForMicAnswer: ({ takeNumber }) =>
+      TakeUpdate.completedWaitForMicAnswer(model, takeNumber),
+    TickedRecordingClock: ({ takeNumber, elapsedSeconds }) =>
+      TakeUpdate.tickedRecordingClock(model, takeNumber, elapsedSeconds),
+    FailedRecordTake: ({ takeNumber, reason }) =>
+      TakeUpdate.failedRecordTake(model, takeNumber, reason),
+    SucceededAnalyseTake: ({ takeNumber, result }) =>
+      TakeUpdate.succeededAnalyseTake(model, takeNumber, result),
+    FailedAnalyseTake: ({ takeNumber, reason }) =>
+      TakeUpdate.failedAnalyseTake(model, takeNumber, reason),
+    CompletedFocusTakeControl: () => ({ model }),
+    CompletedPaintCurve: () => ({ model }),
   })
 
 // VIEW
@@ -83,16 +119,32 @@ export const update = (model: Model, message: Message) =>
 export const tagline =
   'Practise Japanese pitch accent by copying native speakers, line by line, on your own device.'
 
-const homeView = (h: HtmlBuilder<Message>): Html =>
+const homeView = (take: Take, h: HtmlBuilder<Message>): Html =>
   h.main(
+    [h.Class('min-h-screen bg-surface text-ink px-4 py-10 sm:px-6 sm:py-16')],
     [
-      h.Class(
-        'min-h-screen bg-surface text-ink flex flex-col items-center justify-center gap-4 px-6 py-12 text-center',
+      h.div(
+        [h.Class('mx-auto flex max-w-2xl flex-col gap-8')],
+        [
+          h.header(
+            [h.Class('flex flex-col gap-3 text-center')],
+            [
+              h.h1([h.Class('text-5xl font-bold tracking-tight')], ['Intone']),
+              h.p([h.Class('mx-auto max-w-md text-lg text-muted')], [tagline]),
+            ],
+          ),
+          takePanel(
+            take,
+            {
+              record: Message.ClickedRecord(),
+              stop: Message.ClickedStop(),
+              cancel: Message.ClickedCancelTake(),
+              paint: PaintCurve,
+            },
+            h,
+          ),
+        ],
       ),
-    ],
-    [
-      h.h1([h.Class('text-5xl font-bold tracking-tight')], ['Intone']),
-      h.p([h.Class('max-w-md text-lg text-muted')], [tagline]),
     ],
   )
 
@@ -150,7 +202,7 @@ const devLibraryView = (
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
   title: 'Intone',
   body: AppRoute.match(model.route, {
-    Home: () => homeView(h),
+    Home: () => homeView(model.take, h),
     DevLibrary: () =>
       devLibraryView(Option.none(), model.maybeDevLibraryFailure, h),
     DevEntry: ({ entry }) =>

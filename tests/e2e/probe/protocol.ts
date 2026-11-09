@@ -30,9 +30,16 @@ export type BufferRequest = Readonly<{
   offline: boolean
 }>
 
+export type ServiceRequest = Readonly<{
+  // A WAV file, base64.
+  wav: string
+  seconds: number
+}>
+
 export type Probe = Readonly<{
   fromMicrophone: (request: MicrophoneRequest) => Promise<Capture>
   fromBuffer: (request: BufferRequest) => Promise<Capture>
+  fromMicrophoneService: (request: ServiceRequest) => Promise<Capture>
 }>
 
 declare global {

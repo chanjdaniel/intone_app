@@ -29,10 +29,11 @@ export default defineConfig({
       {
         // Tests of the repository's own tooling, which run its lint, type
         // check, build and scripts as child processes in Node, and of the
-        // measuring code the end-to-end tests share (tests/support).
+        // measuring code the end-to-end tests share (tests/support), and
+        // of the tracker on the real SwiftF0 model (tests/tracker).
         test: {
           name: 'tooling',
-          include: ['tests/{lint,build,scripts,support}/**/*.test.ts'],
+          include: ['tests/{lint,build,scripts,support,tracker}/**/*.test.ts'],
           environment: 'node',
           testTimeout: 180_000,
           // They run the project's own lint, whose first step may patch the

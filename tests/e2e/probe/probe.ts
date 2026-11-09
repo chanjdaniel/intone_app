@@ -1,10 +1,18 @@
+import { Effect, Stream } from 'effect'
+
 import {
   audioBufferOf,
   playBuffer,
 } from '../../../src/engine/audio/buffer-source'
 import { decodeWav } from '../../../src/engine/audio/wav'
 import { createCaptureNode } from '../../../src/engine/worklet/capture'
-import type { BufferRequest, Capture, MicrophoneRequest } from './protocol'
+import { Microphone } from '../../../src/services/microphone'
+import type {
+  BufferRequest,
+  Capture,
+  MicrophoneRequest,
+  ServiceRequest,
+} from './protocol'
 
 // Collects the worklet's batches until it holds `length` samples.
 const collector = (length: number) => {
@@ -122,4 +130,30 @@ const fromBuffer = async ({
   return capture(sampleRate, collected, null)
 }
 
-window.intoneProbe = { fromMicrophone, fromBuffer }
+// The Microphone service's buffer layer, as a test of the app would use
+// it: open, take its batches until `seconds` of them, close.
+const fromMicrophoneService = ({
+  wav,
+  seconds,
+}: ServiceRequest): Promise<Capture> =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const microphone = yield* Microphone
+      const { sampleRate, batches } = yield* Effect.scoped(
+        Effect.gen(function* () {
+          const session = yield* microphone.open
+          const collected = collector(Math.round(seconds * session.sampleRate))
+          yield* session.batches.pipe(
+            Stream.runForEach(batch =>
+              Effect.sync(() => collected.push(batch)),
+            ),
+            Effect.race(Effect.promise(() => collected.done)),
+          )
+          return { sampleRate: session.sampleRate, batches: collected }
+        }),
+      )
+      return capture(sampleRate, batches, null)
+    }).pipe(Effect.provide(Microphone.layerBuffer(decodeWav(fromBase64(wav))))),
+  )
+
+window.intoneProbe = { fromMicrophone, fromBuffer, fromMicrophoneService }
