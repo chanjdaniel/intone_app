@@ -5,7 +5,8 @@ import { beforeAll, describe, expect, test } from 'vitest'
 
 import { ensureCached, readModelList } from '../../build/models.ts'
 import { decodeWav } from '../../src/engine/audio/wav.ts'
-import { resample } from '../../src/engine/pitch/resample.ts'
+import { createLiveTracker } from '../../src/engine/pitch/live.ts'
+import { createResampler, resample } from '../../src/engine/pitch/resample.ts'
 import type { SwiftF0Inference } from '../../src/engine/pitch/swift-f0.ts'
 import { analyseTake } from '../../src/engine/pitch/take.ts'
 import { openSwiftF0 } from '../../src/workers/swift-f0-session.ts'
@@ -120,4 +121,46 @@ describe('the tracker on SwiftF0', () => {
       expect(error.medianCents).toBeLessThan(10)
     }
   })
+
+  test.each(voiceNames)(
+    'gives the %s voice live, batch by batch, the frames its whole take gives',
+    async name => {
+      const { wav } = readVoice(name)
+      const samples = wav.channels[0] ?? new Float32Array(0)
+      const { live, whole } = await withSwiftF0(async infer => {
+        // As the tracker Worker hears a take: 20 ms batches at 48 kHz,
+        // resampled as they come.
+        const resampler = createResampler(wav.sampleRate, 16_000)
+        const tracker = createLiveTracker(infer)
+        const frames: Array<number> = []
+        const batch = wav.sampleRate / 50
+        for (let start = 0; start < samples.length; start += batch) {
+          const tracked = await tracker.push(
+            resampler.push(samples.subarray(start, start + batch)),
+          )
+          frames.push(...(tracked?.f0Hz ?? []))
+        }
+        frames.push(
+          ...((await tracker.push(resampler.flush()))?.f0Hz ?? []),
+          ...((await tracker.flush())?.f0Hz ?? []),
+        )
+        return {
+          live: frames,
+          whole: await analyseTake(
+            resample(samples, wav.sampleRate, 16_000),
+            infer,
+          ),
+        }
+      })
+      expect(whole._tag).toBe('Tracked')
+      if (whole._tag !== 'Tracked') {
+        return
+      }
+      expect(live.length).toBe(whole.curve.f0Hz.length)
+      const differences = live.map((hz, frame) =>
+        Math.abs(hz - (whole.curve.f0Hz[frame] ?? Number.NaN)),
+      )
+      expect(Math.max(...differences)).toBeLessThan(0.01)
+    },
+  )
 })

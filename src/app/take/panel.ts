@@ -1,8 +1,10 @@
+import { Option } from 'effect'
 import type { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { takeFocusAttribute } from './commands'
 import { curveView } from './curveView'
+import { levelMeter, liveCurveView } from './liveCurveView'
 import {
   Take,
   type TakeCurve,
@@ -21,6 +23,7 @@ export type TakePanelEvents<ViewMessage> = Readonly<{
   stop: ViewMessage
   cancel: ViewMessage
   paint: (args: { curve: TakeCurve }) => Mount.MountAction<ViewMessage>
+  drawLive: (args: { takeNumber: number }) => Mount.MountAction<ViewMessage>
 }>
 
 const focusRing =
@@ -94,18 +97,40 @@ const screenOf = <ViewMessage>(
       ],
       action: { label: 'Cancel', message: events.cancel, kind: 'secondary' },
     }),
-    Recording: ({ elapsedSeconds }) => ({
+    Recording: ({
+      takeNumber,
+      elapsedSeconds,
+      levelDb,
+      maybeOnsetSeconds,
+    }) => ({
       tone: 'live',
       heading: 'Recording',
-      lines: [
-        `${formatClock(elapsedSeconds)} of ${formatClock(longestTakeSeconds)}. Say your line, then press stop.`,
-      ],
+      lines: ['Say your line, then press stop.'],
+      body: liveBody(
+        takeNumber,
+        Option.some({ elapsedSeconds, levelDb }),
+        Option.match(maybeOnsetSeconds, {
+          onNone: () =>
+            'Your curve starts when you start to speak, a moment behind your voice.',
+          onSome: () =>
+            'From your voice onset. The middle line is your typical pitch so far; the lines are 3 semitones apart.',
+        }),
+        events,
+        h,
+      ),
       action: { label: 'Stop', message: events.stop, kind: 'primary' },
     }),
-    Analysing: () => ({
+    Analysing: ({ takeNumber }) => ({
       tone: 'busy',
       heading: 'Finding your pitch',
       lines: ['The microphone is off. Tracking your take now.'],
+      body: liveBody(
+        takeNumber,
+        Option.none(),
+        'Your curve as you said it, from your voice onset. Its final shape follows.',
+        events,
+        h,
+      ),
     }),
     ShowingResult: ({ takeNumber, result }) =>
       resultScreen(takeNumber, result, events, h),
@@ -140,6 +165,47 @@ const screenOf = <ViewMessage>(
       action: { label: 'Try again', message: events.record, kind: 'primary' },
     }),
   })
+
+// The live curve, from the recording through its analysis, with the
+// clock and the level meter above it while the microphone is on.
+const liveBody = <ViewMessage>(
+  takeNumber: number,
+  maybeRecording: Option.Option<
+    Readonly<{ elapsedSeconds: number; levelDb: number }>
+  >,
+  caption: string,
+  events: TakePanelEvents<ViewMessage>,
+  h: HtmlBuilder<ViewMessage>,
+): Html =>
+  h.div(
+    [h.Class('flex flex-col gap-4')],
+    [
+      Option.match(maybeRecording, {
+        onNone: () => h.empty,
+        onSome: ({ elapsedSeconds, levelDb }) =>
+          h.div(
+            [
+              h.Class(
+                'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6',
+              ),
+            ],
+            [
+              h.p(
+                [
+                  h.Role('timer'),
+                  h.Class('shrink-0 text-base font-semibold tabular-nums'),
+                ],
+                [
+                  `${formatClock(elapsedSeconds)} of ${formatClock(longestTakeSeconds)}`,
+                ],
+              ),
+              h.div([h.Class('w-full sm:max-w-xs')], [levelMeter(levelDb, h)]),
+            ],
+          ),
+      }),
+      liveCurveView(takeNumber, caption, events.drawLive, h),
+    ],
+  )
 
 const resultScreen = <ViewMessage>(
   takeNumber: number,

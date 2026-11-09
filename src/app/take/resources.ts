@@ -9,13 +9,15 @@ import {
 import { Tracker, type TrackerSession } from '../../services/tracker'
 import { Message } from '../message'
 import type { Model } from '../model'
+import { offerLiveFrames } from './liveFrames'
 import { takeNeedingMicrophone, takeNeedingTracker } from './take'
 
 // The take's two resources, held exactly while the Model needs them: the
 // tracker Worker from Preparing to Analysing, the microphone from
 // AwaitingMic to Recording. Foldkit releases each the moment the Model
 // leaves those states, by stop, by error or by leaving the screen, and a
-// new take (a new take number) gets new ones.
+// new take (a new take number) gets new ones. The tracker, while held,
+// offers its take's frames to the live curve's canvas (./liveFrames.ts).
 
 export const TrackerResource =
   ManagedResource.tag<TrackerSession>()('TrackerResource')
@@ -51,10 +53,12 @@ export const managedResources = ManagedResource.make<Model, Message>()(
           Option.filter(() => onHomeScreen(model)),
           Option.map(takeNumber => ({ takeNumber })),
         ),
-      acquire: () =>
+      acquire: ({ takeNumber }) =>
         Effect.gen(function* () {
           const tracker = yield* Tracker
-          return yield* tracker.open
+          const session = yield* tracker.open
+          yield* offerLiveFrames(takeNumber, session.frames)
+          return session
         }).pipe(Effect.provide(Tracker.layer)),
       release: () => Effect.void,
       onAcquired: () => Message.AcquiredTracker(),

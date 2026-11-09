@@ -30,11 +30,17 @@ export const Message = defineMessageUnion({
   },
   ReleasedMicrophone: {},
   CompletedWaitForMicAnswer: { takeNumber },
-  TickedRecordingClock: { takeNumber, elapsedSeconds: Schema.Finite },
+  TickedTakeMeter: {
+    takeNumber,
+    elapsedSeconds: Schema.Finite,
+    levelDb: Schema.Finite,
+  },
+  DetectedVoiceOnset: { takeNumber, onsetSeconds: Schema.Finite },
   FailedRecordTake: { takeNumber, reason: Schema.String },
   SucceededAnalyseTake: { takeNumber, result: TakeResult },
   FailedAnalyseTake: { takeNumber, reason: Schema.String },
   CompletedFocusTakeControl: {},
   CompletedPaintCurve: {},
+  CompletedDrawLiveCurve: {},
 })
 export type Message = typeof Message.Type

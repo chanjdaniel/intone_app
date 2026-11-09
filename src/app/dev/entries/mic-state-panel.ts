@@ -1,13 +1,15 @@
-import { Array, Option, Schema } from 'effect'
+import { Array, Effect, Option, Schema } from 'effect'
 import { Runtime, type Update } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { modifyFields } from 'foldkit/struct'
 
 import { definePaintCurve } from '../../take/curveView'
+import { defineDrawLiveCurve } from '../../take/liveCurveView'
 import { takePanel } from '../../take/panel'
 import { Take, TakeResult } from '../../take/take'
 import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { replayLive } from '../liveReplay'
 import { sampleCurves } from '../sampleCurves'
 
 // The mic state panel in every state a take can be in, each picked from
@@ -20,7 +22,12 @@ export const samples: ReadonlyArray<Readonly<{ name: string; take: Take }>> = [
   { name: 'Prompt ignored', take: Take.MicPromptIgnored({ takeNumber: 1 }) },
   {
     name: 'Recording',
-    take: Take.Recording({ takeNumber: 1, elapsedSeconds: 2.6 }),
+    take: Take.Recording({
+      takeNumber: 1,
+      elapsedSeconds: 2.6,
+      levelDb: -14,
+      maybeOnsetSeconds: Option.some(0.5),
+    }),
   },
   { name: 'Analysing', take: Take.Analysing({ takeNumber: 1 }) },
   {
@@ -74,6 +81,7 @@ export const Message = defineMessageUnion({
   ClickedStop: {},
   ClickedCancelTake: {},
   CompletedPaintCurve: {},
+  CompletedDrawLiveCurve: {},
 })
 export type Message = typeof Message.Type
 
@@ -101,12 +109,21 @@ export const update = (model: Model, message: Message) =>
     ClickedStop: () => pressed(model, 'stop'),
     ClickedCancelTake: () => pressed(model, 'cancel'),
     CompletedPaintCurve: () => ({ model }),
+    CompletedDrawLiveCurve: () => ({ model }),
   })
 
 // VIEW
 
 export const PaintCurve = definePaintCurve(Message.CompletedPaintCurve, () =>
   Message.CompletedPaintCurve(),
+)
+
+// The Recording and Analysing samples draw the middle voice as a take
+// would find it.
+export const DrawLiveCurve = defineDrawLiveCurve(
+  Message.CompletedDrawLiveCurve,
+  () => Message.CompletedDrawLiveCurve(),
+  () => Effect.succeed(replayLive(sampleCurves.middle)),
 )
 
 const takeOf = (name: string): Take =>
@@ -154,7 +171,7 @@ export const readOut = (model: Model): string =>
 export const choices: ReadonlyArray<string> = [
   'The screen says the prompt is being ignored after 4 seconds. Would you rather it waited longer, or said so sooner?',
   'A take stops by itself at 30 seconds. Is that long enough for the longest line you would copy?',
-  'Recording shows a pulsing red dot and a clock, and no level meter until ticket 07. Is the clock useful, or noise?',
+  'Recording shows a pulsing red dot, the clock, the level meter and your curve drawing as you speak. Is the clock useful, or noise?',
   'A blocked microphone explains where Chrome keeps the setting. Should it name the steps for Safari and Firefox too?',
 ]
 
@@ -173,6 +190,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
             stop: Message.ClickedStop(),
             cancel: Message.ClickedCancelTake(),
             paint: PaintCurve,
+            drawLive: DrawLiveCurve,
           },
           h,
         ),

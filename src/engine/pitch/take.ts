@@ -1,5 +1,7 @@
 import { confidenceGate } from '../../score/constants'
 import type { Curve } from '../../score/curve'
+import { peakOf, toDb } from '../audio/level'
+import { createOnsetFinder } from './onset'
 import { type SwiftF0Inference, swiftF0FrameHz, trackFrames } from './swift-f0'
 
 // From a whole take at 16 kHz to its curve, or to the reason it has none:
@@ -27,9 +29,6 @@ export const fewestDbOverNoise = 10
 // With fewer unvoiced frames than this (a take voiced from end to end)
 // there is no room sound to measure, and the check is skipped.
 const fewestNoiseFrames = 8
-// The onset is the first frame of the first run of this many voiced
-// frames, 48 ms, so one stray voiced frame does not start the curve.
-const onsetRunFrames = 3
 
 export type TakeAnalysis =
   | Readonly<{
@@ -41,41 +40,24 @@ export type TakeAnalysis =
   | Readonly<{ _tag: 'TooQuiet'; peakDb: number }>
   | Readonly<{ _tag: 'TooNoisy'; peakDb: number }>
 
-const peakOf = (samples: Float32Array): number => {
-  let peak = 0
-  for (const sample of samples) {
-    peak = Math.max(peak, Math.abs(sample))
-  }
-  return peak
-}
-
-// In dBFS, with exact zeros at -140 dBFS, as SwiftF0 measures levels.
-const toDb = (amplitude: number): number =>
-  20 * Math.log10(Math.max(amplitude, 1e-7))
+// The gain, in dB, that a take peaking at `peakDb` is tracked with.
+export const quietTakeGainDb = (peakDb: number): number =>
+  peakDb < quietPeakDb ? Math.min(scaledPeakDb - peakDb, largestGainDb) : 0
 
 const quantile = (values: Float32Array, q: number): number => {
   const sorted = values.slice().sort()
   return sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? 0
 }
 
-const onsetOf = (f0Hz: Float32Array): number => {
-  let run = 0
-  for (let frame = 0; frame < f0Hz.length; frame++) {
-    run = (f0Hz[frame] ?? 0) > 0 ? run + 1 : 0
-    if (run === onsetRunFrames) {
-      return frame - onsetRunFrames + 1
-    }
-  }
-  return 0
-}
+const onsetOf = (f0Hz: Float32Array): number =>
+  createOnsetFinder().push(0, f0Hz) ?? 0
 
 export const analyseTake = async (
   samples: Float32Array,
   infer: SwiftF0Inference,
 ): Promise<TakeAnalysis> => {
   const peakDb = toDb(peakOf(samples))
-  const gainDb =
-    peakDb < quietPeakDb ? Math.min(scaledPeakDb - peakDb, largestGainDb) : 0
+  const gainDb = quietTakeGainDb(peakDb)
   const gain = 10 ** (gainDb / 20)
   const tracked = await trackFrames(
     gain === 1 ? samples : samples.map(sample => sample * gain),

@@ -1,4 +1,4 @@
-import { Effect, Exit, Scope } from 'effect'
+import { Effect, Exit, Fiber, Scope, Stream } from 'effect'
 
 import { describe, expect, it } from '@effect/vitest'
 
@@ -188,6 +188,100 @@ describe('openTrackerWorker', () => {
         expect(fake.isTerminated()).toBe(true)
       }),
     { timeout: 5_000 },
+  )
+})
+
+// A Worker that answers each batch with the frame it completes, and the
+// end of the take with its last frame, the end of the frames and the curve.
+const answeringFrames = (message: ToTracker): ReadonlyArray<unknown> => {
+  if (message._tag === 'Batch') {
+    return [
+      {
+        _tag: 'Frames',
+        firstFrame: message.samples[0] ?? 0,
+        f0Hz: Float32Array.of(100 + (message.samples[0] ?? 0)),
+      },
+    ]
+  }
+  if (message._tag === 'Finish') {
+    return [
+      { _tag: 'Frames', firstFrame: 3, f0Hz: Float32Array.of(0, 0) },
+      { _tag: 'FramesEnded' },
+      tracked,
+    ]
+  }
+  return answering(message)
+}
+
+const framesOf = (
+  frames: ReadonlyArray<Readonly<{ firstFrame: number; f0Hz: Float32Array }>>,
+) => frames.map(({ firstFrame, f0Hz }) => [firstFrame, Array.from(f0Hz)])
+
+describe("the take's frames", () => {
+  it.effect(
+    'come as the Worker finds them, from the first to a late subscriber, and end with the take',
+    () =>
+      Effect.gen(function* () {
+        const fake = fakeWorker(answeringFrames)
+        const { early, late, result } = yield* Effect.scoped(
+          Effect.gen(function* () {
+            const session = yield* openTrackerWorker(() => fake.worker, assets)
+            const early = yield* Stream.runCollect(session.frames).pipe(
+              Effect.forkChild,
+            )
+            yield* session.start(48_000)
+            yield* session.push(Float32Array.of(0))
+            yield* session.push(Float32Array.of(1))
+            yield* session.push(Float32Array.of(2))
+            const result = yield* session.finish
+            const late = yield* Stream.runCollect(session.frames)
+            return { early: yield* Fiber.join(early), late, result }
+          }),
+        )
+        const expected = [
+          [0, [100]],
+          [1, [101]],
+          [2, [102]],
+          [3, [0, 0]],
+        ]
+        expect(framesOf(early)).toStrictEqual(expected)
+        expect(framesOf(late)).toStrictEqual(expected)
+        // The frames never reach the replies the take waits on.
+        expect(result).toStrictEqual(tracked)
+      }),
+  )
+
+  it.effect('end when the Worker stops', () =>
+    Effect.gen(function* () {
+      const fake = fakeWorker(answeringFrames)
+      const frames = yield* Effect.scoped(
+        Effect.gen(function* () {
+          const session = yield* openTrackerWorker(() => fake.worker, assets)
+          yield* session.start(48_000)
+          yield* session.push(Float32Array.of(0))
+          yield* Effect.sync(() => {
+            queueMicrotask(() => fake.crash('out of memory'))
+          })
+          return yield* Stream.runCollect(session.frames)
+        }),
+      )
+      expect(framesOf(frames)).toStrictEqual([[0, [100]]])
+    }),
+  )
+
+  it.effect('end when the tracker is released mid-take', () =>
+    Effect.gen(function* () {
+      const fake = fakeWorker(answering)
+      const scope = yield* Scope.make()
+      const session = yield* openTrackerWorker(() => fake.worker, assets).pipe(
+        Scope.provide(scope),
+      )
+      const frames = yield* Stream.runCollect(session.frames).pipe(
+        Effect.forkChild,
+      )
+      yield* Scope.close(scope, Exit.void)
+      expect(yield* Fiber.join(frames)).toStrictEqual([])
+    }),
   )
 })
 

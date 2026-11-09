@@ -1,14 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import {
-  type Browser,
-  type BrowserContext,
-  type Page,
-  type TestInfo,
-  expect,
-  test,
-} from '@playwright/test'
+import { type Page, expect, test } from '@playwright/test'
 
 import { plotArea, semitonesOfY } from '../../src/engine/draw/curve.ts'
 import {
@@ -17,6 +10,7 @@ import {
   voiceNames,
   voicedFramesAwayFromEdges,
 } from '../support/synthetic-voice.ts'
+import { launch, report, trackStates, withPage } from './take-session.ts'
 
 // A take in the built app, end to end: Chromium's fake microphone plays a
 // synthetic voice into the real capture worklet, the tracker Worker runs
@@ -38,78 +32,10 @@ const tolerance = { medianSemitones: 0.1, p95Semitones: 0.45, coverage: 0.95 }
 // The take colour, --color-take in src/app/styles.css.
 const takeColour = [0xc2, 0x41, 0x0c] as const
 
+const wavOf = (name: VoiceName): string => join(fixtures, `${name}.wav`)
+
 const labelsOf = (name: VoiceName): SyntheticVoiceLabels =>
   JSON.parse(readFileSync(join(fixtures, `${name}.json`), 'utf8'))
-
-type Session = Readonly<{
-  context: BrowserContext
-  page: Page
-  // Every request the page and its Workers made.
-  requests: Array<
-    Readonly<{ url: string; method: string; body: string | null }>
-  >
-  problems: Array<string>
-}>
-
-// A page at 1280 px and two device pixels to each CSS pixel, which
-// records every request, console problem and microphone track.
-const withPage = async <A>(
-  browser: Browser,
-  use: (session: Session) => Promise<A>,
-): Promise<A> => {
-  const context = await browser.newContext({
-    viewport: { width: 1280, height: 900 },
-    deviceScaleFactor: 2,
-  })
-  const page = await context.newPage()
-  const session: Session = { context, page, requests: [], problems: [] }
-  context.on('request', request => {
-    session.requests.push({
-      url: request.url(),
-      method: request.method(),
-      body: request.postData(),
-    })
-  })
-  page.on('console', message => {
-    if (message.type() === 'error' || message.type() === 'warning') {
-      session.problems.push(message.text())
-    }
-  })
-  page.on('pageerror', error => session.problems.push(error.message))
-  // Keeps every track the app is given, so the test can see it stopped.
-  await page.addInitScript(() => {
-    const tracks: Array<MediaStreamTrack> = []
-    Object.assign(window, { intoneTracks: tracks })
-    const getUserMedia = navigator.mediaDevices.getUserMedia.bind(
-      navigator.mediaDevices,
-    )
-    navigator.mediaDevices.getUserMedia = async constraints => {
-      const stream = await getUserMedia(constraints)
-      tracks.push(...stream.getTracks())
-      return stream
-    }
-    document.addEventListener('securitypolicyviolation', event => {
-      console.error(
-        `CSP violation: ${event.violatedDirective} ${event.blockedURI}`,
-      )
-    })
-  })
-  try {
-    return await use(session)
-  } finally {
-    await context.close()
-  }
-}
-
-const trackStates = (page: Page): Promise<ReadonlyArray<string>> =>
-  page.evaluate(() => {
-    const tracks: unknown = Reflect.get(window, 'intoneTracks')
-    return Array.isArray(tracks)
-      ? tracks.flatMap(track =>
-          track instanceof MediaStreamTrack ? [track.readyState] : [],
-        )
-      : []
-  })
 
 const recordTake = async (page: Page, seconds: number): Promise<void> => {
   await page.getByRole('button', { name: 'Record' }).click()
@@ -248,46 +174,20 @@ const compareWithLabels = (
     )
 }
 
-const report = (testInfo: TestInfo, name: string, body: unknown) =>
-  testInfo.attach(name, {
-    body: JSON.stringify(body, null, 2),
-    contentType: 'application/json',
-  })
-
-const launch = (
-  playwright: { chromium: { launch: (options: object) => Promise<Browser> } },
-  voice: VoiceName,
-  allowMicrophone = true,
-) =>
-  playwright.chromium.launch({
-    // The headless shell cannot show a permission prompt at all, so it
-    // answers getUserMedia "not supported"; full Chromium, headless, has
-    // the prompt, which the deny flag answers no.
-    ...(allowMicrophone ? {} : { channel: 'chromium' }),
-    args: [
-      '--use-fake-device-for-media-stream',
-      // Answers the permission prompt: yes, or, as a learner can, no.
-      allowMicrophone
-        ? '--use-fake-ui-for-media-stream'
-        : '--deny-permission-prompts',
-      `--use-file-for-fake-audio-capture=${join(fixtures, `${voice}.wav`)}%noloop`,
-    ],
-  })
-
 for (const voice of voiceNames) {
   test(`a take of the ${voice} voice draws its known F0, privately, and releases the microphone`, async ({
     playwright,
     baseURL,
   }, testInfo) => {
     test.setTimeout(90_000)
-    const browser = await launch(playwright, voice)
+    const browser = await launch(playwright, wavOf(voice))
     try {
       await withPage(browser, async ({ page, requests, problems }) => {
         await page.goto('/')
         const beforeTake = requests.length
         await recordTake(page, 3)
         await expect(
-          page.getByRole('heading', { name: 'Your pitch' }),
+          page.getByRole('heading', { name: 'Your pitch', exact: true }),
         ).toBeVisible({ timeout: 30_000 })
         // Released on stop.
         expect(await trackStates(page)).toStrictEqual(['ended'])
@@ -334,7 +234,7 @@ test('leaving the screen mid-take releases the microphone', async ({
   playwright,
 }) => {
   test.setTimeout(60_000)
-  const browser = await launch(playwright, 'middle')
+  const browser = await launch(playwright, wavOf('middle'))
   try {
     await withPage(browser, async ({ page, problems }) => {
       await page.goto('/elsewhere')
@@ -360,7 +260,7 @@ test('leaving the screen mid-take releases the microphone', async ({
 
 test('a refused microphone says how to allow it', async ({ playwright }) => {
   test.setTimeout(60_000)
-  const browser = await launch(playwright, 'middle', false)
+  const browser = await launch(playwright, wavOf('middle'), false)
   try {
     await withPage(browser, async ({ page }) => {
       await page.goto('/')

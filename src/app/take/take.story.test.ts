@@ -6,7 +6,7 @@ import { describe, expect, test } from 'vitest'
 import { AppRoute, Message, type Model, update } from '../main'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
 import { managedResources } from './resources'
-import { Take, TakeResult } from './take'
+import { Take, TakeResult, levelMeterFloorDb } from './take'
 
 const home = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
   route: AppRoute.Home(),
@@ -93,7 +93,17 @@ describe('the take, by its Model', () => {
     path => {
       story(
         update,
-        given(home(Take.Recording({ takeNumber: 4, elapsedSeconds: 3 }), 4)),
+        given(
+          home(
+            Take.Recording({
+              takeNumber: 4,
+              elapsedSeconds: 3,
+              levelDb: levelMeterFloorDb,
+              maybeOnsetSeconds: Option.none(),
+            }),
+            4,
+          ),
+        ),
         message(Message.ChangedUrl({ url: url(path) })),
         model(state => {
           expect(state.take).toStrictEqual(Take.Idle())
@@ -124,7 +134,12 @@ describe('the take, by its Model', () => {
     // The microphone answered first: the timer, when it ends, changes
     // nothing.
     const recording = home(
-      Take.Recording({ takeNumber: 2, elapsedSeconds: 1 }),
+      Take.Recording({
+        takeNumber: 2,
+        elapsedSeconds: 1,
+        levelDb: levelMeterFloorDb,
+        maybeOnsetSeconds: Option.none(),
+      }),
       2,
     )
     expect(
@@ -167,9 +182,23 @@ describe('the take, by its Model', () => {
   test('stops a take by itself at 30 seconds', () => {
     story(
       update,
-      given(home(Take.Recording({ takeNumber: 1, elapsedSeconds: 29.8 }), 1)),
+      given(
+        home(
+          Take.Recording({
+            takeNumber: 1,
+            elapsedSeconds: 29.8,
+            levelDb: levelMeterFloorDb,
+            maybeOnsetSeconds: Option.none(),
+          }),
+          1,
+        ),
+      ),
       message(
-        Message.TickedRecordingClock({ takeNumber: 1, elapsedSeconds: 30.05 }),
+        Message.TickedTakeMeter({
+          takeNumber: 1,
+          elapsedSeconds: 30.05,
+          levelDb: -20,
+        }),
       ),
       Command.expectExact(AnalyseTake({ takeNumber: 1 }), FocusTakeControl()),
       model(state => {
@@ -188,7 +217,17 @@ describe('the take, by its Model', () => {
   test('starts no second take while one is under way', () => {
     story(
       update,
-      given(home(Take.Recording({ takeNumber: 1, elapsedSeconds: 1 }), 1)),
+      given(
+        home(
+          Take.Recording({
+            takeNumber: 1,
+            elapsedSeconds: 1,
+            levelDb: levelMeterFloorDb,
+            maybeOnsetSeconds: Option.none(),
+          }),
+          1,
+        ),
+      ),
       message(Message.ClickedRecord()),
       model(state => {
         expect(state.takesStarted).toBe(1)
@@ -200,7 +239,15 @@ describe('the take, by its Model', () => {
 
   test('holds nothing off the home screen, whatever the take says', () => {
     const elsewhere: Model = {
-      ...home(Take.Recording({ takeNumber: 1, elapsedSeconds: 1 }), 1),
+      ...home(
+        Take.Recording({
+          takeNumber: 1,
+          elapsedSeconds: 1,
+          levelDb: levelMeterFloorDb,
+          maybeOnsetSeconds: Option.none(),
+        }),
+        1,
+      ),
       route: AppRoute.NotFound({ path: '/elsewhere' }),
     }
     expect(holds(elsewhere)).toStrictEqual({

@@ -17,10 +17,10 @@ export const swiftF0MaxHz = 2093.75
 // The model's receptive field reaches 10 frames ahead and 11 behind, so a
 // window with that much context either side gives the frames inside it
 // exactly as one run over the whole recording would.
-const lookaheadFrames = 10
-const leftFrames = 11
+export const lookaheadFrames = 10
+export const leftFrames = 11
 // Frames per model run: 30 s.
-const windowFrames = 1875
+export const windowFrames = 1875
 // A frame whose audio peaks below this (-60 dBFS) is digital silence,
 // which the model never saw and answers with random voiced frames; it
 // gets confidence 0.
@@ -47,6 +47,20 @@ export type SwiftF0Frames = Readonly<{
 
 export const frameCount = (sampleCount: number): number =>
   Math.max(1, Math.floor(sampleCount / swiftF0Hop))
+
+// Whether `frame` of `samples` is digital silence.
+export const isSilentFrame = (
+  samples: Float32Array,
+  frame: number,
+): boolean => {
+  const to = Math.min(samples.length, (frame + 1) * swiftF0Hop)
+  for (let i = frame * swiftF0Hop; i < to; i++) {
+    if (Math.abs(samples[i] ?? 0) >= silencePeak) {
+      return false
+    }
+  }
+  return true
+}
 
 // Tracks a whole recording at 16 kHz.
 export const trackFrames = async (
@@ -82,14 +96,12 @@ export const trackFrames = async (
   for (let frame = 0; frame < frames; frame++) {
     const from = frame * swiftF0Hop
     const to = samples.length < swiftF0Hop ? samples.length : from + swiftF0Hop
-    let peak = 0
     let power = 0
     for (let i = from; i < to; i++) {
       const sample = samples[i] ?? 0
-      peak = Math.max(peak, Math.abs(sample))
       power += sample * sample
     }
-    if (peak < silencePeak) {
+    if (isSilentFrame(samples, frame)) {
       confidence[frame] = 0
     }
     levelDb[frame] =

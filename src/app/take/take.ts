@@ -38,7 +38,15 @@ export const Take = defineTaggedUnion({
   AwaitingMic: { takeNumber },
   // Still asking, a few seconds on: the prompt may never be answered.
   MicPromptIgnored: { takeNumber },
-  Recording: { takeNumber, elapsedSeconds: Schema.Finite },
+  // `levelDb` is the microphone's peak over the last tenth of a second,
+  // from `levelMeterFloorDb` to 0; the onset is in seconds from the take's
+  // start, once the voice is heard.
+  Recording: {
+    takeNumber,
+    elapsedSeconds: Schema.Finite,
+    levelDb: Schema.Finite,
+    maybeOnsetSeconds: Schema.Option(Schema.Finite),
+  },
   Analysing: { takeNumber },
   ShowingResult: { takeNumber, result: TakeResult },
   MicDenied: {},
@@ -50,6 +58,9 @@ export type Take = typeof Take.Type
 
 // A take stops by itself after this long, so a forgotten one ends.
 export const longestTakeSeconds = 30
+
+// The level meter's floor, in dBFS: quieter shows as an empty meter.
+export const levelMeterFloorDb = -60
 
 // How long the browser's prompt may wait before the screen says how to
 // find it.

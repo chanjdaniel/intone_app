@@ -33,7 +33,8 @@ Foldkit is pre-1.0 and breaks in minor releases, and Effect's minor releases wai
    npm run test:e2e
    ```
 
-   Once the frame-rate test lands in `tests/e2e/`, `npm run test:e2e` runs it too, and a Foldkit upgrade that slows the live curve fails there.
+   `npm run test:e2e` ends with the frame-rate test, `tests/e2e/frame-rate.spec.ts`: a 20 s take at six times CPU throttle must hold 60 frames a second (`docs/latency.md`).
+   It is the check every Foldkit upgrade must pass, since a slower runtime or renderer shows there first; run it alone with `npx playwright test --project frame-rate --no-deps` after `npm run build`.
 
 7. Open the pull request with the changelog entries you read and what each changed in the app, the entry chunk's size before and after (`docs/bundle-budget.md`), and look at its Vercel preview once Vercel builds them.
 

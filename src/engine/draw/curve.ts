@@ -38,32 +38,42 @@ export const semitonesOfY = (area: PlotArea, y: number): number =>
 
 export type Point = Readonly<{ x: number; y: number }>
 
-export type CurveDrawing = Readonly<{
-  medianHz: number
-  // The frames drawn: from the onset to the last voiced frame.
+// What a painting shows of a curve: frames `firstFrame` to `lastFrame`,
+// across the width of `spanFrames` frames from `firstFrame`, in semitones
+// around `medianHz`. `f0At` reads a frame, 0 where unvoiced.
+export type CurveWindow = Readonly<{
+  f0At: (frame: number) => number
   firstFrame: number
   lastFrame: number
-  // Each run of voiced frames, as points.
-  runs: ReadonlyArray<ReadonlyArray<Point>>
+  spanFrames: number
+  medianHz: number
 }>
 
-// The x of `frame`, in a drawing from `firstFrame` to `lastFrame`.
+// The x of `frame`, a lone frame in the middle.
 export const xOfFrame = (
   area: PlotArea,
-  firstFrame: number,
-  lastFrame: number,
+  window: Pick<CurveWindow, 'firstFrame' | 'spanFrames'>,
   frame: number,
 ): number =>
-  lastFrame === firstFrame
+  window.spanFrames === 0
     ? area.left + area.width / 2
-    : area.left + ((frame - firstFrame) / (lastFrame - firstFrame)) * area.width
+    : area.left + ((frame - window.firstFrame) / window.spanFrames) * area.width
 
-// Where each frame of `curve` goes in `area`; null for a curve with no
-// voiced frame.
-export const layOutCurve = (
+// The y of a voiced `hz`, held at the axis's edge past its reach.
+export const yOfHz = (area: PlotArea, medianHz: number, hz: number): number =>
+  yOfSemitones(
+    area,
+    Math.max(
+      -semitoneReach,
+      Math.min(semitoneReach, semitonesFrom(medianHz, hz)),
+    ),
+  )
+
+// The window that shows a finished curve whole: from the onset to the
+// last voiced frame, across the full width. Null with no voiced frame.
+export const finishedWindow = (
   curve: Pick<Curve, 'f0Hz' | 'onsetFrame'>,
-  area: PlotArea,
-): CurveDrawing | null => {
+): CurveWindow | null => {
   const { f0Hz, onsetFrame } = curve
   const medianHz = medianVoicedHz(f0Hz)
   if (!Number.isFinite(medianHz)) {
@@ -75,18 +85,42 @@ export const layOutCurve = (
       lastFrame = frame
     }
   }
+  return {
+    f0At: frame => f0Hz[frame] ?? 0,
+    firstFrame: onsetFrame,
+    lastFrame,
+    spanFrames: lastFrame - onsetFrame,
+    medianHz,
+  }
+}
+
+export type CurveDrawing = Readonly<{
+  medianHz: number
+  // The frames drawn: from the onset to the last voiced frame.
+  firstFrame: number
+  lastFrame: number
+  // Each run of voiced frames, as points.
+  runs: ReadonlyArray<ReadonlyArray<Point>>
+}>
+
+// Where each frame of `curve` goes in `area`; null for a curve with no
+// voiced frame.
+export const layOutCurve = (
+  curve: Pick<Curve, 'f0Hz' | 'onsetFrame'>,
+  area: PlotArea,
+): CurveDrawing | null => {
+  const window = finishedWindow(curve)
+  if (window === null) {
+    return null
+  }
   const runs: Array<Array<Point>> = []
   let run: Array<Point> = []
-  for (let frame = onsetFrame; frame <= lastFrame; frame++) {
-    const hz = f0Hz[frame] ?? 0
+  for (let frame = window.firstFrame; frame <= window.lastFrame; frame++) {
+    const hz = window.f0At(frame)
     if (hz > 0) {
-      const semitones = Math.max(
-        -semitoneReach,
-        Math.min(semitoneReach, semitonesFrom(medianHz, hz)),
-      )
       run.push({
-        x: xOfFrame(area, onsetFrame, lastFrame, frame),
-        y: yOfSemitones(area, semitones),
+        x: xOfFrame(area, window, frame),
+        y: yOfHz(area, window.medianHz, hz),
       })
     } else if (run.length > 0) {
       runs.push(run)
@@ -96,7 +130,12 @@ export const layOutCurve = (
   if (run.length > 0) {
     runs.push(run)
   }
-  return { medianHz, firstFrame: onsetFrame, lastFrame, runs }
+  return {
+    medianHz: window.medianHz,
+    firstFrame: window.firstFrame,
+    lastFrame: window.lastFrame,
+    runs,
+  }
 }
 
 export type CurveColours = Readonly<{
@@ -106,14 +145,13 @@ export type CurveColours = Readonly<{
   label: string
 }>
 
-// Paints the axis and `curve` over the whole of a `width` by `height`
-// CSS-pixel context.
-export const paintCurve = (
+// Clears a `width` by `height` CSS-pixel context and paints the semitone
+// axis: a line every 3 semitones, the median's darker, labels every 6.
+export const paintAxis = (
   context: CanvasRenderingContext2D,
-  curve: Pick<Curve, 'f0Hz' | 'onsetFrame'>,
   size: Readonly<{ width: number; height: number }>,
   colours: CurveColours,
-): void => {
+): PlotArea => {
   const area = plotArea(size.width, size.height)
   context.clearRect(0, 0, size.width, size.height)
 
@@ -146,33 +184,66 @@ export const paintCurve = (
       )
     }
   }
+  return area
+}
 
-  const drawing = layOutCurve(curve, area)
-  if (drawing === null) {
-    return
-  }
-  context.strokeStyle = colours.curve
-  context.fillStyle = colours.curve
+// Strokes each run of voiced frames in `window`, a dot for a lone frame,
+// allocating nothing, so it can run on every animation frame.
+export const strokeCurve = (
+  context: CanvasRenderingContext2D,
+  area: PlotArea,
+  window: CurveWindow,
+  colour: string,
+): void => {
+  context.strokeStyle = colour
+  context.fillStyle = colour
   context.lineWidth = lineWidth
   context.lineJoin = 'round'
   context.lineCap = 'round'
-  for (const run of drawing.runs) {
-    const [first, ...rest] = run
-    if (first === undefined) {
-      continue
-    }
-    if (rest.length === 0) {
+  let runLength = 0
+  let lastX = 0
+  let lastY = 0
+  const endRun = (): void => {
+    if (runLength === 1) {
       context.beginPath()
-      context.arc(first.x, first.y, lineWidth / 2, 0, 2 * Math.PI)
+      context.arc(lastX, lastY, lineWidth / 2, 0, 2 * Math.PI)
       context.fill()
-      continue
+    } else if (runLength > 1) {
+      context.stroke()
     }
-    context.beginPath()
-    context.moveTo(first.x, first.y)
-    for (const point of rest) {
-      context.lineTo(point.x, point.y)
+    runLength = 0
+  }
+  for (let frame = window.firstFrame; frame <= window.lastFrame; frame++) {
+    const hz = window.f0At(frame)
+    if (hz > 0) {
+      lastX = xOfFrame(area, window, frame)
+      lastY = yOfHz(area, window.medianHz, hz)
+      if (runLength === 0) {
+        context.beginPath()
+        context.moveTo(lastX, lastY)
+      } else {
+        context.lineTo(lastX, lastY)
+      }
+      runLength++
+    } else {
+      endRun()
     }
-    context.stroke()
+  }
+  endRun()
+}
+
+// Paints the axis and `curve` over the whole of a `width` by `height`
+// CSS-pixel context.
+export const paintCurve = (
+  context: CanvasRenderingContext2D,
+  curve: Pick<Curve, 'f0Hz' | 'onsetFrame'>,
+  size: Readonly<{ width: number; height: number }>,
+  colours: CurveColours,
+): void => {
+  const area = paintAxis(context, size, colours)
+  const window = finishedWindow(curve)
+  if (window !== null) {
+    strokeCurve(context, area, window, colours.curve)
   }
 }
 

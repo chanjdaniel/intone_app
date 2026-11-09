@@ -4,13 +4,17 @@ import {
   Effect,
   Exit,
   Layer,
+  PubSub,
   Queue,
   Schema,
   type Scope,
+  Stream,
+  type Take,
 } from 'effect'
 import { modelUrls } from 'virtual:intone/models'
 import { onnxRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'
 
+import type { LiveFrames } from '../engine/pitch/live'
 import {
   FromTracker,
   type ToTracker,
@@ -19,10 +23,12 @@ import {
 } from '../workers/tracker-protocol'
 
 // The tracker during a take: its Worker, with SwiftF0 loaded, from before
-// the microphone opens until the take's curve is back. Released, it asks
-// the Worker to free the model and close, and terminates it if it does
-// not within two seconds.
+// the microphone opens until the take's curve is back. While the take
+// records, its pitch frames come back as the Worker finds them, for the
+// live curve. Released, it asks the Worker to free the model and close,
+// and terminates it if it does not within two seconds.
 
+export type { LiveFrames } from '../engine/pitch/live'
 export type { TrackerResult } from '../workers/tracker-protocol'
 
 export class TrackerError extends Schema.TaggedError<
@@ -37,6 +43,10 @@ export type TrackerSession = Readonly<{
   push: (batch: Float32Array) => Effect.Effect<void>
   // The take is over: its curve, or why it has none.
   finish: Effect.Effect<TrackerResult, TrackerError>
+  // The take's pitch frames as they are found, each from its first, to
+  // any subscriber at any time: ends once the take's last frames are in,
+  // when it fails, or when the tracker is released.
+  frames: Stream.Stream<LiveFrames>
 }>
 
 // The part of a Worker the tracker uses, so tests can stand one in.
@@ -51,6 +61,10 @@ export type TrackerAssets = Readonly<{ modelUrl: string; wasmPaths: string }>
 // terminated anyway.
 const closeGrace = Duration.seconds(2)
 
+// The frame messages kept for a subscriber that comes late: every one of
+// a take of 80 s, one per 20 ms batch, past the longest take.
+const framesReplay = 4096
+
 const reasonOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
@@ -60,18 +74,42 @@ export const openTrackerWorker = (
 ): Effect.Effect<TrackerSession, TrackerError, Scope.Scope> =>
   Effect.gen(function* () {
     const replies = yield* Queue.unbounded<FromTracker>()
+    const liveFrames = yield* PubSub.unbounded<Take.Take<LiveFrames>>({
+      replay: framesReplay,
+    })
+    const endFrames = (): void => {
+      PubSub.endUnsafe(liveFrames, Exit.void)
+    }
     const decode = Schema.decodeUnknownExit(FromTracker)
     const onMessage = (event: MessageEvent): void => {
       Exit.match(decode(event.data), {
-        onSuccess: reply => Queue.offerUnsafe(replies, reply),
-        onFailure: () =>
+        onSuccess: reply => {
+          if (reply._tag === 'Frames') {
+            PubSub.publishUnsafe(liveFrames, [
+              { firstFrame: reply.firstFrame, f0Hz: reply.f0Hz },
+            ])
+            return
+          }
+          if (reply._tag === 'FramesEnded') {
+            endFrames()
+            return
+          }
+          if (reply._tag !== 'Loaded') {
+            endFrames()
+          }
+          Queue.offerUnsafe(replies, reply)
+        },
+        onFailure: () => {
+          endFrames()
           Queue.offerUnsafe(replies, {
             _tag: 'Failed',
             reason: 'The tracker sent a message it should not have.',
-          }),
+          })
+        },
       })
     }
     const onError = (event: Event): void => {
+      endFrames()
       Queue.offerUnsafe(replies, {
         _tag: 'Failed',
         reason:
@@ -116,6 +154,7 @@ export const openTrackerWorker = (
       }),
       created =>
         Effect.gen(function* () {
+          endFrames()
           created.postMessage({ _tag: 'Close' })
           yield* Queue.take(replies).pipe(
             Effect.repeat({ until: reply => reply._tag === 'Closed' }),
@@ -150,6 +189,7 @@ export const openTrackerWorker = (
           ),
         ),
       ),
+      frames: Stream.fromPubSubTake(liveFrames),
     }
   })
 
@@ -177,16 +217,20 @@ export class Tracker extends Context.Service<
   )
 
   // Answers every take with `respond`'s result for the whole take's
-  // samples, with no Worker and no model.
+  // samples, with no Worker and no model, and no live frames: its frames
+  // end when the take finishes.
   static readonly layerTest = (
     respond: (samples: Float32Array, sampleRate: number) => TrackerResult,
   ): Layer.Layer<Tracker> =>
     Layer.succeed(
       Tracker,
       Tracker.of({
-        open: Effect.sync(() => {
+        open: Effect.gen(function* () {
           const parts: Array<Float32Array> = []
           let rate = 0
+          const ended = yield* PubSub.unbounded<Take.Take<LiveFrames>>({
+            replay: 1,
+          })
           return {
             start: sampleRate =>
               Effect.sync(() => {
@@ -196,7 +240,9 @@ export class Tracker extends Context.Service<
               Effect.sync(() => {
                 parts.push(batch)
               }),
+            frames: Stream.fromPubSubTake(ended),
             finish: Effect.sync(() => {
+              PubSub.endUnsafe(ended, Exit.void)
               const whole = new Float32Array(
                 parts.reduce((length, part) => length + part.length, 0),
               )

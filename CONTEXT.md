@@ -9,6 +9,7 @@ Every screen, test, doc and name in the code uses these words with these meaning
   A **guided** take shows the native curve and the live curve; a **blind** take hides both until it ends.
 - **Curve:** the tracker's output for a recording: pitch, confidence and level per 16 ms frame, and the onset.
 - **Native curve, learner curve:** the curve of the line and the curve of the take.
+- **Live curve:** the learner curve drawn during the take, frame by frame as the tracker finds them, about a quarter second behind the voice; when the take ends it takes the finished curve's shape.
 - **Match:** the headline, "N% match to this clip".
   Its **parts** are pitch accent, timing and sounds.
 - **Worst stretch:** the 400 ms of the line where the take's pitch part is lowest.

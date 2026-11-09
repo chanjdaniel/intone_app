@@ -6,6 +6,7 @@ import { appPort, probePort } from './tests/e2e/ports.ts'
 // `vite preview`. Build first: `npm run test:e2e` does both. The
 // fake-microphone probe, a test-only page, is built and served apart.
 const probeConfig = 'tests/e2e/probe/vite.config.ts'
+const frameRateSpec = /frame-rate\.spec\.ts$/
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -18,7 +19,22 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${appPort}`,
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      testIgnore: frameRateSpec,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // The frame-rate test measures the page's own timing, so it runs
+    // after every other test has finished, alone on the machine. Run it
+    // by itself with `npx playwright test --project frame-rate --no-deps`.
+    {
+      name: 'frame-rate',
+      testMatch: frameRateSpec,
+      dependencies: ['chromium'],
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
   webServer: [
     {
       command: `npx vite preview --host 127.0.0.1 --port ${appPort} --strictPort`,

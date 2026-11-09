@@ -34,6 +34,16 @@ export type ToTracker = typeof ToTracker.Type
 
 export const Loaded = Schema.TaggedStruct('Loaded', {})
 
+// Frames of the take newly tracked while it records, for the live curve:
+// `f0Hz[i]` is frame `firstFrame + i`, 0 where unvoiced.
+export const Frames = Schema.TaggedStruct('Frames', {
+  firstFrame: Schema.Finite,
+  f0Hz: Samples,
+})
+
+// The take's last frames have been sent: its curve follows.
+export const FramesEnded = Schema.TaggedStruct('FramesEnded', {})
+
 export const Tracked = Schema.TaggedStruct('Tracked', {
   frameHz: Schema.Finite,
   f0Hz: Samples,
@@ -59,6 +69,8 @@ export const Closed = Schema.TaggedStruct('Closed', {})
 
 export const FromTracker = Schema.Union([
   Loaded,
+  Frames,
+  FramesEnded,
   Tracked,
   TooQuiet,
   TooNoisy,
@@ -79,6 +91,9 @@ export const transferables = (
 ): ReadonlyArray<Transferable> => {
   if (message._tag === 'Batch') {
     return [message.samples.buffer]
+  }
+  if (message._tag === 'Frames') {
+    return [message.f0Hz.buffer]
   }
   if (message._tag === 'Tracked') {
     return [

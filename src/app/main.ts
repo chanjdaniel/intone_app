@@ -10,6 +10,7 @@ import { Message } from './message'
 import { type Model } from './model'
 import { AppRoute, homeRouter, urlToAppRoute } from './route'
 import { PaintCurve } from './take/curveView'
+import { DrawLiveCurve } from './take/liveCurveView'
 import { takePanel } from './take/panel'
 import type { TakeResourceServices } from './take/resources'
 import { Take } from './take/take'
@@ -102,8 +103,10 @@ export const update = (model: Model, message: Message) =>
     ReleasedMicrophone: () => ({ model }),
     CompletedWaitForMicAnswer: ({ takeNumber }) =>
       TakeUpdate.completedWaitForMicAnswer(model, takeNumber),
-    TickedRecordingClock: ({ takeNumber, elapsedSeconds }) =>
-      TakeUpdate.tickedRecordingClock(model, takeNumber, elapsedSeconds),
+    TickedTakeMeter: ({ takeNumber, elapsedSeconds, levelDb }) =>
+      TakeUpdate.tickedTakeMeter(model, takeNumber, elapsedSeconds, levelDb),
+    DetectedVoiceOnset: ({ takeNumber, onsetSeconds }) =>
+      TakeUpdate.detectedVoiceOnset(model, takeNumber, onsetSeconds),
     FailedRecordTake: ({ takeNumber, reason }) =>
       TakeUpdate.failedRecordTake(model, takeNumber, reason),
     SucceededAnalyseTake: ({ takeNumber, result }) =>
@@ -112,6 +115,7 @@ export const update = (model: Model, message: Message) =>
       TakeUpdate.failedAnalyseTake(model, takeNumber, reason),
     CompletedFocusTakeControl: () => ({ model }),
     CompletedPaintCurve: () => ({ model }),
+    CompletedDrawLiveCurve: () => ({ model }),
   })
 
 // VIEW
@@ -140,6 +144,7 @@ const homeView = (take: Take, h: HtmlBuilder<Message>): Html =>
               stop: Message.ClickedStop(),
               cancel: Message.ClickedCancelTake(),
               paint: PaintCurve,
+              drawLive: DrawLiveCurve,
             },
             h,
           ),

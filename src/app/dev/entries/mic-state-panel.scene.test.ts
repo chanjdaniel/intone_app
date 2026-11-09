@@ -3,6 +3,7 @@ import { Mount, click, expect, given, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import {
+  DrawLiveCurve,
   Message,
   PaintCurve,
   init,
@@ -29,10 +30,16 @@ describe('the mic state panel entry', () => {
       given(init().model),
       click(role('button', { name: 'Recording' })),
       expect(role('heading', { name: 'Recording', level: 2 })).toExist(),
-      expect(text('0:02 of 0:30. Say your line, then press stop.')).toExist(),
+      Mount.resolve(DrawLiveCurve, Message.CompletedDrawLiveCurve()),
+      expect(role('timer')).toHaveText('0:02 of 0:30'),
+      expect(role('meter', { name: 'Microphone level' })).toHaveAttr(
+        'aria-valuetext',
+        'good',
+      ),
       click(role('button', { name: 'Stop' })),
       expect(text('Read-out: Recording: Recording; pressed stop')).toExist(),
       click(role('button', { name: 'Denied' })),
+      Mount.expectEnded(DrawLiveCurve),
       expect(role('heading', { name: 'The microphone is blocked' })).toExist(),
       click(role('button', { name: 'Try again' })),
       expect(text('Read-out: Denied: MicDenied; pressed record')).toExist(),

@@ -17,8 +17,9 @@ import { MicrophoneError } from '../../services/microphone'
 import { AppRoute, Message, type Model, update, view } from '../main'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
 import { PaintCurve } from './curveView'
+import { DrawLiveCurve } from './liveCurveView'
 import { managedResources } from './resources'
-import { Take, TakeResult } from './take'
+import { Take, TakeResult, levelMeterFloorDb } from './take'
 
 const home = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
   route: AppRoute.Home(),
@@ -42,6 +43,10 @@ const curve = {
 }
 
 const recordButton = role('button', { name: 'Record' })
+const liveCurve = role('img', {
+  name: 'Your pitch, drawn as you speak, in semitones around your typical pitch so far.',
+})
+const meter = role('meter', { name: 'Microphone level' })
 const stopButton = role('button', { name: 'Stop' })
 
 describe('a take', () => {
@@ -67,14 +72,42 @@ describe('a take', () => {
       ManagedResource.acquire(managedResources.microphone),
       focused,
       expect(role('heading', { name: 'Recording' })).toExist(),
+      // Its Message comes when the take's frames end; here, at once.
+      Mount.resolve(DrawLiveCurve, Message.CompletedDrawLiveCurve()),
+      expect(liveCurve).toExist(),
+      expect(
+        text(
+          'Your curve starts when you start to speak, a moment behind your voice.',
+        ),
+      ).toExist(),
+      expect(meter).toHaveAttr('aria-valuetext', 'silent'),
       Subscription.emit(
-        Message.TickedRecordingClock({ takeNumber: 1, elapsedSeconds: 2.4 }),
+        Message.TickedTakeMeter({
+          takeNumber: 1,
+          elapsedSeconds: 2.4,
+          levelDb: -14,
+        }),
       ),
-      expect(text('0:02 of 0:30. Say your line, then press stop.')).toExist(),
+      expect(role('timer')).toHaveText('0:02 of 0:30'),
+      expect(text('Say your line, then press stop.')).toExist(),
+      expect(meter).toHaveAttr('aria-valuenow', '-14'),
+      expect(meter).toHaveAttr('aria-valuetext', 'good'),
+      Subscription.emit(
+        Message.DetectedVoiceOnset({ takeNumber: 1, onsetSeconds: 0.5 }),
+      ),
+      expect(
+        text(
+          'From your voice onset. The middle line is your typical pitch so far; the lines are 3 semitones apart.',
+        ),
+      ).toExist(),
       click(stopButton),
       Command.expectHas(AnalyseTake({ takeNumber: 1 })),
       focused,
       expect(role('heading', { name: 'Finding your pitch' })).toExist(),
+      // The live curve stays while the take is tracked, without the
+      // meter: the microphone is off.
+      expect(liveCurve).toExist(),
+      expect(meter).toBeAbsent(),
       Command.resolve(
         AnalyseTake,
         Message.SucceededAnalyseTake({
@@ -82,6 +115,8 @@ describe('a take', () => {
           result: TakeResult.Tracked({ curve }),
         }),
       ),
+      // The live canvas leaves for the finished curve's, ending its Mount.
+      Mount.expectEnded(DrawLiveCurve),
       focused,
       Mount.resolve(PaintCurve, Message.CompletedPaintCurve()),
       ManagedResource.release(managedResources.microphone),
@@ -125,13 +160,25 @@ describe('a take', () => {
   test('releases the microphone and the tracker when the recording fails', () => {
     scene(
       { update, view },
-      given(home(Take.Recording({ takeNumber: 2, elapsedSeconds: 1 }), 2)),
+      given(
+        home(
+          Take.Recording({
+            takeNumber: 2,
+            elapsedSeconds: 1,
+            levelDb: levelMeterFloorDb,
+            maybeOnsetSeconds: Option.none(),
+          }),
+          2,
+        ),
+      ),
+      Mount.resolve(DrawLiveCurve, Message.CompletedDrawLiveCurve()),
       Subscription.emit(
         Message.FailedRecordTake({
           takeNumber: 2,
           reason: 'The take lost its microphone.',
         }),
       ),
+      Mount.expectEnded(DrawLiveCurve),
       focused,
       expect(
         role('heading', { name: 'Your take could not be tracked' }),
@@ -217,6 +264,7 @@ describe('the mic state panel', () => {
     scene(
       { update, view },
       given(home(Take.Analysing({ takeNumber: 1 }), 1)),
+      Mount.resolve(DrawLiveCurve, Message.CompletedDrawLiveCurve()),
       expect(role('heading', { name: 'Finding your pitch' })).toExist(),
       expect(text('The microphone is off. Tracking your take now.')).toExist(),
       expect(role('button')).toBeAbsent(),

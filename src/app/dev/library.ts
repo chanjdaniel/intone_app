@@ -30,6 +30,7 @@ export const plannedEntries: ReadonlyArray<
 > = [
   { name: 'tokens', title: 'Tokens' },
   { name: 'curve-view', title: 'Curve view' },
+  { name: 'live-curve', title: 'Live curve and level meter' },
   { name: 'mic-state-panel', title: 'Mic state panel' },
   { name: 'score-card', title: 'Score card' },
   { name: 'star-row', title: 'Star row' },

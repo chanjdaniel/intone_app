@@ -19,7 +19,7 @@ import { TakeCurve } from './take'
 const colourOf = (style: CSSStyleDeclaration, token: string): string =>
   style.getPropertyValue(`--color-${token}`).trim()
 
-const coloursFrom = (element: Element): CurveColours => {
+export const coloursFrom = (element: Element): CurveColours => {
   const style = getComputedStyle(element)
   return {
     curve: colourOf(style, 'take'),

@@ -117,10 +117,15 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 
 ## The take's audio path
 
-- `src/app/take/` holds the take: its Model (`take.ts`), its two ManagedResources (`resources.ts`: the tracker Worker from `Preparing` to `Analysing`, the microphone from `AwaitingMic` to `Recording`, both only on the home screen), the Subscription that hands batches to the tracker while `Recording` (`subscriptions.ts`), the Commands, the mic state panel and the curve view.
-- `src/services/microphone.ts` (`Microphone`, with `layer` and the buffer test layer `layerBuffer(wav)`) and `src/services/tracker.ts` (`Tracker`, with `layer` and `layerTest(respond)`) are the services; the ManagedResources provide them.
-- `src/workers/tracker.worker.ts` runs SwiftF0 from `src/workers/swift-f0-session.ts` in a scope, speaking `src/workers/tracker-protocol.ts`: `Load`, `Start`, `Batch`, `Finish`, `Close` in, `Loaded`, `Tracked`, `TooQuiet`, `TooNoisy`, `Failed`, `Closed` out, every array transferred.
-- `src/engine/pitch/` is the plain loop (resample to 16 kHz, SwiftF0's windows, the quiet-take gain, onset, too quiet or noisy) and `src/engine/draw/curve.ts` the painter; `tests/tracker/` runs that loop on the real model in Node.
+- `src/app/take/` holds the take: its Model (`take.ts`), its two ManagedResources (`resources.ts`: the tracker Worker from `Preparing` to `Analysing`, the microphone from `AwaitingMic` to `Recording`, both only on the home screen), the Subscription that hands batches to the tracker while `Recording` (`subscriptions.ts`), the Commands, the mic state panel, the curve view and the live curve (`liveCurveView.ts`).
+- Pitch frames never enter the Model.
+  The Subscription's `takeEvents` sends it only the voice's onset (`DetectedVoiceOnset`, once) and the level meter with the clock (`TickedTakeMeter`, about 10 Hz); the curve comes once, from `AnalyseTake`.
+  The live canvas's Mount (`DrawLiveCurve`) gets its take's frames from `liveFrames.ts`, where the tracker resource offers them while it holds the Worker, since a Mount runs with no services; it feeds them to the painter's ring buffer, and the painter draws on each animation frame that changes the picture.
+- `src/services/microphone.ts` (`Microphone`, with `layer` and the buffer test layer `layerBuffer(wav)`) and `src/services/tracker.ts` (`Tracker`, with `layer` and `layerTest(respond)`; a session's `frames` is a `Stream` of the take's frames, replayed to a late subscriber, ending with the take) are the services; the ManagedResources provide them.
+- `src/workers/tracker.worker.ts` runs SwiftF0 from `src/workers/swift-f0-session.ts` in a scope, speaking `src/workers/tracker-protocol.ts`: `Load`, `Start`, `Batch`, `Finish`, `Close` in, `Loaded`, `Frames`, `FramesEnded`, `Tracked`, `TooQuiet`, `TooNoisy`, `Failed`, `Closed` out, every array transferred.
+  Each batch's `Frames` come as soon as SwiftF0 can see 10 frames past them; on `Finish` the last 10 follow, then `FramesEnded`, then the finished curve, whose frames a loud take's live frames equal.
+- `src/engine/pitch/` is the plain loop (resample to 16 kHz, SwiftF0's windows, the live tracker `live.ts`, the quiet-take gain, onset, too quiet or noisy); `src/engine/draw/curve.ts` is the painter and `live-curve.ts` the live curve's ring buffer, settling median and draw loop; `tests/tracker/` runs that loop on the real model in Node.
+- `docs/latency.md` says how far the live curve runs behind the voice, stage by stage.
 
 ## Audio in tests
 
@@ -130,7 +135,9 @@ A test that needs the exact samples plays them through the capture worklet with 
 - `fixtures/synthetic/` holds the synthetic voices and their labels, written by `npm run fixtures:synthetic` from a seed; never edit them by hand, and rerun the script after changing `tests/support/synthetic-voice.ts`, since a test fails on any byte of difference.
 - `tests/e2e/probe/` is a test-only page that drives the capture worklet; Playwright builds it to `.cache/e2e-probe` and serves it on the port after the app's, and it never ships.
 - `tests/support/` holds the measuring code the end-to-end tests share (the comparison, a plain pitch estimate, the voices), tested in the `tooling` project.
-- `tests/e2e/take.spec.ts` records each voice in the built app and reads the drawn curve back off the canvas by the painter's own axis (`plotArea`, `semitonesOfY`, and the canvas's `data-curve-seconds`).
+- `tests/e2e/take.spec.ts` records each voice in the built app and reads the drawn curve back off the canvas by the painter's own axis (`plotArea`, `semitonesOfY`, and the canvas's `data-curve-seconds`); `tests/e2e/take-session.ts` holds what the take specs share.
+- `tests/e2e/live-curve.spec.ts` times the live curve from the voice's end to the paint that shows it, by watching the batches, the Worker's replies and the canvas's `data-drawn-frames` and `data-drawn-last-voiced` from inside the page.
+- `tests/e2e/frame-rate.spec.ts` holds 60 frames a second through a 20 s take at 6x CPU throttle; it runs in the Playwright project `frame-rate`, after every other test, so nothing shares the machine while it measures.
 - The headless shell, Playwright's default, cannot show a permission prompt, so `getUserMedia` there fails `NotSupportedError` unless `--use-fake-ui-for-media-stream` answers it; a test of a refused microphone runs full Chromium (`channel: 'chromium'`) with `--deny-permission-prompts`.
 - Write test audio as 48 kHz 16-bit mono WAV; the fake device plays 24-bit as silence.
 - Open the microphone only once the capture worklet has posted its first batch: the fake device plays its file from `getUserMedia` on, and audio before the context renders is lost.

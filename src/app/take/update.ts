@@ -1,4 +1,4 @@
-import { Match } from 'effect'
+import { Match, Option } from 'effect'
 import type { Update } from 'foldkit'
 import { modifyFields } from 'foldkit/struct'
 
@@ -7,7 +7,13 @@ import type { Message } from '../message'
 import type { Model } from '../model'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
 import type { TakeResourceServices } from './resources'
-import { Take, type TakeResult, canStartTake, longestTakeSeconds } from './take'
+import {
+  Take,
+  type TakeResult,
+  canStartTake,
+  levelMeterFloorDb,
+  longestTakeSeconds,
+} from './take'
 
 // The take's transitions. Each is a fact about the take that update reads
 // against the state the take is in; one that does not fit the state (a
@@ -98,6 +104,8 @@ export const acquiredMicrophone = (model: Model): TakeUpdate =>
         Take.Recording({
           takeNumber: model.take.takeNumber,
           elapsedSeconds: 0,
+          levelDb: levelMeterFloorDb,
+          maybeOnsetSeconds: Option.none(),
         }),
       )
     : unchanged(model)
@@ -119,12 +127,14 @@ export const failedAcquireMicrophone = (
       )
     : unchanged(model)
 
-export const tickedRecordingClock = (
+export const tickedTakeMeter = (
   model: Model,
   takeNumber: number,
   elapsedSeconds: number,
+  levelDb: number,
 ): TakeUpdate => {
-  if (model.take._tag !== 'Recording' || model.take.takeNumber !== takeNumber) {
+  const take = model.take
+  if (take._tag !== 'Recording' || take.takeNumber !== takeNumber) {
     return unchanged(model)
   }
   if (elapsedSeconds >= longestTakeSeconds) {
@@ -136,7 +146,35 @@ export const tickedRecordingClock = (
   }
   return {
     model: modifyFields(model, {
-      take: () => Take.Recording({ takeNumber, elapsedSeconds }),
+      take: () =>
+        Take.Recording({
+          takeNumber,
+          elapsedSeconds,
+          levelDb,
+          maybeOnsetSeconds: take.maybeOnsetSeconds,
+        }),
+    }),
+  }
+}
+
+export const detectedVoiceOnset = (
+  model: Model,
+  takeNumber: number,
+  onsetSeconds: number,
+): TakeUpdate => {
+  const take = model.take
+  if (take._tag !== 'Recording' || take.takeNumber !== takeNumber) {
+    return unchanged(model)
+  }
+  return {
+    model: modifyFields(model, {
+      take: () =>
+        Take.Recording({
+          takeNumber,
+          elapsedSeconds: take.elapsedSeconds,
+          levelDb: take.levelDb,
+          maybeOnsetSeconds: Option.some(onsetSeconds),
+        }),
     }),
   }
 }

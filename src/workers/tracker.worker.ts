@@ -1,5 +1,6 @@
 import { Effect, Exit, Match, Queue, Schema, Scope, Stream } from 'effect'
 
+import { type LiveTracker, createLiveTracker } from '../engine/pitch/live'
 import { type Resampler, createResampler } from '../engine/pitch/resample'
 import {
   type SwiftF0Inference,
@@ -10,10 +11,12 @@ import { openSwiftF0 } from './swift-f0-session'
 import { type FromTracker, ToTracker, transferables } from './tracker-protocol'
 
 // The tracker Worker: one take's audio in, its curve out. It loads SwiftF0
-// inside a scope on `Load`, learns the take's rate on `Start`, resamples
-// each `Batch` to 16 kHz as it comes,
-// tracks the whole take on `Finish`, and on `Close` releases the model,
-// says `Closed` and closes itself. Tracking never runs on the main thread.
+// inside a scope on `Load` and learns the take's rate on `Start`. It
+// resamples each `Batch` to 16 kHz as it comes and posts the `Frames` it
+// completes, for the live curve. On `Finish` it posts the take's last
+// frames and `FramesEnded`, then tracks the whole take. On `Close` it
+// releases the model, says `Closed` and closes itself. Tracking never runs
+// on the main thread.
 
 const post = (message: FromTracker): Effect.Effect<void> =>
   Effect.sync(() => {
@@ -79,6 +82,7 @@ const concatenate = (parts: ReadonlyArray<Float32Array>): Float32Array => {
 type Take = {
   infer: SwiftF0Inference | null
   resampler: Resampler | null
+  live: LiveTracker | null
   parts: Array<Float32Array>
   finished: boolean
 }
@@ -88,6 +92,7 @@ const program = Effect.gen(function* () {
   const take: Take = {
     infer: null,
     resampler: null,
+    live: null,
     parts: [],
     finished: false,
   }
@@ -105,15 +110,35 @@ const program = Effect.gen(function* () {
     })
 
   const finish = Effect.gen(function* () {
-    const { infer, resampler } = take
-    if (infer === null || resampler === null || take.finished) {
+    const { infer, resampler, live } = take
+    if (
+      infer === null ||
+      resampler === null ||
+      live === null ||
+      take.finished
+    ) {
       return yield* post({
         _tag: 'Failed',
         reason: 'There is no take to track.',
       })
     }
     take.finished = true
-    take.parts.push(resampler.flush())
+    const rest = resampler.flush()
+    take.parts.push(rest)
+    const last = yield* Effect.tryPromise({
+      try: async () => {
+        const held = await live.push(rest)
+        const flushed = await live.flush()
+        return [held, flushed]
+      },
+      catch: error => new TrackError({ reason: reasonOf(error) }),
+    })
+    for (const frames of last) {
+      if (frames !== null) {
+        yield* post({ _tag: 'Frames', ...frames })
+      }
+    }
+    yield* post({ _tag: 'FramesEnded' })
     const samples = concatenate(take.parts)
     take.parts = []
     if (samples.length === 0) {
@@ -138,22 +163,35 @@ const program = Effect.gen(function* () {
     return yield* post(analysis)
   })
 
+  const batch = (samples: Float32Array) =>
+    Effect.gen(function* () {
+      const { resampler, live } = take
+      if (resampler === null || live === null || take.finished) {
+        return
+      }
+      const resampled = resampler.push(samples)
+      take.parts.push(resampled)
+      const frames = yield* Effect.tryPromise({
+        try: () => live.push(resampled),
+        catch: error => new TrackError({ reason: reasonOf(error) }),
+      })
+      if (frames !== null) {
+        yield* post({ _tag: 'Frames', ...frames })
+      }
+    })
+
   const handle = (message: ToTracker): Effect.Effect<void> =>
     Match.value(message).pipe(
       Match.tagsExhaustive({
         Load: load,
         Start: ({ sampleRate }) =>
           Effect.sync(() => {
-            if (take.resampler === null) {
+            if (take.resampler === null && take.infer !== null) {
               take.resampler = createResampler(sampleRate, swiftF0SampleRate)
+              take.live = createLiveTracker(take.infer)
             }
           }),
-        Batch: ({ samples }) =>
-          Effect.sync(() => {
-            if (take.resampler !== null && !take.finished) {
-              take.parts.push(take.resampler.push(samples))
-            }
-          }),
+        Batch: ({ samples }) => batch(samples),
         Finish: () => finish,
         Close: () => Effect.void,
       }),
