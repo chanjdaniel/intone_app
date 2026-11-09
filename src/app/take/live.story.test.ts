@@ -6,7 +6,7 @@ import { describe, expect, it } from '@effect/vitest'
 
 import type { MicrophoneSession } from '../../services/microphone'
 import type { LiveFrames, TrackerSession } from '../../services/tracker'
-import { AppRoute, Message, type Model, update } from '../main'
+import { AppRoute, Message, type Model, initialModel, update } from '../main'
 import { takeEvents } from './subscriptions'
 import { Take as TakeState, levelMeterFloorDb } from './take'
 
@@ -64,8 +64,7 @@ const trackerOf = Effect.gen(function* () {
 })
 
 const recording = (takeNumber: number): Model => ({
-  route: AppRoute.Home(),
-  maybeDevLibraryFailure: Option.none(),
+  ...initialModel(AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })),
   take: TakeState.Recording({
     takeNumber,
     elapsedSeconds: 0,
@@ -82,10 +81,12 @@ describe('the take, as its Model hears it', () => {
       Effect.gen(function* () {
         const tracker = yield* trackerOf
         const heard: Array<Message> = []
+        const kept: Array<Float32Array> = []
         const listening = yield* takeEvents(
           3,
           microphone,
           tracker.session,
+          batch => Effect.sync(() => kept.push(batch.slice())),
         ).pipe(
           Stream.runForEach(event => Effect.sync(() => heard.push(event))),
           Effect.forkChild,
@@ -127,6 +128,10 @@ describe('the take, as its Model hears it', () => {
           levelMeterFloorDb,
         ])
         expect(heard).toHaveLength(onsets.length + meters.length)
+        // Every batch was kept for the learner to hear, before the tracker
+        // took it.
+        expect(kept).toHaveLength(batchCount)
+        expect(kept[voiceFromBatch]?.[0]).toBe(0.5)
 
         const last = meters.at(-1)
         story(

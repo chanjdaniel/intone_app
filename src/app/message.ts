@@ -4,7 +4,8 @@ import { UrlRequest } from 'foldkit/navigation'
 import { Url } from 'foldkit/url'
 
 import { MicrophoneFailure } from '../services/microphone'
-import { TakeResult } from './take/take'
+import { ListenSpeed } from './line/native'
+import { TakeCurve, TakeResult, Voice } from './take/take'
 
 const takeNumber = Schema.Finite
 
@@ -16,8 +17,28 @@ export const Message = defineMessageUnion({
   CompletedMountDevLibrary: {},
   FailedMountDevLibrary: { reason: Schema.String },
 
+  // The line.
+  SucceededLoadNativeCurve: {
+    clipId: Schema.String,
+    lineId: Schema.String,
+    curve: TakeCurve,
+  },
+  FailedLoadNativeCurve: {
+    clipId: Schema.String,
+    lineId: Schema.String,
+    reason: Schema.String,
+  },
+  ClickedRetryNativeCurve: {},
+  ClickedListen: { voice: Voice },
+  ClickedStopListening: {},
+  EndedListening: { voice: Voice },
+  SelectedListenSpeed: { speed: ListenSpeed },
+  FailedPlayback: { reason: Schema.String },
+  CompletedForgetTakeAudio: {},
+
   // The take.
   ClickedRecord: {},
+  EndedNativeBeforeTake: { takeNumber },
   ClickedStop: {},
   ClickedCancelTake: {},
   AcquiredTracker: {},
@@ -40,7 +61,6 @@ export const Message = defineMessageUnion({
   SucceededAnalyseTake: { takeNumber, result: TakeResult },
   FailedAnalyseTake: { takeNumber, reason: Schema.String },
   CompletedFocusTakeControl: {},
-  CompletedPaintCurve: {},
-  CompletedDrawLiveCurve: {},
+  CompletedDrawCurvePair: {},
 })
 export type Message = typeof Message.Type

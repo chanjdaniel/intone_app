@@ -1,29 +1,22 @@
 import { Option } from 'effect'
-import type { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { takeFocusAttribute } from './commands'
-import { curveView } from './curveView'
-import { levelMeter, liveCurveView } from './liveCurveView'
-import {
-  Take,
-  type TakeCurve,
-  type TakeResult,
-  longestTakeSeconds,
-} from './take'
+import { levelMeter } from './levelMeter'
+import { Take, type TakeResult, longestTakeSeconds } from './take'
 
 // The mic state panel: one clear screen for every state of a take, from
-// the record button through asking for the microphone, recording and
-// analysing, to the curve or the reason there is none. Each state offers
-// at most one thing to do next, and that control (or the heading, when
-// there is none) carries `takeFocusAttribute`, so focus follows the take.
+// the record button through playing the line, asking for the microphone,
+// recording and analysing, to the result or the reason there is none.
+// Each state offers at most one thing to do next, and that control (or
+// the heading, when there is none) carries `takeFocusAttribute`, so focus
+// follows the take. Listening again shows the screen it was started from.
+// The curves themselves are drawn above the panel (./curvePair.ts).
 
 export type TakePanelEvents<ViewMessage> = Readonly<{
   record: ViewMessage
   stop: ViewMessage
   cancel: ViewMessage
-  paint: (args: { curve: TakeCurve }) => Mount.MountAction<ViewMessage>
-  drawLive: (args: { takeNumber: number }) => Mount.MountAction<ViewMessage>
 }>
 
 const focusRing =
@@ -68,11 +61,12 @@ const screenOf = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Screen<ViewMessage> =>
   Take.match<Screen<ViewMessage>>(take, {
-    Idle: () => ({
-      tone: 'neutral',
-      heading: 'Record a take',
-      lines: ['Press record, say a line, then press stop to see your pitch.'],
-      action: { label: 'Record', message: events.record, kind: 'primary' },
+    Idle: () => idleScreen(events),
+    PlayingNative: () => ({
+      tone: 'busy',
+      heading: 'Listen to the line',
+      lines: ['The microphone opens when the line ends. Then say it back.'],
+      action: { label: 'Cancel', message: events.cancel, kind: 'secondary' },
     }),
     Preparing: () => ({
       tone: 'busy',
@@ -97,43 +91,24 @@ const screenOf = <ViewMessage>(
       ],
       action: { label: 'Cancel', message: events.cancel, kind: 'secondary' },
     }),
-    Recording: ({
-      takeNumber,
-      elapsedSeconds,
-      levelDb,
-      maybeOnsetSeconds,
-    }) => ({
+    Recording: ({ elapsedSeconds, levelDb }) => ({
       tone: 'live',
       heading: 'Recording',
-      lines: ['Say your line, then press stop.'],
-      body: liveBody(
-        takeNumber,
-        Option.some({ elapsedSeconds, levelDb }),
-        Option.match(maybeOnsetSeconds, {
-          onNone: () =>
-            'Your curve starts when you start to speak, a moment behind your voice.',
-          onSome: () =>
-            'From your voice onset. The middle line is your typical pitch so far; the lines are 3 semitones apart.',
-        }),
-        events,
-        h,
-      ),
+      lines: ['Say the line, then press stop.'],
+      body: recordingBody(elapsedSeconds, levelDb, h),
       action: { label: 'Stop', message: events.stop, kind: 'primary' },
     }),
-    Analysing: ({ takeNumber }) => ({
+    Analysing: () => ({
       tone: 'busy',
       heading: 'Finding your pitch',
       lines: ['The microphone is off. Tracking your take now.'],
-      body: liveBody(
-        takeNumber,
-        Option.none(),
-        'Your curve as you said it, from your voice onset. Its final shape follows.',
-        events,
-        h,
-      ),
     }),
-    ShowingResult: ({ takeNumber, result }) =>
-      resultScreen(takeNumber, result, events, h),
+    ShowingResult: ({ result }) => resultScreen(result, events),
+    Listening: ({ maybeTake }) =>
+      Option.match(maybeTake, {
+        onNone: () => idleScreen(events),
+        onSome: ({ result }) => resultScreen(result, events),
+      }),
     MicDenied: () => ({
       tone: 'problem',
       heading: 'The microphone is blocked',
@@ -166,52 +141,46 @@ const screenOf = <ViewMessage>(
     }),
   })
 
-// The live curve, from the recording through its analysis, with the
-// clock and the level meter above it while the microphone is on.
-const liveBody = <ViewMessage>(
-  takeNumber: number,
-  maybeRecording: Option.Option<
-    Readonly<{ elapsedSeconds: number; levelDb: number }>
-  >,
-  caption: string,
+const idleScreen = <ViewMessage>(
   events: TakePanelEvents<ViewMessage>,
+): Screen<ViewMessage> => ({
+  tone: 'neutral',
+  heading: 'Copy the line',
+  lines: [
+    'Press record: the line plays once, then the microphone opens for you to say it back. Press stop when you are done.',
+  ],
+  action: { label: 'Record', message: events.record, kind: 'primary' },
+})
+
+// The clock and the level meter, while the microphone is on.
+const recordingBody = <ViewMessage>(
+  elapsedSeconds: number,
+  levelDb: number,
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   h.div(
-    [h.Class('flex flex-col gap-4')],
     [
-      Option.match(maybeRecording, {
-        onNone: () => h.empty,
-        onSome: ({ elapsedSeconds, levelDb }) =>
-          h.div(
-            [
-              h.Class(
-                'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6',
-              ),
-            ],
-            [
-              h.p(
-                [
-                  h.Role('timer'),
-                  h.Class('shrink-0 text-base font-semibold tabular-nums'),
-                ],
-                [
-                  `${formatClock(elapsedSeconds)} of ${formatClock(longestTakeSeconds)}`,
-                ],
-              ),
-              h.div([h.Class('w-full sm:max-w-xs')], [levelMeter(levelDb, h)]),
-            ],
-          ),
-      }),
-      liveCurveView(takeNumber, caption, events.drawLive, h),
+      h.Class(
+        'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6',
+      ),
+    ],
+    [
+      h.p(
+        [
+          h.Role('timer'),
+          h.Class('shrink-0 text-base font-semibold tabular-nums'),
+        ],
+        [
+          `${formatClock(elapsedSeconds)} of ${formatClock(longestTakeSeconds)}`,
+        ],
+      ),
+      h.div([h.Class('w-full sm:max-w-xs')], [levelMeter(levelDb, h)]),
     ],
   )
 
 const resultScreen = <ViewMessage>(
-  takeNumber: number,
   result: TakeResult,
   events: TakePanelEvents<ViewMessage>,
-  h: HtmlBuilder<ViewMessage>,
 ): Screen<ViewMessage> => {
   const again: Screen<ViewMessage>['action'] = {
     label: 'Record again',
@@ -221,9 +190,10 @@ const resultScreen = <ViewMessage>(
   if (result._tag === 'Tracked') {
     return {
       tone: 'neutral',
-      heading: 'Your pitch',
-      lines: [],
-      body: curveView(`take-${takeNumber}`, result.curve, events.paint, h),
+      heading: 'Your copy',
+      lines: [
+        "Your curve is drawn over the line's. Listen to both, then record again when you are ready.",
+      ],
       action: again,
     }
   }

@@ -5,23 +5,29 @@ import { defineMessageUnion } from 'foldkit/message'
 import { modifyFields } from 'foldkit/struct'
 
 import {
-  defineDrawLiveCurve,
-  describeLevel,
-  levelMeter,
-  liveCurveView,
-} from '../../take/liveCurveView'
+  PairLearner,
+  curvePairView,
+  defineDrawCurvePair,
+} from '../../take/curvePair'
+import { describeLevel, levelMeter } from '../../take/levelMeter'
 import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
 import { replayLive } from '../liveReplay'
-import { type SampleVoice, sampleCurves, sampleVoices } from '../sampleCurves'
+import {
+  type SampleTakeName,
+  sampleLine,
+  sampleTakeLabel,
+  sampleTakeNames,
+  sampleTakes,
+} from '../samplePairs'
 
-// The learner's curve drawing live, each synthetic voice played back as
-// the tracker finds it during a take, and the level meter at the levels
-// it reads out.
+// A take drawing live over the line, each sample take played back as the
+// tracker finds it during a take, and the level meter at the levels it
+// reads out.
 
 // MODEL
 
 export const Model = Schema.Struct({
-  voice: Schema.Literals(sampleVoices),
+  take: Schema.Literals(sampleTakeNames),
   // Each playback is a take of its own, so a new one gets a new canvas.
   playback: Schema.Finite,
   finishedPlayback: Schema.Finite,
@@ -31,32 +37,32 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  SelectedVoice: { voice: Schema.Literals(sampleVoices) },
+  SelectedTake: { take: Schema.Literals(sampleTakeNames) },
   ClickedPlayAgain: {},
-  CompletedDrawLiveCurve: {},
+  CompletedDrawCurvePair: {},
 })
 export type Message = typeof Message.Type
 
 // INIT
 
 export const init: Runtime.ElementInit<Model, Message> = () => ({
-  model: { voice: 'middle', playback: 0, finishedPlayback: -1 },
+  model: { take: 'low', playback: 0, finishedPlayback: -1 },
 })
 
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
   Message.match<Update.Return<Model, Message>>(message, {
-    SelectedVoice: ({ voice }) => ({
+    SelectedTake: ({ take }) => ({
       model: modifyFields(model, {
-        voice: () => voice,
+        take: () => take,
         playback: playback => playback + 1,
       }),
     }),
     ClickedPlayAgain: () => ({
       model: modifyFields(model, { playback: playback => playback + 1 }),
     }),
-    CompletedDrawLiveCurve: () => ({
+    CompletedDrawCurvePair: () => ({
       model: modifyFields(model, {
         finishedPlayback: () => model.playback,
       }),
@@ -65,29 +71,23 @@ export const update = (model: Model, message: Message) =>
 
 // VIEW
 
-// A playback's number names its voice too: the Mount's only arg.
-const takeNumberOf = (voice: SampleVoice, playback: number): number =>
-  playback * sampleVoices.length + sampleVoices.indexOf(voice)
+// A playback's number names its take too: the Mount's only way to it.
+const takeNumberOf = (take: SampleTakeName, playback: number): number =>
+  playback * sampleTakeNames.length + sampleTakeNames.indexOf(take)
 
-const voiceOf = (takeNumber: number): SampleVoice =>
-  sampleVoices[takeNumber % sampleVoices.length] ?? 'middle'
+const takeOf = (takeNumber: number): SampleTakeName =>
+  sampleTakeNames[takeNumber % sampleTakeNames.length] ?? 'low'
 
-export const DrawLiveCurve = defineDrawLiveCurve(
-  Message.CompletedDrawLiveCurve,
-  () => Message.CompletedDrawLiveCurve(),
-  takeNumber => Effect.succeed(replayLive(sampleCurves[voiceOf(takeNumber)])),
+export const DrawCurvePair = defineDrawCurvePair(
+  Message.CompletedDrawCurvePair,
+  () => Message.CompletedDrawCurvePair(),
+  takeNumber => Effect.succeed(replayLive(sampleTakes[takeOf(takeNumber)])),
 )
-
-const voiceLabel: Readonly<Record<SampleVoice, string>> = {
-  low: 'Low voice',
-  middle: 'Middle voice',
-  high: 'High voice',
-}
 
 export const meterSamples: ReadonlyArray<number> = [-60, -48, -20, -3]
 
 export const readOut = (model: Model): string =>
-  `${model.voice}, playback ${model.playback + 1}: ${
+  `${model.take}, playback ${model.playback + 1}: ${
     model.finishedPlayback === model.playback
       ? 'finished, snapped to its median'
       : 'drawing'
@@ -95,8 +95,8 @@ export const readOut = (model: Model): string =>
 
 export const choices: ReadonlyArray<string> = [
   'The curve runs about a quarter second behind your voice: SwiftF0 needs 160 ms of what follows each frame. Ticket 21 adds a faint fast tail if that feels too slow.',
-  'The middle line follows your typical pitch so far, gliding to each new median over about half a second rather than jumping. Should it stay still until the take ends instead?',
-  'The width shows at least 4 s from your onset, then squeezes to fit as you go on, and stretches to the whole width when the take ends. Would you rather it scrolled?',
+  "While you speak, each moment of your curve is coloured by how close it is to the line's within about 150 ms either way, with no number. Would a number help, or distract?",
+  'The middle line follows your typical pitch so far, gliding to each new median over about half a second rather than jumping, so the colours settle as you go. Should it stay still until the take ends instead?',
   'The level meter shows the loudest sound in each tenth of a second, from silence at -60 dBFS to full scale. Screen readers can read it as silent, quiet, good or very loud, but it never announces itself. Is a meter useful while you speak?',
 ]
 
@@ -105,22 +105,22 @@ const pickerView = (model: Model, h: HtmlBuilder<Message>): Html =>
     [h.Class('flex flex-wrap gap-2')],
     [
       h.ul(
-        [h.AriaLabel('Voices'), h.Class('flex flex-wrap gap-2')],
-        Array.map(sampleVoices, voice =>
+        [h.AriaLabel('Takes'), h.Class('flex flex-wrap gap-2')],
+        Array.map(sampleTakeNames, take =>
           h.keyed('li')(
-            voice,
+            take,
             [],
             [
               h.button(
                 [
                   h.Type('button'),
-                  h.AriaPressed(model.voice === voice ? 'true' : 'false'),
-                  h.OnClick(Message.SelectedVoice({ voice })),
+                  h.AriaPressed(model.take === take ? 'true' : 'false'),
+                  h.OnClick(Message.SelectedTake({ take })),
                   h.Class(
                     `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent ${buttonFocusClass}`,
                   ),
                 ],
-                [voiceLabel[voice]],
+                [sampleTakeLabel[take]],
               ),
             ],
           ),
@@ -139,18 +139,21 @@ const pickerView = (model: Model, h: HtmlBuilder<Message>): Html =>
     ],
   )
 
-export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
-  entryFrame(
+export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
+  const takeNumber = takeNumberOf(model.take, model.playback)
+  return entryFrame(
     {
-      title: 'Live curve and level meter',
+      title: 'Live curve over the line, and level meter',
       summary:
-        "The learner's pitch drawn as the tracker finds it during a take, from the voice's onset, around a median that settles as the take goes on; and the meter that shows the microphone's level.",
+        "A take drawn over the line as the tracker finds it, from the voice's onset, around a median that settles as the take goes on, coloured by closeness; and the meter that shows the microphone's level.",
       demo: [
         pickerView(model, h),
-        liveCurveView(
-          takeNumberOf(model.voice, model.playback),
-          'From your voice onset. The middle line is your typical pitch so far; the lines are 3 semitones apart.',
-          DrawLiveCurve,
+        curvePairView(
+          `live-${takeNumber}`,
+          sampleLine,
+          PairLearner.Live({ takeNumber }),
+          "Your curve, as you speak. Each curve starts at its voice onset, around its speaker's own typical pitch; the lines are 3 semitones apart, and dashes bridge short pauses.",
+          DrawCurvePair,
           h,
         ),
         h.ul(
@@ -175,6 +178,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
     },
     h,
   )
+}
 
 export const entry: DevEntry = {
   makeProgram: container =>

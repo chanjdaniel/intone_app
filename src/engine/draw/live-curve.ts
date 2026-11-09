@@ -1,13 +1,6 @@
 import type { LiveFrames } from '../pitch/live'
 import { createOnsetFinder } from '../pitch/onset'
-import { swiftF0FrameHz } from '../pitch/swift-f0'
-import {
-  type CurveColours,
-  type CurveWindow,
-  backingSize,
-  paintAxis,
-  strokeCurve,
-} from './curve'
+import type { CurveWindow } from './curve'
 
 // The learner's curve as it is drawn during a take: frames come in from
 // the tracker as it finds them and go into a ring buffer, and each
@@ -18,10 +11,6 @@ import {
 // its finished window: the exact median, from the onset to the last
 // voiced frame, as the finished curve is drawn.
 
-// The width shows at least this long from the onset, then squeezes to
-// fit as the take goes on: about a short line's length, so a line's
-// shape is not stretched while it is still being said.
-export const shortestLiveSpanSeconds = 4
 // The drawn median closes this fraction of its distance to the running
 // median every this many ms, about 63% per 400 ms.
 export const medianSettleMs = 400
@@ -142,25 +131,10 @@ export const createLiveCurve = (capacity: number): LiveCurve => {
         return null
       }
       const firstFrame = Math.max(onset, framesIn - capacity)
-      if (finished) {
-        const lastFrame = Math.max(firstFrame, newestVoiced)
-        return {
-          f0At,
-          firstFrame,
-          lastFrame,
-          spanFrames: lastFrame - firstFrame,
-          medianHz: 2 ** drawnLog2,
-        }
-      }
-      const lastFrame = framesIn - 1
       return {
         f0At,
         firstFrame,
-        lastFrame,
-        spanFrames: Math.max(
-          shortestLiveSpanSeconds * swiftF0FrameHz,
-          lastFrame - firstFrame,
-        ),
+        lastFrame: finished ? Math.max(firstFrame, newestVoiced) : framesIn - 1,
         medianHz: 2 ** drawnLog2,
       }
     },
@@ -170,80 +144,11 @@ export const createLiveCurve = (capacity: number): LiveCurve => {
   }
 }
 
-// Paints `curve` as it is now over a `width` by `height` CSS-pixel
-// context.
-export const paintLiveCurve = (
-  context: CanvasRenderingContext2D,
-  curve: LiveCurve,
-  size: Readonly<{ width: number; height: number }>,
-  colours: CurveColours,
-): void => {
-  const area = paintAxis(context, size, colours)
-  const window = curve.window()
-  if (window !== null) {
-    strokeCurve(context, area, window, colours.curve)
-  }
-}
-
-export type LiveCurveDrawing = Readonly<{
-  // Stops drawing; the canvas keeps its last picture.
-  stop: () => void
-}>
-
-// Draws `curve` on `canvas` on each animation frame that changes it, at
-// the canvas's size and the device's pixel ratio, until stopped.
-// `colours` is read again when the canvas changes size; `painted` hears
-// each paint.
-export const drawLiveCurve = (
-  canvas: HTMLCanvasElement,
-  curve: LiveCurve,
-  colours: () => CurveColours,
-  painted: (curve: LiveCurve) => void,
-): LiveCurveDrawing => {
-  const context = canvas.getContext('2d')
-  let resized = true
-  let frameRequest = 0
-  let currentColours = colours()
-  const observer = new ResizeObserver(() => {
-    resized = true
-  })
-  observer.observe(canvas)
-
-  const onFrame = (nowMs: number): void => {
-    frameRequest = requestAnimationFrame(onFrame)
-    const moved = curve.advance(nowMs)
-    const width = canvas.clientWidth
-    const height = canvas.clientHeight
-    if (context === null || width === 0 || height === 0) {
-      return
-    }
-    if (resized) {
-      const pixelRatio = globalThis.devicePixelRatio || 1
-      const backing = backingSize(width, height, pixelRatio)
-      canvas.width = backing.width
-      canvas.height = backing.height
-      context.setTransform(
-        backing.width / width,
-        0,
-        0,
-        backing.height / height,
-        0,
-        0,
-      )
-      currentColours = colours()
-    }
-    if (resized || moved) {
-      resized = false
-      paintLiveCurve(context, curve, { width, height }, currentColours)
-      painted(curve)
-    }
-  }
-  frameRequest = requestAnimationFrame(onFrame)
-
-  return {
-    stop: () => {
-      cancelAnimationFrame(frameRequest)
-      observer.disconnect()
-    },
-  }
+// A finished curve as a live one that has ended: its frames from the
+// first, snapped to its finished window.
+export const finishedLiveCurve = (f0Hz: Float32Array): LiveCurve => {
+  const curve = createLiveCurve(Math.max(1, f0Hz.length))
+  curve.append({ firstFrame: 0, f0Hz })
+  curve.finish()
+  return curve
 }

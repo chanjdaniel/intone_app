@@ -1,103 +1,115 @@
-import { Array, Schema } from 'effect'
+import { Array, Effect, Schema } from 'effect'
 import { Runtime, type Update } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { modifyFields } from 'foldkit/struct'
 
 import {
-  curveView,
-  definePaintCurve,
+  PairLearner,
+  curvePairView,
+  defineDrawCurvePair,
   describeCurve,
-} from '../../take/curveView'
+} from '../../take/curvePair'
 import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
-import { type SampleVoice, sampleCurves, sampleVoices } from '../sampleCurves'
+import {
+  type SampleTakeName,
+  sampleLine,
+  sampleTakeLabel,
+  sampleTakeNames,
+  sampleTakes,
+} from '../samplePairs'
 
-// The finished curve as a take shows it, for each synthetic voice: the
-// same shape at three registers draws the same.
+// A finished take over the line, as the practice screen shows it: the
+// line's curve below, the take's above, coloured by closeness.
 
 // MODEL
 
-export const Model = Schema.Struct({ voice: Schema.Literals(sampleVoices) })
+export const Model = Schema.Struct({ take: Schema.Literals(sampleTakeNames) })
 export type Model = typeof Model.Type
 
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  SelectedVoice: { voice: Schema.Literals(sampleVoices) },
-  CompletedPaintCurve: {},
+  SelectedTake: { take: Schema.Literals(sampleTakeNames) },
+  CompletedDrawCurvePair: {},
 })
 export type Message = typeof Message.Type
 
 // INIT
 
 export const init: Runtime.ElementInit<Model, Message> = () => ({
-  model: { voice: 'middle' },
+  model: { take: 'low' },
 })
 
 // UPDATE
 
 export const update = (model: Model, message: Message) =>
   Message.match<Update.Return<Model, Message>>(message, {
-    SelectedVoice: ({ voice }) => ({
-      model: modifyFields(model, { voice: () => voice }),
+    SelectedTake: ({ take }) => ({
+      model: modifyFields(model, { take: () => take }),
     }),
-    CompletedPaintCurve: () => ({ model }),
+    CompletedDrawCurvePair: () => ({ model }),
   })
 
 // VIEW
 
-export const PaintCurve = definePaintCurve(Message.CompletedPaintCurve, () =>
-  Message.CompletedPaintCurve(),
+export const DrawCurvePair = defineDrawCurvePair(
+  Message.CompletedDrawCurvePair,
+  () => Message.CompletedDrawCurvePair(),
+  () => Effect.never,
 )
 
-const voiceLabel: Readonly<Record<SampleVoice, string>> = {
-  low: 'Low voice',
-  middle: 'Middle voice',
-  high: 'High voice',
-}
-
 export const readOut = (model: Model): string => {
-  const { seconds, medianHz } = describeCurve(sampleCurves[model.voice])
-  return `${model.voice}: ${seconds.toFixed(2)} s from the onset, median ${Math.round(medianHz)} Hz`
+  const take = describeCurve(sampleTakes[model.take])
+  const line = describeCurve(sampleLine)
+  return `${model.take}: the take ${take.seconds.toFixed(2)} s around ${Math.round(take.medianHz)} Hz, the line ${line.seconds.toFixed(2)} s around ${Math.round(line.medianHz)} Hz`
 }
 
 export const choices: ReadonlyArray<string> = [
-  'The axis reaches 12 semitones either side of your typical pitch, the same for every take, so two takes compare at a glance. Would you rather it zoomed to each take?',
-  'Every unvoiced frame breaks the line. Ticket 07 draws short gaps dashed and long ones empty; is that what you want here too?',
-  'Lines every 3 semitones, labelled every 6. Too busy, or too sparse?',
-  'The curve runs from your voice onset to your last voiced frame, stretched to the width. A fixed time scale would show long and short takes at their own lengths instead. Which do you want?',
+  "Your curve is coloured from blue where it is within a semitone of the line to orange where it is 4 or more away, comparing each moment with the line's within about 150 ms either way. Is a semitone a step the right size?",
+  "Each curve starts at its own voice onset and sits around its speaker's own typical pitch, so a low voice copying a high one draws the same shape. Would you rather see your real pitch against theirs?",
+  'The width shows the line and a quarter more, and grows by half again when a take runs past it. Would you rather it always fitted the longer of the two exactly?',
+  'Short pauses, up to about 150 ms, are bridged with dashes; longer ones are left empty. Is that the right length?',
+  'Jitter is smoothed over 80 ms for drawing only. Does the line still look like your voice?',
 ]
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
   entryFrame(
     {
-      title: 'Curve view',
+      title: 'Curves: the line and a finished take',
       summary:
-        "A finished take's pitch, in semitones around the speaker's own median, from the voice's onset, with gaps where no voice was tracked.",
+        "The line's curve as a grey band, and a finished take's drawn over it in semitones around each speaker's own median, from each voice's onset, coloured by how close it is.",
       demo: [
         h.ul(
-          [h.AriaLabel('Voices'), h.Class('flex flex-wrap gap-2')],
-          Array.map(sampleVoices, voice =>
+          [h.AriaLabel('Takes'), h.Class('flex flex-wrap gap-2')],
+          Array.map(sampleTakeNames, (take: SampleTakeName) =>
             h.keyed('li')(
-              voice,
+              take,
               [],
               [
                 h.button(
                   [
                     h.Type('button'),
-                    h.AriaPressed(model.voice === voice ? 'true' : 'false'),
-                    h.OnClick(Message.SelectedVoice({ voice })),
+                    h.AriaPressed(model.take === take ? 'true' : 'false'),
+                    h.OnClick(Message.SelectedTake({ take })),
                     h.Class(
                       `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent ${buttonFocusClass}`,
                     ),
                   ],
-                  [voiceLabel[voice]],
+                  [sampleTakeLabel[take]],
                 ),
               ],
             ),
           ),
         ),
-        curveView(model.voice, sampleCurves[model.voice], PaintCurve, h),
+        curvePairView(
+          model.take,
+          sampleLine,
+          PairLearner.Finished({ curve: sampleTakes[model.take] }),
+          "Each curve starts at its voice onset, around its speaker's own typical pitch; the lines are 3 semitones apart, and dashes bridge short pauses.",
+          DrawCurvePair,
+          h,
+        ),
       ],
       readOut: readOut(model),
       choices,

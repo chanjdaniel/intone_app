@@ -8,8 +8,10 @@ import type { Model } from '../model'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
 import type { TakeResourceServices } from './resources'
 import {
+  type FinishedTake,
   Take,
   type TakeResult,
+  type Voice,
   canStartTake,
   levelMeterFloorDb,
   longestTakeSeconds,
@@ -33,18 +35,42 @@ const moveTo = (
   commands: [...commands, FocusTakeControl()],
 })
 
+// A take starts by playing the line, once its native curve is ready to
+// compare with; the tracker loads while it plays.
 export const clickedRecord = (model: Model): TakeUpdate => {
-  if (!canStartTake(model.take)) {
+  if (!canStartTake(model.take) || model.native._tag !== 'Ready') {
     return unchanged(model)
   }
   const takeNumber = model.takesStarted + 1
   return {
     model: modifyFields(model, {
-      take: () => Take.Preparing({ takeNumber }),
+      take: () => Take.PlayingNative({ takeNumber, tracker: 'Loading' }),
       takesStarted: () => takeNumber,
+      maybePlaybackFailure: () => Option.none(),
     }),
     commands: [FocusTakeControl()],
   }
+}
+
+const askForMicrophone = (model: Model, takeNumber: number): TakeUpdate =>
+  moveTo(
+    model,
+    Take.AwaitingMic({ takeNumber }),
+    WaitForMicAnswer({ takeNumber }),
+  )
+
+// The line has played: the microphone opens, once the tracker is ready.
+export const endedNativeBeforeTake = (
+  model: Model,
+  takeNumber: number,
+): TakeUpdate => {
+  const take = model.take
+  if (take._tag !== 'PlayingNative' || take.takeNumber !== takeNumber) {
+    return unchanged(model)
+  }
+  return take.tracker === 'Ready'
+    ? askForMicrophone(model, takeNumber)
+    : moveTo(model, Take.Preparing({ takeNumber }))
 }
 
 export const clickedStop = (model: Model): TakeUpdate =>
@@ -58,26 +84,34 @@ export const clickedStop = (model: Model): TakeUpdate =>
 
 export const clickedCancelTake = (model: Model): TakeUpdate =>
   Match.value(model.take).pipe(
-    Match.tag('Preparing', 'AwaitingMic', 'MicPromptIgnored', () =>
-      moveTo(model, Take.Idle()),
+    Match.tag(
+      'PlayingNative',
+      'Preparing',
+      'AwaitingMic',
+      'MicPromptIgnored',
+      () => moveTo(model, Take.Idle()),
     ),
     Match.orElse(() => unchanged(model)),
   )
 
 export const acquiredTracker = (model: Model): TakeUpdate =>
-  model.take._tag === 'Preparing'
-    ? moveTo(
-        model,
-        Take.AwaitingMic({ takeNumber: model.take.takeNumber }),
-        WaitForMicAnswer({ takeNumber: model.take.takeNumber }),
-      )
-    : unchanged(model)
+  Match.value(model.take).pipe(
+    Match.tag('Preparing', ({ takeNumber }) =>
+      askForMicrophone(model, takeNumber),
+    ),
+    Match.tag('PlayingNative', ({ takeNumber }) => ({
+      model: modifyFields(model, {
+        take: () => Take.PlayingNative({ takeNumber, tracker: 'Ready' }),
+      }),
+    })),
+    Match.orElse(() => unchanged(model)),
+  )
 
 export const failedAcquireTracker = (
   model: Model,
   reason: string,
 ): TakeUpdate =>
-  model.take._tag === 'Preparing'
+  model.take._tag === 'Preparing' || model.take._tag === 'PlayingNative'
     ? moveTo(
         model,
         Take.AnalysisFailed({
@@ -215,9 +249,79 @@ export const failedAnalyseTake = (
     ? moveTo(model, Take.AnalysisFailed({ reason }))
     : unchanged(model)
 
-// Leaving the screen abandons a take in progress, which releases its
-// microphone and tracker.
-export const leftScreen = (model: Model): Model =>
-  canStartTake(model.take)
-    ? model
-    : modifyFields(model, { take: () => Take.Idle() })
+// LISTENING AGAIN
+
+// The finished take a state shows, if any, to come back to after
+// listening.
+const finishedTakeOf = (take: Take): Option.Option<FinishedTake> =>
+  Match.value(take).pipe(
+    Match.tag('ShowingResult', ({ takeNumber, result }) =>
+      Option.some({ takeNumber, result }),
+    ),
+    Match.tag('Listening', ({ maybeTake }) => maybeTake),
+    Match.orElse(() => Option.none()),
+  )
+
+// Whether `voice` can be listened to from here: the line once its curve
+// is ready, the take once one has finished; never during a take.
+export const canListenTo = (model: Model, voice: Voice): boolean =>
+  canStartTake(model.take) &&
+  (voice === 'Line'
+    ? model.native._tag === 'Ready'
+    : Option.isSome(finishedTakeOf(model.take)))
+
+// Listening changes no focus: the control that started it stays where it
+// is, and says it now stops it.
+export const clickedListen = (model: Model, voice: Voice): TakeUpdate =>
+  canListenTo(model, voice)
+    ? {
+        model: modifyFields(model, {
+          take: () =>
+            Take.Listening({ voice, maybeTake: finishedTakeOf(model.take) }),
+          maybePlaybackFailure: () => Option.none(),
+        }),
+      }
+    : unchanged(model)
+
+const backFromListening = (
+  model: Model,
+  maybeTake: Option.Option<FinishedTake>,
+): Model =>
+  modifyFields(model, {
+    take: () =>
+      Option.match(maybeTake, {
+        onNone: () => Take.Idle(),
+        onSome: ({ takeNumber, result }) =>
+          Take.ShowingResult({ takeNumber, result }),
+      }),
+  })
+
+export const clickedStopListening = (model: Model): TakeUpdate =>
+  model.take._tag === 'Listening'
+    ? { model: backFromListening(model, model.take.maybeTake) }
+    : unchanged(model)
+
+export const endedListening = (model: Model, voice: Voice): TakeUpdate =>
+  model.take._tag === 'Listening' && model.take.voice === voice
+    ? { model: backFromListening(model, model.take.maybeTake) }
+    : unchanged(model)
+
+// A voice that would not play: the line before a take ends the take, and
+// listening ends; either way the screen says why.
+export const failedPlayback = (model: Model, reason: string): TakeUpdate => {
+  const failed = modifyFields(model, {
+    maybePlaybackFailure: () => Option.some(reason),
+  })
+  return Match.value(model.take).pipe(
+    Match.tag('PlayingNative', () => moveTo(failed, Take.Idle())),
+    Match.tag('Listening', ({ maybeTake }) => ({
+      model: backFromListening(failed, maybeTake),
+    })),
+    Match.orElse(() => unchanged(model)),
+  )
+}
+
+// Leaving the line abandons its take, finished or not, which releases
+// its microphone and tracker; its audio is forgotten by the caller.
+export const leftLine = (model: Model): Model =>
+  modifyFields(model, { take: () => Take.Idle() })

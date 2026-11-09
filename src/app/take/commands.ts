@@ -4,6 +4,7 @@ import { Command, Dom } from 'foldkit'
 import { Message } from '../message'
 import { TrackerResource } from './resources'
 import { micPromptPatienceSeconds, takeResultOf } from './take'
+import { forgetTakeAudio } from './takeAudio'
 
 // The element each take state puts focus on when it appears, marked by
 // this data attribute: its one button, or its heading when it has none.
@@ -54,4 +55,10 @@ export const FocusTakeControl = Command.define('FocusTakeControl', {
     Effect.ignore,
     Effect.as(Message.CompletedFocusTakeControl()),
   ),
+})
+
+// Lets the last take's audio go, when its line is left.
+export const ForgetTakeAudio = Command.define('ForgetTakeAudio', {
+  messages: [Message.CompletedForgetTakeAudio],
+  execute: forgetTakeAudio.pipe(Effect.as(Message.CompletedForgetTakeAudio())),
 })

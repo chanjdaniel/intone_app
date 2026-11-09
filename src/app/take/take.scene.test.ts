@@ -14,19 +14,34 @@ import {
 import { describe, test } from 'vitest'
 
 import { MicrophoneError } from '../../services/microphone'
-import { AppRoute, Message, type Model, update, view } from '../main'
+import { NativeCurve } from '../line/native'
+import {
+  AppRoute,
+  Message,
+  type Model,
+  initialModel,
+  update,
+  view,
+} from '../main'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
-import { PaintCurve } from './curveView'
-import { DrawLiveCurve } from './liveCurveView'
+import { DrawCurvePair } from './curvePair'
 import { managedResources } from './resources'
 import { Take, TakeResult, levelMeterFloorDb } from './take'
+import { sampleCurve } from './testCurves'
 
-const home = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
-  route: AppRoute.Home(),
-  maybeDevLibraryFailure: Option.none(),
+// The bundled line's practice screen, its native curve ready.
+const onLine = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
+  ...initialModel(AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })),
+  native: NativeCurve.Ready({
+    clipId: 'ame-ga-suki',
+    lineId: '1',
+    curve: sampleCurve,
+  }),
   take,
   takesStarted,
 })
+
+const drawn = Mount.resolve(DrawCurvePair, Message.CompletedDrawCurvePair())
 
 const focused = Command.resolve(
   FocusTakeControl,
@@ -44,7 +59,10 @@ const curve = {
 
 const recordButton = role('button', { name: 'Record' })
 const liveCurve = role('img', {
-  name: 'Your pitch, drawn as you speak, in semitones around your typical pitch so far.',
+  name: /^Your pitch, drawn as you speak over the line's/,
+})
+const lineCurve = role('img', {
+  name: "The line's pitch curve, from the speaker's voice onset, in semitones around their typical pitch of 200 Hz.",
 })
 const meter = role('meter', { name: 'Microphone level' })
 const stopButton = role('button', { name: 'Stop' })
@@ -53,12 +71,16 @@ describe('a take', () => {
   test('goes from record to its curve, holding the microphone only while it records', () => {
     scene(
       { update, view },
-      given(home()),
-      expect(role('heading', { name: 'Record a take' })).toExist(),
+      given(onLine()),
+      drawn,
+      expect(role('heading', { name: 'Copy the line' })).toExist(),
+      expect(lineCurve).toExist(),
+      expect(liveCurve).toBeAbsent(),
       click(recordButton),
       focused,
-      expect(role('heading', { name: 'Getting ready' })).toExist(),
+      expect(role('heading', { name: 'Listen to the line' })).toExist(),
       ManagedResource.acquire(managedResources.tracker),
+      Subscription.emit(Message.EndedNativeBeforeTake({ takeNumber: 1 })),
       Command.expectHas(WaitForMicAnswer({ takeNumber: 1 })),
       focused,
       Command.resolve(
@@ -72,9 +94,8 @@ describe('a take', () => {
       ManagedResource.acquire(managedResources.microphone),
       focused,
       expect(role('heading', { name: 'Recording' })).toExist(),
-      // Its Message comes when the take's frames end; here, at once.
-      Mount.resolve(DrawLiveCurve, Message.CompletedDrawLiveCurve()),
       expect(liveCurve).toExist(),
+      expect(lineCurve).toExist(),
       expect(
         text(
           'Your curve starts when you start to speak, a moment behind your voice.',
@@ -89,17 +110,13 @@ describe('a take', () => {
         }),
       ),
       expect(role('timer')).toHaveText('0:02 of 0:30'),
-      expect(text('Say your line, then press stop.')).toExist(),
+      expect(text('Say the line, then press stop.')).toExist(),
       expect(meter).toHaveAttr('aria-valuenow', '-14'),
       expect(meter).toHaveAttr('aria-valuetext', 'good'),
       Subscription.emit(
         Message.DetectedVoiceOnset({ takeNumber: 1, onsetSeconds: 0.5 }),
       ),
-      expect(
-        text(
-          'From your voice onset. The middle line is your typical pitch so far; the lines are 3 semitones apart.',
-        ),
-      ).toExist(),
+      expect(text(/^Your curve, as you speak\. Each curve starts/)).toExist(),
       click(stopButton),
       Command.expectHas(AnalyseTake({ takeNumber: 1 })),
       focused,
@@ -115,17 +132,16 @@ describe('a take', () => {
           result: TakeResult.Tracked({ curve }),
         }),
       ),
-      // The live canvas leaves for the finished curve's, ending its Mount.
-      Mount.expectEnded(DrawLiveCurve),
       focused,
-      Mount.resolve(PaintCurve, Message.CompletedPaintCurve()),
       ManagedResource.release(managedResources.microphone),
-      expect(role('heading', { name: 'Your pitch' })).toExist(),
+      expect(role('heading', { name: 'Your copy' })).toExist(),
       expect(
         role('img', {
-          name: 'Your pitch curve, 0.10 s from your voice onset, in semitones around your typical pitch of 105 Hz.',
+          name: "Your pitch curve, 0.10 s from your voice onset, in semitones around your typical pitch of 105 Hz, over the line's, coloured blue where it is close to the line and orange where it is far.",
         }),
       ).toExist(),
+      expect(lineCurve).toExist(),
+      expect(role('button', { name: 'Hear your take' })).toBeEnabled(),
       ManagedResource.release(managedResources.tracker),
       expect(role('button', { name: 'Record again' })).toExist(),
     )
@@ -134,7 +150,8 @@ describe('a take', () => {
   test('releases the microphone and the tracker when the microphone is refused', () => {
     scene(
       { update, view },
-      given(home(Take.AwaitingMic({ takeNumber: 3 }), 3)),
+      given(onLine(Take.AwaitingMic({ takeNumber: 3 }), 3)),
+      drawn,
       ManagedResource.failAcquire(
         managedResources.microphone,
         new MicrophoneError({
@@ -153,7 +170,7 @@ describe('a take', () => {
       ManagedResource.release(managedResources.tracker),
       click(role('button', { name: 'Try again' })),
       focused,
-      expect(role('heading', { name: 'Getting ready' })).toExist(),
+      expect(role('heading', { name: 'Listen to the line' })).toExist(),
     )
   })
 
@@ -161,7 +178,7 @@ describe('a take', () => {
     scene(
       { update, view },
       given(
-        home(
+        onLine(
           Take.Recording({
             takeNumber: 2,
             elapsedSeconds: 1,
@@ -171,14 +188,13 @@ describe('a take', () => {
           2,
         ),
       ),
-      Mount.resolve(DrawLiveCurve, Message.CompletedDrawLiveCurve()),
+      drawn,
       Subscription.emit(
         Message.FailedRecordTake({
           takeNumber: 2,
           reason: 'The take lost its microphone.',
         }),
       ),
-      Mount.expectEnded(DrawLiveCurve),
       focused,
       expect(
         role('heading', { name: 'Your take could not be tracked' }),
@@ -192,7 +208,8 @@ describe('a take', () => {
   test('releases both when the learner cancels while the browser asks', () => {
     scene(
       { update, view },
-      given(home(Take.MicPromptIgnored({ takeNumber: 1 }), 1)),
+      given(onLine(Take.MicPromptIgnored({ takeNumber: 1 }), 1)),
+      drawn,
       click(role('button', { name: 'Cancel' })),
       focused,
       ManagedResource.release(managedResources.microphone),
@@ -204,7 +221,8 @@ describe('a take', () => {
   test('releases the tracker when it cannot start, and says so', () => {
     scene(
       { update, view },
-      given(home(Take.Preparing({ takeNumber: 1 }), 1)),
+      given(onLine(Take.Preparing({ takeNumber: 1 }), 1)),
+      drawn,
       ManagedResource.failAcquire(
         managedResources.tracker,
         new Error('The pitch model did not load'),
@@ -253,7 +271,8 @@ describe('the mic state panel', () => {
   ])('shows %o as its own screen', (take, heading, line, button) => {
     scene(
       { update, view },
-      given(home(take, 1)),
+      given(onLine(take, 1)),
+      drawn,
       expect(role('heading', { name: heading, level: 2 })).toExist(),
       expect(text(line)).toExist(),
       expect(role('button', { name: button })).toExist(),
@@ -263,11 +282,13 @@ describe('the mic state panel', () => {
   test('says it is analysing, with nothing to press, once the microphone is off', () => {
     scene(
       { update, view },
-      given(home(Take.Analysing({ takeNumber: 1 }), 1)),
-      Mount.resolve(DrawLiveCurve, Message.CompletedDrawLiveCurve()),
+      given(onLine(Take.Analysing({ takeNumber: 1 }), 1)),
+      drawn,
       expect(role('heading', { name: 'Finding your pitch' })).toExist(),
       expect(text('The microphone is off. Tracking your take now.')).toExist(),
-      expect(role('button')).toBeAbsent(),
+      expect(role('button', { name: 'Stop' })).toBeAbsent(),
+      expect(role('button', { name: 'Record' })).toBeAbsent(),
+      expect(role('button', { name: 'Hear the line' })).toBeDisabled(),
     )
   })
 })

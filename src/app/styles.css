@@ -18,8 +18,19 @@
   --color-muted: #555c69;
   --color-accent: #3346c4;
   --color-on-accent: #ffffff;
-  --color-native: #2b5fc0;
+  /* The native's curve: a neutral band the learner's line is drawn over. */
+  --color-native: #8b93a0;
   --color-take: #c2410c;
+  /*
+   * The learner's line during a take, by closeness to the native's: blue
+   * for close to orange for far, through violet and rose, never red
+   * against green; interpolated in OKLCH, each at least 5:1 on surface.
+   */
+  --color-closeness-1: #2b5fc0;
+  --color-closeness-2: #734dbb;
+  --color-closeness-3: #9e3e99;
+  --color-closeness-4: #ba3663;
+  --color-closeness-5: #c2410c;
   --color-good: #1d7038;
   --color-warn: #8f5100;
   --color-bad: #b4232a;

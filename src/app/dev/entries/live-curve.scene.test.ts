@@ -5,7 +5,7 @@ import { describe, expect as expectValue, it, test } from 'vitest'
 import { replayLive } from '../liveReplay'
 import { sampleCurves } from '../sampleCurves'
 import {
-  DrawLiveCurve,
+  DrawCurvePair,
   Message,
   init,
   meterSamples,
@@ -13,25 +13,25 @@ import {
   view,
 } from './live-curve'
 
-const drawn = Mount.resolve(DrawLiveCurve, Message.CompletedDrawLiveCurve())
+const drawn = Mount.resolve(DrawCurvePair, Message.CompletedDrawCurvePair())
 
 describe('the live curve entry', () => {
   test('plays a voice, says when it has finished, and plays it again', () => {
     scene(
       { update, view },
       given(init().model),
-      expect(text('Read-out: middle, playback 1: drawing')).toExist(),
+      expect(text('Read-out: low, playback 1: drawing')).toExist(),
       drawn,
       expect(
-        text('Read-out: middle, playback 1: finished, snapped to its median'),
+        text('Read-out: low, playback 1: finished, snapped to its median'),
       ).toExist(),
       click(role('button', { name: 'Play again' })),
-      expect(text('Read-out: middle, playback 2: drawing')).toExist(),
-      click(role('button', { name: 'High voice' })),
-      expect(text('Read-out: high, playback 3: drawing')).toExist(),
+      expect(text('Read-out: low, playback 2: drawing')).toExist(),
+      click(role('button', { name: 'Flattened' })),
+      expect(text('Read-out: flattened, playback 3: drawing')).toExist(),
       expect(
         role('img', {
-          name: 'Your pitch, drawn as you speak, in semitones around your typical pitch so far.',
+          name: /^Your pitch, drawn as you speak over the line's, in semitones around your typical pitch so far, coloured blue where it is close/,
         }),
       ).toExist(),
     )

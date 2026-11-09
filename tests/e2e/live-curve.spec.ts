@@ -2,7 +2,7 @@ import { join } from 'node:path'
 
 import { type Page, expect, test } from '@playwright/test'
 
-import { launch, report, withPage } from './take-session.ts'
+import { launch, openLine, report, withPage } from './take-session.ts'
 
 // The live curve in the built app, end to end: Chromium's fake microphone
 // plays a synthetic voice, and the page is watched at three points of the
@@ -135,6 +135,18 @@ const watchAudioPath = async (page: Page): Promise<void> => {
   }, loudSample)
 }
 
+// Forgets what was watched so far: the line's own run through the
+// tracker, when the screen opened.
+const resetWatched = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    const watched = Reflect.get(window, 'intoneWatched')
+    watched.sampleRate = 0
+    watched.tracked = null
+    watched.batches.length = 0
+    watched.frames.length = 0
+    watched.paints.length = 0
+  })
+
 const watchedOf = (page: Page): Promise<Watched> =>
   page.evaluate((): Watched => Reflect.get(window, 'intoneWatched'))
 
@@ -211,10 +223,11 @@ test.describe('the live curve', () => {
       try {
         await withPage(browser, async ({ page, problems }) => {
           await watchAudioPath(page)
-          await page.goto('/')
+          await openLine(page)
+          await resetWatched(page)
           await recordFor(page, 3)
           const live = page.getByRole('img', {
-            name: 'Your pitch, drawn as you speak, in semitones around your typical pitch so far.',
+            name: /^Your pitch, drawn as you speak over the line's/,
           })
           await expect(live).toBeVisible()
           await expect(page.getByRole('meter')).toHaveAccessibleName(
@@ -222,7 +235,7 @@ test.describe('the live curve', () => {
           )
           await page.getByRole('button', { name: 'Stop' }).click()
           await expect(
-            page.getByRole('heading', { name: 'Your pitch', exact: true }),
+            page.getByRole('heading', { name: 'Your copy' }),
           ).toBeVisible({ timeout: 30_000 })
 
           const watched = await watchedOf(page)

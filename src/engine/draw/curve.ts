@@ -1,9 +1,12 @@
 import { type Curve, medianVoicedHz, semitonesFrom } from '../../score/curve'
 
-// The plain painter for a finished curve: a semitone axis around the
-// speaker's own median, confident frames only, a gap at every unvoiced
-// frame, from the voice's onset to its last voiced frame. It draws in CSS
-// pixels on a context the caller has scaled for the device's pixel ratio.
+// The plain painter: a semitone axis around a speaker's own median, and a
+// curve on it from the voice's onset, drawn as the ear hears it. Jitter is
+// smoothed for display only, short gaps are bridged with a dashed line and
+// longer ones are left empty. It reads a curve's frames and never writes
+// them, so the raw frames kept for scoring are never changed. It draws in
+// CSS pixels on a context the caller has scaled for the device's pixel
+// ratio.
 
 // The axis reaches this far either side of the median: two octaves in
 // all, past any speaker's accent span, so every curve is drawn at the
@@ -13,7 +16,18 @@ export const semitoneReach = 12
 const gridStep = 3
 // Room around the plot, in CSS pixels: on the left for the axis labels.
 export const plotInset = { top: 10, right: 12, bottom: 10, left: 36 } as const
-const lineWidth = 2.5
+
+// A gap of up to this many unvoiced frames between two voiced ones is
+// bridged with a dashed line: 9 frames of 16 ms, about 150 ms, the length
+// of a devoiced mora or a stop's closure, which the ear hears through.
+export const bridgedGapFrames = 9
+// Each frame is drawn at the median of its run's voiced frames this far
+// either side: 5 frames, 80 ms, which removes a one or two frame octave
+// slip and the tracker's frame-to-frame jitter but keeps an accent's fall,
+// which takes longer.
+export const smoothingReach = 2
+const dash: Array<number> = [4, 4]
+const none: Array<number> = []
 
 export type PlotArea = Readonly<{
   left: number
@@ -36,28 +50,26 @@ export const yOfSemitones = (area: PlotArea, semitones: number): number =>
 export const semitonesOfY = (area: PlotArea, y: number): number =>
   semitoneReach - ((y - area.top) / area.height) * 2 * semitoneReach
 
-export type Point = Readonly<{ x: number; y: number }>
-
-// What a painting shows of a curve: frames `firstFrame` to `lastFrame`,
-// across the width of `spanFrames` frames from `firstFrame`, in semitones
-// around `medianHz`. `f0At` reads a frame, 0 where unvoiced.
+// What a painting shows of a curve: frames `firstFrame` to `lastFrame`, in
+// semitones around `medianHz`. `f0At` reads a frame, 0 where unvoiced.
 export type CurveWindow = Readonly<{
   f0At: (frame: number) => number
   firstFrame: number
   lastFrame: number
-  spanFrames: number
   medianHz: number
 }>
 
-// The x of `frame`, a lone frame in the middle.
+// The x of `frame` when the plot's width shows `spanFrames` frames from
+// `firstFrame`; a lone frame in the middle.
 export const xOfFrame = (
   area: PlotArea,
-  window: Pick<CurveWindow, 'firstFrame' | 'spanFrames'>,
+  firstFrame: number,
+  spanFrames: number,
   frame: number,
 ): number =>
-  window.spanFrames === 0
+  spanFrames === 0
     ? area.left + area.width / 2
-    : area.left + ((frame - window.firstFrame) / window.spanFrames) * area.width
+    : area.left + ((frame - firstFrame) / spanFrames) * area.width
 
 // The y of a voiced `hz`, held at the axis's edge past its reach.
 export const yOfHz = (area: PlotArea, medianHz: number, hz: number): number =>
@@ -70,7 +82,7 @@ export const yOfHz = (area: PlotArea, medianHz: number, hz: number): number =>
   )
 
 // The window that shows a finished curve whole: from the onset to the
-// last voiced frame, across the full width. Null with no voiced frame.
+// last voiced frame. Null with no voiced frame.
 export const finishedWindow = (
   curve: Pick<Curve, 'f0Hz' | 'onsetFrame'>,
 ): CurveWindow | null => {
@@ -89,57 +101,249 @@ export const finishedWindow = (
     f0At: frame => f0Hz[frame] ?? 0,
     firstFrame: onsetFrame,
     lastFrame,
-    spanFrames: lastFrame - onsetFrame,
     medianHz,
   }
 }
 
-export type CurveDrawing = Readonly<{
-  medianHz: number
-  // The frames drawn: from the onset to the last voiced frame.
-  firstFrame: number
-  lastFrame: number
-  // Each run of voiced frames, as points.
-  runs: ReadonlyArray<ReadonlyArray<Point>>
-}>
+// The pitch a voiced frame is drawn at: the median of the voiced frames
+// of its own run within `smoothingReach` of it, never reaching across a
+// gap or out of the window; 0 for an unvoiced frame. One smoother keeps
+// its own scratch space, so reading through it allocates nothing.
+export type Smoother = (window: CurveWindow, frame: number) => number
 
-// Where each frame of `curve` goes in `area`; null for a curve with no
-// voiced frame.
-export const layOutCurve = (
-  curve: Pick<Curve, 'f0Hz' | 'onsetFrame'>,
-  area: PlotArea,
-): CurveDrawing | null => {
-  const window = finishedWindow(curve)
-  if (window === null) {
-    return null
-  }
-  const runs: Array<Array<Point>> = []
-  let run: Array<Point> = []
-  for (let frame = window.firstFrame; frame <= window.lastFrame; frame++) {
+export const createSmoother = (): Smoother => {
+  const near = new Float64Array(2 * smoothingReach + 1)
+  return (window, frame) => {
     const hz = window.f0At(frame)
-    if (hz > 0) {
-      run.push({
-        x: xOfFrame(area, window, frame),
-        y: yOfHz(area, window.medianHz, hz),
-      })
-    } else if (run.length > 0) {
-      runs.push(run)
-      run = []
+    if (hz <= 0) {
+      return 0
     }
-  }
-  if (run.length > 0) {
-    runs.push(run)
-  }
-  return {
-    medianHz: window.medianHz,
-    firstFrame: window.firstFrame,
-    lastFrame: window.lastFrame,
-    runs,
+    let count = 0
+    near[count++] = hz
+    for (let step = 1; step <= smoothingReach; step++) {
+      const before = frame - step
+      const value = before >= window.firstFrame ? window.f0At(before) : 0
+      if (value <= 0) {
+        break
+      }
+      near[count++] = value
+    }
+    for (let step = 1; step <= smoothingReach; step++) {
+      const after = frame + step
+      const value = after <= window.lastFrame ? window.f0At(after) : 0
+      if (value <= 0) {
+        break
+      }
+      near[count++] = value
+    }
+    // Insertion sort of at most five values, in place.
+    for (let i = 1; i < count; i++) {
+      const value = near[i] ?? 0
+      let at = i
+      while (at > 0 && (near[at - 1] ?? 0) > value) {
+        near[at] = near[at - 1] ?? 0
+        at--
+      }
+      near[at] = value
+    }
+    const middle = count >> 1
+    return count % 2 === 1
+      ? (near[middle] ?? hz)
+      : ((near[middle - 1] ?? hz) + (near[middle] ?? hz)) / 2
   }
 }
 
-export type CurveColours = Readonly<{
-  curve: string
+// What walking a curve meets, in frame order: the first point of a voiced
+// run after nothing or a long gap, the first point after a short gap
+// (bridged from the point before it), and each following point of a run.
+// `hz` is the frame's drawn pitch, after smoothing.
+export type CurveVisitor = Readonly<{
+  runStart: (x: number, y: number, frame: number, hz: number) => void
+  bridge: (x: number, y: number, frame: number, hz: number) => void
+  point: (x: number, y: number, frame: number, hz: number) => void
+}>
+
+// Walks `window`'s frames as drawn across `spanFrames` frames of `area`.
+export const walkCurve = (
+  area: PlotArea,
+  window: CurveWindow,
+  spanFrames: number,
+  smoother: Smoother,
+  visitor: CurveVisitor,
+): void => {
+  let lastVoiced = Number.NaN
+  for (let frame = window.firstFrame; frame <= window.lastFrame; frame++) {
+    const hz = smoother(window, frame)
+    if (hz <= 0) {
+      continue
+    }
+    const x = xOfFrame(area, window.firstFrame, spanFrames, frame)
+    const y = yOfHz(area, window.medianHz, hz)
+    const gap = frame - lastVoiced - 1
+    if (gap === 0) {
+      visitor.point(x, y, frame, hz)
+    } else if (gap <= bridgedGapFrames) {
+      visitor.bridge(x, y, frame, hz)
+    } else {
+      visitor.runStart(x, y, frame, hz)
+    }
+    lastVoiced = frame
+  }
+}
+
+export type Point = Readonly<{ x: number; y: number }>
+
+// Where a curve's lines go, for tests and read-outs: each solid run as
+// points, and each dashed bridge as its two ends.
+export type CurveLayout = Readonly<{
+  runs: ReadonlyArray<ReadonlyArray<Point>>
+  bridges: ReadonlyArray<readonly [Point, Point]>
+}>
+
+export const layOutCurve = (
+  area: PlotArea,
+  window: CurveWindow,
+  spanFrames: number,
+): CurveLayout => {
+  const runs: Array<Array<Point>> = []
+  const bridges: Array<readonly [Point, Point]> = []
+  let previous: Point = { x: 0, y: 0 }
+  const startRun = (x: number, y: number): void => {
+    previous = { x, y }
+    runs.push([previous])
+  }
+  walkCurve(area, window, spanFrames, createSmoother(), {
+    runStart: startRun,
+    bridge: (x, y) => {
+      bridges.push([previous, { x, y }])
+      startRun(x, y)
+    },
+    point: (x, y) => {
+      previous = { x, y }
+      runs.at(-1)?.push(previous)
+    },
+  })
+  return { runs, bridges }
+}
+
+// How a curve is stroked: its width, its colours, and which colour each
+// frame's line takes, from its frame and drawn pitch.
+export type Pen = Readonly<{
+  width: number
+  colours: ReadonlyArray<string>
+  colourAt: (frame: number, hz: number) => number
+}>
+
+export const onePen = (width: number, colour: string): Pen => ({
+  width,
+  colours: [colour],
+  colourAt: () => 0,
+})
+
+// The parts of a Path2D and a canvas context the stroker uses, so tests
+// can stand them in.
+export type CurvePath = Pick<Path2D, 'moveTo' | 'lineTo'>
+export type StrokeTarget<Path> = {
+  lineWidth: number
+  lineJoin: CanvasLineJoin
+  lineCap: CanvasLineCap
+  strokeStyle: string | CanvasGradient | CanvasPattern
+  setLineDash: (segments: Array<number>) => void
+  stroke: (path: Path) => void
+}
+
+export type CurveStroker<Path = Path2D> = (
+  context: StrokeTarget<Path>,
+  area: PlotArea,
+  window: CurveWindow,
+  spanFrames: number,
+  pen: Pen,
+) => void
+
+// Strokes `window` across `spanFrames` frames of `area` with `pen`: each
+// colour's solid lines as one path and its dashed lines over short gaps
+// as another, so a paint strokes at most twice per colour however often
+// the colour changes along the curve. A lone frame is a dot: a line of no
+// length, which the round cap draws. It walks the frames without
+// allocating, so it can run on every animation frame.
+export const createCurveStrokerWith = <Path extends CurvePath>(
+  makePath: () => Path,
+): CurveStroker<Path> => {
+  const smoother = createSmoother()
+  let solid: Array<Path> = []
+  let dashed: Array<Path> = []
+  // Which colours' paths have anything in them this paint.
+  const solidUsed: Array<boolean> = []
+  const dashedUsed: Array<boolean> = []
+  let pen: Pen = onePen(1, '')
+  let lastX = 0
+  let lastY = 0
+  let lastColour = 0
+
+  const startAt = (x: number, y: number, colour: number): void => {
+    const path = solid[colour]
+    solidUsed[colour] = true
+    path?.moveTo(x, y)
+    path?.lineTo(x, y)
+    lastX = x
+    lastY = y
+    lastColour = colour
+  }
+  const visitor: CurveVisitor = {
+    runStart: (x, y, frame, hz) => startAt(x, y, pen.colourAt(frame, hz)),
+    bridge: (x, y, frame, hz) => {
+      const colour = pen.colourAt(frame, hz)
+      dashedUsed[colour] = true
+      dashed[colour]?.moveTo(lastX, lastY)
+      dashed[colour]?.lineTo(x, y)
+      startAt(x, y, colour)
+    },
+    point: (x, y, frame, hz) => {
+      const colour = pen.colourAt(frame, hz)
+      const path = solid[colour]
+      if (colour !== lastColour) {
+        // A new colour carries on from the last point, so the line stays
+        // joined.
+        solidUsed[colour] = true
+        path?.moveTo(lastX, lastY)
+      }
+      path?.lineTo(x, y)
+      lastX = x
+      lastY = y
+      lastColour = colour
+    },
+  }
+
+  return (context, area, window, spanFrames, withPen) => {
+    pen = withPen
+    solid = withPen.colours.map(makePath)
+    dashed = withPen.colours.map(makePath)
+    solidUsed.length = 0
+    dashedUsed.length = 0
+    walkCurve(area, window, spanFrames, smoother, visitor)
+    context.lineWidth = withPen.width
+    context.lineJoin = 'round'
+    context.lineCap = 'round'
+    withPen.colours.forEach((colour, i) => {
+      context.strokeStyle = colour
+      const line = solid[i]
+      const dashes = dashed[i]
+      if (line !== undefined && solidUsed[i] === true) {
+        context.stroke(line)
+      }
+      if (dashes !== undefined && dashedUsed[i] === true) {
+        context.setLineDash(dash)
+        context.stroke(dashes)
+        context.setLineDash(none)
+      }
+    })
+  }
+}
+
+export const createCurveStroker = (): CurveStroker =>
+  createCurveStrokerWith(() => new Path2D())
+
+export type AxisColours = Readonly<{
   grid: string
   median: string
   label: string
@@ -150,7 +354,7 @@ export type CurveColours = Readonly<{
 export const paintAxis = (
   context: CanvasRenderingContext2D,
   size: Readonly<{ width: number; height: number }>,
-  colours: CurveColours,
+  colours: AxisColours,
 ): PlotArea => {
   const area = plotArea(size.width, size.height)
   context.clearRect(0, 0, size.width, size.height)
@@ -177,7 +381,7 @@ export const paintAxis = (
         semitones > 0
           ? `+${semitones}`
           : semitones < 0
-            ? `\u2212${-semitones}`
+            ? `−${-semitones}`
             : '0',
         area.left - 8,
         y,
@@ -185,66 +389,6 @@ export const paintAxis = (
     }
   }
   return area
-}
-
-// Strokes each run of voiced frames in `window`, a dot for a lone frame,
-// allocating nothing, so it can run on every animation frame.
-export const strokeCurve = (
-  context: CanvasRenderingContext2D,
-  area: PlotArea,
-  window: CurveWindow,
-  colour: string,
-): void => {
-  context.strokeStyle = colour
-  context.fillStyle = colour
-  context.lineWidth = lineWidth
-  context.lineJoin = 'round'
-  context.lineCap = 'round'
-  let runLength = 0
-  let lastX = 0
-  let lastY = 0
-  const endRun = (): void => {
-    if (runLength === 1) {
-      context.beginPath()
-      context.arc(lastX, lastY, lineWidth / 2, 0, 2 * Math.PI)
-      context.fill()
-    } else if (runLength > 1) {
-      context.stroke()
-    }
-    runLength = 0
-  }
-  for (let frame = window.firstFrame; frame <= window.lastFrame; frame++) {
-    const hz = window.f0At(frame)
-    if (hz > 0) {
-      lastX = xOfFrame(area, window, frame)
-      lastY = yOfHz(area, window.medianHz, hz)
-      if (runLength === 0) {
-        context.beginPath()
-        context.moveTo(lastX, lastY)
-      } else {
-        context.lineTo(lastX, lastY)
-      }
-      runLength++
-    } else {
-      endRun()
-    }
-  }
-  endRun()
-}
-
-// Paints the axis and `curve` over the whole of a `width` by `height`
-// CSS-pixel context.
-export const paintCurve = (
-  context: CanvasRenderingContext2D,
-  curve: Pick<Curve, 'f0Hz' | 'onsetFrame'>,
-  size: Readonly<{ width: number; height: number }>,
-  colours: CurveColours,
-): void => {
-  const area = paintAxis(context, size, colours)
-  const window = finishedWindow(curve)
-  if (window !== null) {
-    strokeCurve(context, area, window, colours.curve)
-  }
 }
 
 // The canvas's backing size for a `width` by `height` CSS-pixel box at
@@ -257,3 +401,30 @@ export const backingSize = (
   width: Math.max(1, Math.round(width * pixelRatio)),
   height: Math.max(1, Math.round(height * pixelRatio)),
 })
+
+// Sizes `canvas`'s bitmap for its CSS box at the device's pixel ratio and
+// scales its context to CSS pixels: its CSS size, or null while it has
+// none.
+export const fitCanvas = (
+  canvas: HTMLCanvasElement,
+  context: CanvasRenderingContext2D,
+): Readonly<{ width: number; height: number }> | null => {
+  const width = canvas.clientWidth
+  const height = canvas.clientHeight
+  if (width === 0 || height === 0) {
+    return null
+  }
+  const pixelRatio = globalThis.devicePixelRatio || 1
+  const backing = backingSize(width, height, pixelRatio)
+  canvas.width = backing.width
+  canvas.height = backing.height
+  context.setTransform(
+    backing.width / width,
+    0,
+    0,
+    backing.height / height,
+    0,
+    0,
+  )
+  return { width, height }
+}

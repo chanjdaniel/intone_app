@@ -1,33 +1,33 @@
 import { Mount, click, expect, given, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
-import { Message, PaintCurve, init, update, view } from './curve-view'
+import { DrawCurvePair, Message, init, update, view } from './curve-view'
 
-const painted = Mount.resolve(PaintCurve, Message.CompletedPaintCurve())
+const drawn = Mount.resolve(DrawCurvePair, Message.CompletedDrawCurvePair())
 
 describe('the curve view entry', () => {
-  test('draws each synthetic voice around its own median', () => {
+  test('draws each take over the line, each around its own median', () => {
     scene(
       { update, view },
       given(init().model),
-      painted,
+      drawn,
       expect(
-        text('Read-out: middle: 1.38 s from the onset, median 160 Hz'),
-      ).toExist(),
-      click(role('button', { name: 'Low voice' })),
-      expect(
-        text('Read-out: low: 1.38 s from the onset, median 89 Hz'),
+        text(
+          'Read-out: low: the take 1.38 s around 89 Hz, the line 1.38 s around 160 Hz',
+        ),
       ).toExist(),
       expect(
         role('img', {
-          name: 'Your pitch curve, 1.38 s from your voice onset, in semitones around your typical pitch of 89 Hz.',
+          name: "The line's pitch curve, from the speaker's voice onset, in semitones around their typical pitch of 160 Hz.",
         }),
       ).toExist(),
       expect(
-        text(
-          'From your voice onset, 1.38 s. The middle line is your typical pitch, 89 Hz; the lines are 3 semitones apart.',
-        ),
+        role('img', {
+          name: /^Your pitch curve, 1\.38 s from your voice onset, in semitones around your typical pitch of 89 Hz, over the line's/,
+        }),
       ).toExist(),
+      click(role('button', { name: 'Much slower' })),
+      expect(text(/^Read-out: much-slower: the take 2\.\d\d s/)).toExist(),
     )
   })
 })

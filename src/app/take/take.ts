@@ -4,9 +4,13 @@ import { defineTaggedUnion } from 'foldkit/schema'
 import type { TrackerResult } from '../../services/tracker'
 
 // A take, as the practice screen's Model sees it: one state at a time, so
-// recording, asking and showing a result cannot overlap by construction.
-// The tracker is held from Preparing to Analysing, the microphone from
-// AwaitingMic to Recording (./resources.ts).
+// playing, recording, asking and showing a result cannot overlap by
+// construction. A take plays the line first (PlayingNative), and the
+// microphone opens only once it has ended; listening again to either
+// voice (Listening) is a state of its own, outside any take. The tracker
+// is held from PlayingNative to Analysing, the microphone from
+// AwaitingMic to Recording (./resources.ts), and a voice plays only in
+// PlayingNative and Listening (./subscriptions.ts).
 
 // The finished curve, the one time pitch frames enter the Model: plain
 // arrays, so the Model stays a plain Schema value.
@@ -30,9 +34,19 @@ export type TakeResult = typeof TakeResult.Type
 // told apart from the current one.
 const takeNumber = Schema.Finite
 
+// The voice to listen to: the native line, or the learner's last take.
+export const Voice = Schema.Literals(['Line', 'Take'])
+export type Voice = typeof Voice.Type
+
+// A finished take, kept while its voices are listened to again.
+export const FinishedTake = Schema.Struct({ takeNumber, result: TakeResult })
+export type FinishedTake = typeof FinishedTake.Type
+
 export const Take = defineTaggedUnion({
   Idle: {},
-  // The tracker Worker is loading its model.
+  // The line plays before the take, while the tracker Worker loads.
+  PlayingNative: { takeNumber, tracker: Schema.Literals(['Loading', 'Ready']) },
+  // The line has played and the tracker Worker is still loading.
   Preparing: { takeNumber },
   // The browser is asking for the microphone.
   AwaitingMic: { takeNumber },
@@ -49,6 +63,8 @@ export const Take = defineTaggedUnion({
   },
   Analysing: { takeNumber },
   ShowingResult: { takeNumber, result: TakeResult },
+  // Listening again, from the start or from the take it came from.
+  Listening: { voice: Voice, maybeTake: Schema.Option(FinishedTake) },
   MicDenied: {},
   NoMicDevice: {},
   MicFailed: { reason: Schema.String },
@@ -75,6 +91,7 @@ const takeNumberIn =
 
 // The take that needs the tracker, the microphone, or a running recording.
 export const takeNeedingTracker = takeNumberIn([
+  'PlayingNative',
   'Preparing',
   'AwaitingMic',
   'MicPromptIgnored',

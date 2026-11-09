@@ -3,25 +3,25 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { fromString } from 'foldkit/url'
 import { describe, expect, test } from 'vitest'
 
+import { LoadNativeCurve } from './line/commands'
+import { NativeCurve } from './line/native'
 import {
   AppRoute,
   Message,
   type Model,
   NavigateInternal,
   init,
+  initialModel,
   update,
 } from './main'
-import { Take } from './take/take'
+import { ForgetTakeAudio } from './take/commands'
+import { Take, TakeResult } from './take/take'
+import { sampleCurve } from './take/testCurves'
 
 const url = (path: string) =>
   Option.getOrThrow(fromString(`http://localhost${path}`))
 
-const on = (route: AppRoute): Model => ({
-  route,
-  maybeDevLibraryFailure: Option.none(),
-  take: Take.Idle(),
-  takesStarted: 0,
-})
+const on = (route: AppRoute): Model => initialModel(route)
 
 describe('init', () => {
   test('the app starts on the home screen and asks for no work', () => {
@@ -84,6 +84,87 @@ describe('update', () => {
       model(current => {
         expect(current).toStrictEqual(on(AppRoute.Home()))
       }),
+    )
+  })
+})
+
+describe('opening a line', () => {
+  const line = AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })
+
+  test('starting on a line asks for its native curve', () => {
+    const start = init(url('/line/ame-ga-suki/1'))
+    expect(start.model.route).toStrictEqual(line)
+    expect(start.model.native).toStrictEqual(
+      NativeCurve.Loading({ clipId: 'ame-ga-suki', lineId: '1' }),
+    )
+    expect(
+      (start.commands ?? []).map(({ name, args }) => ({ name, args })),
+    ).toStrictEqual([
+      {
+        name: LoadNativeCurve.name,
+        args: { clipId: 'ame-ga-suki', lineId: '1' },
+      },
+    ])
+  })
+
+  test('a line the app does not have asks for nothing', () => {
+    const start = init(url('/line/ame-ga-suki/9'))
+    expect(start.model.native).toStrictEqual(NativeCurve.NoLine())
+    expect(start.commands ?? []).toStrictEqual([])
+  })
+
+  test('the native curve is asked for once, and again only after a failure', () => {
+    story(
+      update,
+      given(on(AppRoute.Home())),
+      message(Message.ChangedUrl({ url: url('/line/ame-ga-suki/1') })),
+      Command.resolve(
+        LoadNativeCurve,
+        Message.FailedLoadNativeCurve({
+          clipId: 'ame-ga-suki',
+          lineId: '1',
+          reason: 'offline',
+        }),
+      ),
+      message(Message.ClickedRetryNativeCurve()),
+      Command.resolve(
+        LoadNativeCurve,
+        Message.SucceededLoadNativeCurve({
+          clipId: 'ame-ga-suki',
+          lineId: '1',
+          curve: sampleCurve,
+        }),
+      ),
+      model(current =>
+        expect(current.native).toStrictEqual(
+          NativeCurve.Ready({
+            clipId: 'ame-ga-suki',
+            lineId: '1',
+            curve: sampleCurve,
+          }),
+        ),
+      ),
+      message(Message.ChangedUrl({ url: url('/') })),
+      Command.resolve(ForgetTakeAudio, Message.CompletedForgetTakeAudio()),
+      message(Message.ChangedUrl({ url: url('/line/ame-ga-suki/1') })),
+      model(current => expect(current.native._tag).toBe('Ready')),
+    )
+  })
+
+  test('leaving a line drops its take, finished or not, and forgets its audio', () => {
+    story(
+      update,
+      given({
+        ...on(line),
+        take: Take.ShowingResult({
+          takeNumber: 1,
+          result: TakeResult.Tracked({ curve: sampleCurve }),
+        }),
+      }),
+      message(Message.ChangedUrl({ url: url('/') })),
+      Command.expectExact(ForgetTakeAudio()),
+      Command.resolve(ForgetTakeAudio, Message.CompletedForgetTakeAudio()),
+      model(current => expect(current.take).toStrictEqual(Take.Idle())),
     )
   })
 })

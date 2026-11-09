@@ -1,16 +1,8 @@
 import { Array } from 'effect'
-import { Mount, click, expect, given, role, scene, text } from 'foldkit/scene'
+import { click, expect, given, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
-import {
-  DrawLiveCurve,
-  Message,
-  PaintCurve,
-  init,
-  samples,
-  update,
-  view,
-} from './mic-state-panel'
+import { init, samples, update, view } from './mic-state-panel'
 
 describe('the mic state panel entry', () => {
   test('offers every state a take can be in', () => {
@@ -30,7 +22,6 @@ describe('the mic state panel entry', () => {
       given(init().model),
       click(role('button', { name: 'Recording' })),
       expect(role('heading', { name: 'Recording', level: 2 })).toExist(),
-      Mount.resolve(DrawLiveCurve, Message.CompletedDrawLiveCurve()),
       expect(role('timer')).toHaveText('0:02 of 0:30'),
       expect(role('meter', { name: 'Microphone level' })).toHaveAttr(
         'aria-valuetext',
@@ -39,21 +30,24 @@ describe('the mic state panel entry', () => {
       click(role('button', { name: 'Stop' })),
       expect(text('Read-out: Recording: Recording; pressed stop')).toExist(),
       click(role('button', { name: 'Denied' })),
-      Mount.expectEnded(DrawLiveCurve),
       expect(role('heading', { name: 'The microphone is blocked' })).toExist(),
       click(role('button', { name: 'Try again' })),
       expect(text('Read-out: Denied: MicDenied; pressed record')).toExist(),
     )
   })
 
-  test('paints the curve state with its own Mount', () => {
+  test('shows a finished take while its voices play again', () => {
     scene(
       { update, view },
       given(init().model),
-      click(role('button', { name: 'Curve' })),
-      Mount.resolve(PaintCurve, Message.CompletedPaintCurve()),
-      expect(role('heading', { name: 'Your pitch' })).toExist(),
-      expect(role('img', { name: /^Your pitch curve, 1\.38 s/ })).toExist(),
+      click(role('button', { name: 'Listening' })),
+      expect(role('heading', { name: 'Your copy' })).toExist(),
+      click(role('button', { name: 'Playing the line' })),
+      expect(role('heading', { name: 'Listen to the line' })).toExist(),
+      click(role('button', { name: 'Cancel' })),
+      expect(
+        text('Read-out: Playing the line: PlayingNative; pressed cancel'),
+      ).toExist(),
     )
   })
 })

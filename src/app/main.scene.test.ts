@@ -3,15 +3,17 @@ import { Mount, expect, given, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import { MountDevLibrary } from './devLibrary'
-import { AppRoute, Message, type Model, tagline, update, view } from './main'
-import { Take } from './take/take'
+import {
+  AppRoute,
+  Message,
+  type Model,
+  initialModel,
+  tagline,
+  update,
+  view,
+} from './main'
 
-const on = (route: AppRoute): Model => ({
-  route,
-  maybeDevLibraryFailure: Option.none(),
-  take: Take.Idle(),
-  takesStarted: 0,
-})
+const on = (route: AppRoute): Model => initialModel(route)
 
 describe('home screen', () => {
   test('names the app in its one top-level heading and says what it is for', () => {
@@ -20,6 +22,28 @@ describe('home screen', () => {
       given(on(AppRoute.Home())),
       expect(role('heading', { name: 'Intone', level: 1 })).toExist(),
       expect(text(tagline)).toExist(),
+    )
+  })
+})
+
+describe('home screen lines', () => {
+  test('lists the bundled line, linked to its practice screen', () => {
+    scene(
+      { update, view },
+      given(on(AppRoute.Home())),
+      expect(role('heading', { name: 'Lines to copy', level: 2 })).toExist(),
+      expect(role('link', { name: 'Copy 雨が好き, あめがすき' })).toHaveAttr(
+        'href',
+        '/line/ame-ga-suki/1',
+      ),
+    )
+  })
+
+  test('a line the app does not have is not found', () => {
+    scene(
+      { update, view },
+      given(on(AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '9' }))),
+      expect(text('The app has no page at /line/ame-ga-suki/9.')).toExist(),
     )
   })
 })

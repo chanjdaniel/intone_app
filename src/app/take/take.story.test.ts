@@ -3,19 +3,32 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { fromString } from 'foldkit/url'
 import { describe, expect, test } from 'vitest'
 
-import { AppRoute, Message, type Model, update } from '../main'
-import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
+import { NativeCurve } from '../line/native'
+import { AppRoute, Message, type Model, initialModel, update } from '../main'
+import {
+  AnalyseTake,
+  FocusTakeControl,
+  ForgetTakeAudio,
+  WaitForMicAnswer,
+} from './commands'
 import { managedResources } from './resources'
+import { playOf } from './subscriptions'
 import { Take, TakeResult, levelMeterFloorDb } from './take'
+import { sampleCurve } from './testCurves'
 
-const home = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
-  route: AppRoute.Home(),
-  maybeDevLibraryFailure: Option.none(),
+// The bundled line's practice screen, its native curve ready.
+const onLine = (take: Take = Take.Idle(), takesStarted = 0): Model => ({
+  ...initialModel(AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })),
+  native: NativeCurve.Ready({
+    clipId: 'ame-ga-suki',
+    lineId: '1',
+    curve: sampleCurve,
+  }),
   take,
   takesStarted,
 })
 
-// What the runtime would hold for this Model.
+// What the runtime would hold, and play, for this Model.
 const holds = (state: Model) => ({
   tracker: Option.isSome(
     managedResources.tracker.modelToMaybeRequirements(state),
@@ -24,6 +37,16 @@ const holds = (state: Model) => ({
     managedResources.microphone.modelToMaybeRequirements(state),
   ),
 })
+const plays = (state: Model): string =>
+  Option.match(playOf(state), {
+    onNone: () => 'nothing',
+    onSome: play => play._tag,
+  })
+
+const forgot = Command.resolve(
+  ForgetTakeAudio,
+  Message.CompletedForgetTakeAudio(),
+)
 
 const focused = Command.resolve(
   FocusTakeControl,
@@ -34,21 +57,33 @@ const url = (path: string) =>
   Option.getOrThrow(fromString(`http://localhost${path}`))
 
 describe('the take, by its Model', () => {
-  test('holds the tracker from record to the curve, and the microphone only from asking to stop', () => {
+  test('plays the line first, then holds the microphone only from asking to stop', () => {
     story(
       update,
-      given(home()),
+      given(onLine()),
       message(Message.ClickedRecord()),
       focused,
       model(state => {
-        expect(state.take).toStrictEqual(Take.Preparing({ takeNumber: 1 }))
+        expect(state.take).toStrictEqual(
+          Take.PlayingNative({ takeNumber: 1, tracker: 'Loading' }),
+        )
         expect(holds(state)).toStrictEqual({ tracker: true, microphone: false })
+        expect(plays(state)).toBe('LineBeforeTake')
       }),
       message(Message.AcquiredTracker()),
+      model(state => {
+        expect(state.take).toStrictEqual(
+          Take.PlayingNative({ takeNumber: 1, tracker: 'Ready' }),
+        )
+        expect(holds(state)).toStrictEqual({ tracker: true, microphone: false })
+      }),
+      message(Message.EndedNativeBeforeTake({ takeNumber: 1 })),
       focused,
-      model(state =>
-        expect(holds(state)).toStrictEqual({ tracker: true, microphone: true }),
-      ),
+      model(state => {
+        expect(state.take).toStrictEqual(Take.AwaitingMic({ takeNumber: 1 }))
+        expect(holds(state)).toStrictEqual({ tracker: true, microphone: true })
+        expect(plays(state)).toBe('nothing')
+      }),
       Command.resolve(
         WaitForMicAnswer,
         Message.CompletedWaitForMicAnswer({ takeNumber: 1 }),
@@ -94,7 +129,7 @@ describe('the take, by its Model', () => {
       story(
         update,
         given(
-          home(
+          onLine(
             Take.Recording({
               takeNumber: 4,
               elapsedSeconds: 3,
@@ -105,6 +140,7 @@ describe('the take, by its Model', () => {
           ),
         ),
         message(Message.ChangedUrl({ url: url(path) })),
+        forgot,
         model(state => {
           expect(state.take).toStrictEqual(Take.Idle())
           expect(holds(state)).toStrictEqual({
@@ -116,24 +152,10 @@ describe('the take, by its Model', () => {
     },
   )
 
-  test('keeps a finished result when the learner leaves and comes back', () => {
-    const result = Take.ShowingResult({
-      takeNumber: 1,
-      result: TakeResult.TooNoisy(),
-    })
-    story(
-      update,
-      given(home(result, 1)),
-      message(Message.ChangedUrl({ url: url('/elsewhere') })),
-      message(Message.ChangedUrl({ url: url('/') })),
-      model(state => expect(state.take).toStrictEqual(result)),
-    )
-  })
-
   test('says the prompt is waiting only if it is still unanswered for this take', () => {
     // The microphone answered first: the timer, when it ends, changes
     // nothing.
-    const recording = home(
+    const recording = onLine(
       Take.Recording({
         takeNumber: 2,
         elapsedSeconds: 1,
@@ -147,7 +169,7 @@ describe('the take, by its Model', () => {
     ).toStrictEqual({ model: recording })
     story(
       update,
-      given(home(Take.AwaitingMic({ takeNumber: 3 }), 3)),
+      given(onLine(Take.AwaitingMic({ takeNumber: 3 }), 3)),
       message(Message.CompletedWaitForMicAnswer({ takeNumber: 2 })),
       model(state =>
         expect(state.take).toStrictEqual(Take.AwaitingMic({ takeNumber: 3 })),
@@ -165,7 +187,7 @@ describe('the take, by its Model', () => {
   test('ignores a result that comes back for an earlier take', () => {
     story(
       update,
-      given(home(Take.Analysing({ takeNumber: 5 }), 5)),
+      given(onLine(Take.Analysing({ takeNumber: 5 }), 5)),
       message(
         Message.SucceededAnalyseTake({
           takeNumber: 4,
@@ -183,7 +205,7 @@ describe('the take, by its Model', () => {
     story(
       update,
       given(
-        home(
+        onLine(
           Take.Recording({
             takeNumber: 1,
             elapsedSeconds: 29.8,
@@ -218,7 +240,7 @@ describe('the take, by its Model', () => {
     story(
       update,
       given(
-        home(
+        onLine(
           Take.Recording({
             takeNumber: 1,
             elapsedSeconds: 1,
@@ -237,9 +259,9 @@ describe('the take, by its Model', () => {
     )
   })
 
-  test('holds nothing off the home screen, whatever the take says', () => {
+  test('holds nothing off the line screen, whatever the take says', () => {
     const elsewhere: Model = {
-      ...home(
+      ...onLine(
         Take.Recording({
           takeNumber: 1,
           elapsedSeconds: 1,

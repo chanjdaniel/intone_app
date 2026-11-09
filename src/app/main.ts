@@ -6,12 +6,16 @@ import { modifyFields } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
 import { MountDevLibrary } from './devLibrary'
+import { lineRow } from './line/lineRow'
+import { type BundledLine, bundledLines, lineOf } from './line/lines'
+import { NativeCurve } from './line/native'
+import { practiceView } from './line/practiceView'
+import * as LineUpdate from './line/update'
 import { Message } from './message'
 import { type Model } from './model'
 import { AppRoute, homeRouter, urlToAppRoute } from './route'
-import { PaintCurve } from './take/curveView'
-import { DrawLiveCurve } from './take/liveCurveView'
-import { takePanel } from './take/panel'
+import { ForgetTakeAudio } from './take/commands'
+import { DrawCurvePair } from './take/curvePair'
 import type { TakeResourceServices } from './take/resources'
 import { Take } from './take/take'
 import * as TakeUpdate from './take/update'
@@ -24,16 +28,29 @@ export { subscriptions } from './take/subscriptions'
 
 // INIT
 
-export const init: Runtime.RoutingApplicationInit<Model, Message> = (
-  url: Url,
-) => ({
-  model: {
-    route: urlToAppRoute(url),
-    maybeDevLibraryFailure: Option.none(),
-    take: Take.Idle(),
-    takesStarted: 0,
-  },
+export const initialModel = (route: AppRoute): Model => ({
+  route,
+  maybeDevLibraryFailure: Option.none(),
+  native: NativeCurve.NoLine(),
+  take: Take.Idle(),
+  takesStarted: 0,
+  listenSpeed: 1,
+  maybePlaybackFailure: Option.none(),
 })
+
+// Opening on a line's screen finds its native curve at once.
+export const init: Runtime.RoutingApplicationInit<
+  Model,
+  Message,
+  void,
+  never,
+  TakeResourceServices
+> = (url: Url) => {
+  const model = initialModel(urlToAppRoute(url))
+  return model.route._tag === 'Line'
+    ? LineUpdate.openedLine(model, model.route.clipId, model.route.lineId)
+    : { model }
+}
 
 // COMMAND
 
@@ -75,9 +92,27 @@ export const update = (model: Model, message: Message) =>
         route: () => route,
         maybeDevLibraryFailure: () => Option.none(),
       })
-      return {
-        model: route._tag === 'Home' ? routed : TakeUpdate.leftScreen(routed),
-      }
+      const leftLine =
+        model.route._tag === 'Line' &&
+        !(
+          route._tag === 'Line' &&
+          route.clipId === model.route.clipId &&
+          route.lineId === model.route.lineId
+        )
+      const opened =
+        route._tag === 'Line'
+          ? LineUpdate.openedLine(
+              leftLine ? TakeUpdate.leftLine(routed) : routed,
+              route.clipId,
+              route.lineId,
+            )
+          : { model: leftLine ? TakeUpdate.leftLine(routed) : routed }
+      return leftLine
+        ? {
+            model: opened.model,
+            commands: [...(opened.commands ?? []), ForgetTakeAudio()],
+          }
+        : opened
     },
 
     CompletedNavigateInternal: () => ({ model }),
@@ -90,7 +125,23 @@ export const update = (model: Model, message: Message) =>
       }),
     }),
 
+    SucceededLoadNativeCurve: ({ clipId, lineId, curve }) =>
+      LineUpdate.succeededLoadNativeCurve(model, clipId, lineId, curve),
+    FailedLoadNativeCurve: ({ clipId, lineId, reason }) =>
+      LineUpdate.failedLoadNativeCurve(model, clipId, lineId, reason),
+    ClickedRetryNativeCurve: () => LineUpdate.clickedRetryNativeCurve(model),
+    ClickedListen: ({ voice }) => TakeUpdate.clickedListen(model, voice),
+    ClickedStopListening: () => TakeUpdate.clickedStopListening(model),
+    EndedListening: ({ voice }) => TakeUpdate.endedListening(model, voice),
+    SelectedListenSpeed: ({ speed }) => ({
+      model: modifyFields(model, { listenSpeed: () => speed }),
+    }),
+    FailedPlayback: ({ reason }) => TakeUpdate.failedPlayback(model, reason),
+    CompletedForgetTakeAudio: () => ({ model }),
+
     ClickedRecord: () => TakeUpdate.clickedRecord(model),
+    EndedNativeBeforeTake: ({ takeNumber }) =>
+      TakeUpdate.endedNativeBeforeTake(model, takeNumber),
     ClickedStop: () => TakeUpdate.clickedStop(model),
     ClickedCancelTake: () => TakeUpdate.clickedCancelTake(model),
     AcquiredTracker: () => TakeUpdate.acquiredTracker(model),
@@ -114,8 +165,7 @@ export const update = (model: Model, message: Message) =>
     FailedAnalyseTake: ({ takeNumber, reason }) =>
       TakeUpdate.failedAnalyseTake(model, takeNumber, reason),
     CompletedFocusTakeControl: () => ({ model }),
-    CompletedPaintCurve: () => ({ model }),
-    CompletedDrawLiveCurve: () => ({ model }),
+    CompletedDrawCurvePair: () => ({ model }),
   })
 
 // VIEW
@@ -123,12 +173,15 @@ export const update = (model: Model, message: Message) =>
 export const tagline =
   'Practise Japanese pitch accent by copying native speakers, line by line, on your own device.'
 
-const homeView = (take: Take, h: HtmlBuilder<Message>): Html =>
+const homeView = (
+  lines: ReadonlyArray<BundledLine>,
+  h: HtmlBuilder<Message>,
+): Html =>
   h.main(
     [h.Class('min-h-screen bg-surface text-ink px-4 py-10 sm:px-6 sm:py-16')],
     [
       h.div(
-        [h.Class('mx-auto flex max-w-2xl flex-col gap-8')],
+        [h.Class('mx-auto flex max-w-2xl flex-col gap-10')],
         [
           h.header(
             [h.Class('flex flex-col gap-3 text-center')],
@@ -137,20 +190,52 @@ const homeView = (take: Take, h: HtmlBuilder<Message>): Html =>
               h.p([h.Class('mx-auto max-w-md text-lg text-muted')], [tagline]),
             ],
           ),
-          takePanel(
-            take,
-            {
-              record: Message.ClickedRecord(),
-              stop: Message.ClickedStop(),
-              cancel: Message.ClickedCancelTake(),
-              paint: PaintCurve,
-              drawLive: DrawLiveCurve,
-            },
-            h,
+          h.section(
+            [h.AriaLabelledBy('lines-heading'), h.Class('flex flex-col gap-4')],
+            [
+              h.h2(
+                [h.Id('lines-heading'), h.Class('text-xl font-bold')],
+                ['Lines to copy'],
+              ),
+              h.ul(
+                [h.Class('flex flex-col gap-3')],
+                lines.map(line =>
+                  h.keyed('li')(
+                    `${line.clipId}/${line.lineId}`,
+                    [],
+                    [lineRow(line, h)],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     ],
+  )
+
+const lineView = (model: Model, line: BundledLine, h: HtmlBuilder<Message>) =>
+  practiceView(
+    line,
+    {
+      native: model.native,
+      take: model.take,
+      speed: model.listenSpeed,
+      canPlayLine: TakeUpdate.canListenTo(model, 'Line'),
+      canPlayTake: TakeUpdate.canListenTo(model, 'Take'),
+      maybePlaybackFailure: model.maybePlaybackFailure,
+    },
+    {
+      record: Message.ClickedRecord(),
+      stop: Message.ClickedStop(),
+      cancel: Message.ClickedCancelTake(),
+      retryNative: Message.ClickedRetryNativeCurve(),
+      listen: voice => Message.ClickedListen({ voice }),
+      stopListening: Message.ClickedStopListening(),
+      selectSpeed: speed => Message.SelectedListenSpeed({ speed }),
+      draw: DrawCurvePair,
+    },
+    h,
   )
 
 const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
@@ -207,7 +292,12 @@ const devLibraryView = (
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
   title: 'Intone',
   body: AppRoute.match(model.route, {
-    Home: () => homeView(model.take, h),
+    Home: () => homeView(bundledLines, h),
+    Line: ({ clipId, lineId }) =>
+      Option.match(lineOf(clipId, lineId), {
+        onNone: () => notFoundView(`/line/${clipId}/${lineId}`, h),
+        onSome: line => lineView(model, line, h),
+      }),
     DevLibrary: () =>
       devLibraryView(Option.none(), model.maybeDevLibraryFailure, h),
     DevEntry: ({ entry }) =>

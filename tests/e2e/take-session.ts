@@ -1,4 +1,10 @@
-import type { Browser, BrowserContext, Page, TestInfo } from '@playwright/test'
+import {
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type TestInfo,
+  expect,
+} from '@playwright/test'
 
 // What every take's end-to-end test shares: a page that records its
 // requests, console problems and microphone tracks, Chromium with the fake
@@ -101,3 +107,14 @@ export const launch = (
       `--use-file-for-fake-audio-capture=${wav}%noloop`,
     ],
   })
+
+// The bundled line's practice screen, where every take is recorded.
+export const linePath = '/line/ame-ga-suki/1'
+
+// Opens the line and waits for its native curve, tracked on first open.
+export const openLine = async (page: Page): Promise<void> => {
+  await page.goto(linePath)
+  await expect(
+    page.getByRole('heading', { name: 'Copy the line' }),
+  ).toBeVisible({ timeout: 30_000 })
+}

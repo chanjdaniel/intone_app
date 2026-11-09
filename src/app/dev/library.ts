@@ -29,9 +29,10 @@ export const plannedEntries: ReadonlyArray<
   Readonly<{ name: string; title: string }>
 > = [
   { name: 'tokens', title: 'Tokens' },
-  { name: 'curve-view', title: 'Curve view' },
-  { name: 'live-curve', title: 'Live curve and level meter' },
+  { name: 'curve-view', title: 'Curves: the line and a finished take' },
+  { name: 'live-curve', title: 'Live curve over the line, and level meter' },
   { name: 'mic-state-panel', title: 'Mic state panel' },
+  { name: 'listen-controls', title: 'Listen controls' },
   { name: 'score-card', title: 'Score card' },
   { name: 'star-row', title: 'Star row' },
   { name: 'line-row', title: 'Line row' },

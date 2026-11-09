@@ -4,11 +4,11 @@ import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 
 import { decodeWav, encodeWav } from '../../src/engine/audio/wav.ts'
-import { launch, report, withPage } from './take-session.ts'
+import { launch, openLine, report, withPage } from './take-session.ts'
 
-// The live curve's frame rate: a 20 s take in the built app, with the CPU
-// slowed six times, as a phone's might be, must keep the page at 60
-// frames a second. It is the check every Foldkit upgrade runs
+// The live curve's frame rate: a 20 s take in the built app, drawn over
+// the line's curve, with the CPU slowed six times, as a phone's might be,
+// must keep the page at 60 frames a second. It is the check every Foldkit upgrade runs
 // (docs/upgrading.md), and runs in a Playwright project of its own, after
 // every other end-to-end test has finished, so that no other test's
 // browser shares the machine while it measures.
@@ -33,7 +33,7 @@ test('holds 60 frames a second through a 20 s take at 6x CPU throttle', async ({
   const browser = await launch(playwright, wav)
   try {
     await withPage(browser, async ({ context, page, problems }) => {
-      await page.goto('/')
+      await openLine(page)
       const devTools = await context.newCDPSession(page)
       await devTools.send('Emulation.setCPUThrottlingRate', { rate: 6 })
 
@@ -65,7 +65,7 @@ test('holds 60 frames a second through a 20 s take at 6x CPU throttle', async ({
       )
       await page.getByRole('button', { name: 'Stop' }).click()
       await expect(
-        page.getByRole('heading', { name: 'Your pitch', exact: true }),
+        page.getByRole('heading', { name: 'Your copy' }),
       ).toBeVisible({ timeout: 60_000 })
       await devTools.send('Emulation.setCPUThrottlingRate', { rate: 1 })
 

@@ -13,7 +13,7 @@ import { offerLiveFrames } from './liveFrames'
 import { takeNeedingMicrophone, takeNeedingTracker } from './take'
 
 // The take's two resources, held exactly while the Model needs them: the
-// tracker Worker from Preparing to Analysing, the microphone from
+// tracker Worker from PlayingNative to Analysing, the microphone from
 // AwaitingMic to Recording. Foldkit releases each the moment the Model
 // leaves those states, by stop, by error or by leaving the screen, and a
 // new take (a new take number) gets new ones. The tracker, while held,
@@ -42,7 +42,8 @@ const TakeRequirements = Schema.Option(
   Schema.Struct({ takeNumber: Schema.Finite }),
 )
 
-const onHomeScreen = (model: Model): boolean => model.route._tag === 'Home'
+// A take runs only on its line's practice screen.
+const onLineScreen = (model: Model): boolean => model.route._tag === 'Line'
 
 export const managedResources = ManagedResource.make<Model, Message>()(
   entry => ({
@@ -50,7 +51,7 @@ export const managedResources = ManagedResource.make<Model, Message>()(
       resource: TrackerResource,
       modelToMaybeRequirements: model =>
         takeNeedingTracker(model.take).pipe(
-          Option.filter(() => onHomeScreen(model)),
+          Option.filter(() => onLineScreen(model)),
           Option.map(takeNumber => ({ takeNumber })),
         ),
       acquire: ({ takeNumber }) =>
@@ -71,7 +72,7 @@ export const managedResources = ManagedResource.make<Model, Message>()(
       resource: MicrophoneResource,
       modelToMaybeRequirements: model =>
         takeNeedingMicrophone(model.take).pipe(
-          Option.filter(() => onHomeScreen(model)),
+          Option.filter(() => onLineScreen(model)),
           Option.map(takeNumber => ({ takeNumber })),
         ),
       acquire: () =>

@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import { medianVoicedHz, semitonesFrom } from '../../score/curve'
 import { finishedWindow } from './curve'
-import { createLiveCurve, medianSettleMs } from './live-curve'
+import {
+  createLiveCurve,
+  finishedLiveCurve,
+  medianSettleMs,
+} from './live-curve'
 
 const frames = (firstFrame: number, hz: ReadonlyArray<number>) => ({
   firstFrame,
@@ -25,16 +29,6 @@ describe('the live curve', () => {
     expect(window?.firstFrame).toBe(5)
     expect(window?.lastFrame).toBe(8)
     expect(window?.f0At(6)).toBeCloseTo(131, 3)
-  })
-
-  it('shows at least 4 s from the onset, then squeezes to fit', () => {
-    const curve = createLiveCurve(2048)
-    curve.append(frames(0, repeat(150, 100)))
-    curve.advance(0)
-    expect(curve.window()?.spanFrames).toBe(250)
-    curve.append(frames(100, repeat(150, 300)))
-    curve.advance(16)
-    expect(curve.window()?.spanFrames).toBe(399)
   })
 
   it('settles towards a new median rather than jumping to it', () => {
@@ -98,7 +92,6 @@ describe('the live curve', () => {
     const window = curve.window()
     expect(window?.firstFrame).toBe(finished?.firstFrame)
     expect(window?.lastFrame).toBe(finished?.lastFrame)
-    expect(window?.spanFrames).toBe(finished?.spanFrames)
     expect(window?.medianHz).toBeCloseTo(finished?.medianHz ?? Number.NaN, 4)
 
     // Nothing comes after the end.
@@ -124,5 +117,17 @@ describe('the live curve', () => {
     curve.append(frames(0, repeat(100, 5)))
     curve.append(frames(8, repeat(100, 5)))
     expect(curve.framesIn()).toBe(5)
+  })
+
+  it('shows a finished curve as a live one that has ended', () => {
+    const f0Hz = Float32Array.of(0, 0, 100, 110, 120, 0, 130, 0, 0)
+    const curve = finishedLiveCurve(f0Hz)
+    expect(curve.advance(0)).toBe(true)
+    const window = curve.window()
+    const finished = finishedWindow({ f0Hz, onsetFrame: 2 })
+    expect(window?.firstFrame).toBe(finished?.firstFrame)
+    expect(window?.lastFrame).toBe(finished?.lastFrame)
+    expect(window?.medianHz).toBeCloseTo(finished?.medianHz ?? Number.NaN, 4)
+    expect(window?.f0At(6)).toBe(130)
   })
 })

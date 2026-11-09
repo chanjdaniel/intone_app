@@ -349,7 +349,7 @@ const fontsView = (h: HtmlBuilder<Message>): Html =>
   )
 
 export const choices: ReadonlyArray<string> = [
-  'Accent is a deep indigo, and the two curves are blue (the native speaker) and orange (you), a pair that stays apart for most colour blindness. Would you rather other colours for the curves?',
+  "Accent is a deep indigo. The native's curve is a grey band, and yours is drawn over it from blue where close to orange where far, through violet and rose, with no green, so it stays readable for most colour blindness. Would you rather other colours for the curves?",
   'There is no dark theme yet. Should the app follow the device into dark mode, and from which ticket?',
   "Body text is 16 px on 24 px lines, and Japanese lines may want to be larger than Latin text. Should a line's Japanese text get its own, larger step?",
   "Every font is the device's own, with Hiragino Sans, Noto Sans JP and Yu Gothic first. Is any of them a face you dislike for Japanese?",
