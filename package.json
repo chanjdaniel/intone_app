@@ -13,7 +13,8 @@
     "format:check": "oxfmt --check",
     "lint": "oxlint --ignore-pattern tests/lint/fixtures/ src tests && effect-tsgo patch --no-typescript --oxlint && oxlint --config .oxlintrc.effect.json --deny-warnings --ignore-pattern tests/lint/fixtures/ src tests",
     "test": "vitest run",
-    "test:e2e": "vite build && playwright test"
+    "test:e2e": "vite build && playwright test",
+    "vendor:foldkit": "scripts/vendor-foldkit.sh"
   },
   "dependencies": {
     "@effect/platform-browser": "4.1.2",
