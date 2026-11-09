@@ -3,8 +3,10 @@ import type { Update } from 'foldkit'
 import { modifyFields } from 'foldkit/struct'
 
 import type { MicrophoneFailure } from '../../services/microphone'
+import { lineOf } from '../line/lines'
 import type { Message } from '../message'
 import type { Model } from '../model'
+import { AskToPersistStorage } from '../settings/commands'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
 import type { TakeResourceServices } from './resources'
 import {
@@ -76,24 +78,30 @@ export const endedNativeBeforeTake = (
 }
 
 // The take has ended: it is tracked, then scored against the line's
-// native curve, which a take never starts without.
-const analyse = (model: Model, takeNumber: number): TakeUpdate =>
-  model.native._tag === 'Ready'
-    ? moveTo(
-        model,
-        Take.Analysing({ takeNumber }),
-        AnalyseTake({
-          takeNumber,
-          native: {
-            curve: model.native.curve,
-            features: model.native.features,
-          },
-        }),
-      )
-    : moveTo(
-        model,
-        Take.AnalysisFailed({ reason: "The line's curve is not loaded." }),
-      )
+// native curve, which a take never starts without, and kept in the
+// history under its line.
+const analyse = (model: Model, takeNumber: number): TakeUpdate => {
+  const native = model.native
+  if (native._tag !== 'Ready') {
+    return moveTo(
+      model,
+      Take.AnalysisFailed({ reason: "The line's curve is not loaded." }),
+    )
+  }
+  const lineText = Option.match(lineOf(native.clipId, native.lineId), {
+    onNone: () => `${native.clipId} ${native.lineId}`,
+    onSome: line => line.text,
+  })
+  return moveTo(
+    model,
+    Take.Analysing({ takeNumber }),
+    AnalyseTake({
+      takeNumber,
+      line: { clipId: native.clipId, lineId: native.lineId, lineText },
+      native: { curve: native.curve, features: native.features },
+    }),
+  )
+}
 
 export const clickedStop = (model: Model): TakeUpdate =>
   model.take._tag === 'Recording'
@@ -245,13 +253,21 @@ export const failedRecordTake = (
     ? moveTo(model, Take.AnalysisFailed({ reason }))
     : unchanged(model)
 
+// A take kept in the history is the moment to ask the browser to keep
+// the history too.
 export const succeededAnalyseTake = (
   model: Model,
   takeNumber: number,
   result: TakeResult,
 ): TakeUpdate =>
   isTakeIn(model.take, ['Analysing'], takeNumber)
-    ? moveTo(model, Take.ShowingResult({ takeNumber, result }))
+    ? moveTo(
+        model,
+        Take.ShowingResult({ takeNumber, result }),
+        ...(result._tag === 'Tracked' && result.kept._tag === 'Kept'
+          ? [AskToPersistStorage()]
+          : []),
+      )
     : unchanged(model)
 
 export const failedAnalyseTake = (

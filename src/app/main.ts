@@ -5,7 +5,13 @@ import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { modifyFields } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
+import { Dialog } from '@foldkit/ui'
+
 import { MountDevLibrary } from './devLibrary'
+import { HistoryPage, LineHistoryPage } from './history/history'
+import { historyView } from './history/historyView'
+import { lineHistoryView } from './history/lineHistoryView'
+import * as HistoryUpdate from './history/update'
 import { lineRow } from './line/lineRow'
 import { type BundledLine, bundledLines, lineOf } from './line/lines'
 import { NativeCurve } from './line/native'
@@ -14,6 +20,11 @@ import * as LineUpdate from './line/update'
 import { Message } from './message'
 import { type Model } from './model'
 import { AppRoute, homeRouter, urlToAppRoute } from './route'
+import { AskToPersistStorage } from './settings/commands'
+import { SettingsPage, clearDialogId } from './settings/settings'
+import { settingsView } from './settings/settingsView'
+import * as SettingsUpdate from './settings/update'
+import { siteNav } from './siteNav'
 import { ForgetTakeAudio } from './take/commands'
 import { DrawCurvePair } from './take/curvePair'
 import type { TakeResourceServices } from './take/resources'
@@ -36,9 +47,32 @@ export const initialModel = (route: AppRoute): Model => ({
   takesStarted: 0,
   listenSpeed: 1,
   maybePlaybackFailure: Option.none(),
+  history: HistoryPage.NotLoaded(),
+  lineHistory: LineHistoryPage.NotLoaded(),
+  settings: SettingsPage.NotLoaded(),
+  maybeSettingsNotice: Option.none(),
+  clearDialog: Dialog.init({ id: clearDialogId }),
 })
 
-// Opening on a line's screen finds its native curve at once.
+type UpdateReturn = Update.Return<Model, Message, TakeResourceServices>
+
+// What a screen reads when it opens: a line its native curve, unless the
+// Model has it, and the history and settings screens what the device
+// keeps.
+const opened = (model: Model, route: AppRoute): UpdateReturn =>
+  AppRoute.match<UpdateReturn>(route, {
+    Line: ({ clipId, lineId }) => LineUpdate.openedLine(model, clipId, lineId),
+    History: () => HistoryUpdate.openedHistory(model),
+    LineHistory: ({ clipId, lineId }) =>
+      HistoryUpdate.openedLineHistory(model, clipId, lineId),
+    Settings: () => SettingsUpdate.openedSettings(model),
+    Home: () => ({ model }),
+    DevLibrary: () => ({ model }),
+    DevEntry: () => ({ model }),
+    NotFound: () => ({ model }),
+  })
+
+// Opening on a screen reads what it needs at once.
 export const init: Runtime.RoutingApplicationInit<
   Model,
   Message,
@@ -47,9 +81,7 @@ export const init: Runtime.RoutingApplicationInit<
   TakeResourceServices
 > = (url: Url) => {
   const model = initialModel(urlToAppRoute(url))
-  return model.route._tag === 'Line'
-    ? LineUpdate.openedLine(model, model.route.clipId, model.route.lineId)
-    : { model }
+  return opened(model, model.route)
 }
 
 // COMMAND
@@ -70,7 +102,13 @@ export const LoadExternal = Command.define('LoadExternal', {
 
 // UPDATE
 
-type UpdateReturn = Update.Return<Model, Message, TakeResourceServices>
+// The find words of /history changed in the address, the list's screen
+// staying open.
+const staysOnHistory = (from: AppRoute, to: AppRoute): boolean =>
+  from._tag === 'History' && to._tag === 'History'
+
+const findOf = (route: AppRoute): string =>
+  route._tag === 'History' ? Option.getOrElse(route.maybeFind, () => '') : ''
 
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
@@ -99,20 +137,18 @@ export const update = (model: Model, message: Message) =>
           route.clipId === model.route.clipId &&
           route.lineId === model.route.lineId
         )
-      const opened =
-        route._tag === 'Line'
-          ? LineUpdate.openedLine(
-              leftLine ? TakeUpdate.leftLine(routed) : routed,
-              route.clipId,
-              route.lineId,
-            )
-          : { model: leftLine ? TakeUpdate.leftLine(routed) : routed }
+      const left = leftLine ? TakeUpdate.leftLine(routed) : routed
+      const arrived = staysOnHistory(model.route, route)
+        ? findOf(model.route) === findOf(route)
+          ? { model: left }
+          : HistoryUpdate.changedFind(left)
+        : opened(left, route)
       return leftLine
         ? {
-            model: opened.model,
-            commands: [...(opened.commands ?? []), ForgetTakeAudio()],
+            model: arrived.model,
+            commands: [...(arrived.commands ?? []), ForgetTakeAudio()],
           }
-        : opened
+        : arrived
     },
 
     CompletedNavigateInternal: () => ({ model }),
@@ -174,6 +210,64 @@ export const update = (model: Model, message: Message) =>
       TakeUpdate.failedAnalyseTake(model, takeNumber, reason),
     CompletedFocusTakeControl: () => ({ model }),
     CompletedDrawCurvePair: () => ({ model }),
+    CompletedAskToPersistStorage: ({ storage }) =>
+      SettingsUpdate.completedAskToPersistStorage(model, storage),
+
+    SucceededLoadHistory: loaded =>
+      HistoryUpdate.succeededLoadHistory(model, loaded),
+    FailedLoadHistory: ({ reason }) =>
+      HistoryUpdate.failedLoadHistory(model, reason),
+    ChangedFindLines: ({ words }) =>
+      HistoryUpdate.changedFindLines(model, words),
+    CompletedReplaceFind: () => ({ model }),
+    ClickedShowMoreLines: () => HistoryUpdate.clickedShowMoreLines(model),
+    CompletedFocusLineRow: () => ({ model }),
+    ClickedPreviousMonth: () => HistoryUpdate.clickedPreviousMonth(model),
+    ClickedNextMonth: () => HistoryUpdate.clickedNextMonth(model),
+    ClickedRescore: () => HistoryUpdate.clickedRescore(model),
+    SucceededRescoreTakes: ({ rescored }) =>
+      HistoryUpdate.succeededRescoreTakes(model, rescored),
+    FailedRescoreTakes: ({ reason }) =>
+      HistoryUpdate.failedRescoreTakes(model, reason),
+    SucceededLoadLineHistory: ({ clipId, lineId, maybeFound }) =>
+      HistoryUpdate.succeededLoadLineHistory(model, clipId, lineId, maybeFound),
+    FailedLoadLineHistory: ({ clipId, lineId, reason }) =>
+      HistoryUpdate.failedLoadLineHistory(model, clipId, lineId, reason),
+
+    SucceededLoadSettings: ({ facts }) =>
+      SettingsUpdate.succeededLoadSettings(model, facts),
+    FailedLoadSettings: ({ reason }) =>
+      SettingsUpdate.failedLoadSettings(model, reason),
+    ToggledKeepTakeAudio: ({ keep }) =>
+      SettingsUpdate.toggledKeepTakeAudio(model, keep),
+    SucceededSetKeepTakeAudio: () => ({ model }),
+    FailedSetKeepTakeAudio: ({ reason }) =>
+      SettingsUpdate.failedSetKeepTakeAudio(model, reason),
+    ClickedAskToPersistStorage: () => ({
+      model,
+      commands: [AskToPersistStorage()],
+    }),
+    ToggledBackupAudio: ({ include }) =>
+      SettingsUpdate.toggledBackupAudio(model, include),
+    ClickedSaveBackup: () => SettingsUpdate.clickedSaveBackup(model),
+    SucceededSaveBackup: ({ fileName, takes }) =>
+      SettingsUpdate.succeededSaveBackup(model, fileName, takes),
+    FailedSaveBackup: ({ reason }) =>
+      SettingsUpdate.failedSaveBackup(model, reason),
+    ClickedRestoreBackup: () => SettingsUpdate.clickedRestoreBackup(model),
+    SucceededRestoreBackup: ({ takes }) =>
+      SettingsUpdate.succeededRestoreBackup(model, takes),
+    CancelledRestoreBackup: () => SettingsUpdate.cancelledRestoreBackup(model),
+    FailedRestoreBackup: ({ reason }) =>
+      SettingsUpdate.failedRestoreBackup(model, reason),
+    ClickedClearAll: () => SettingsUpdate.clickedClearAll(model),
+    GotClearDialogMessage: ({ message }) =>
+      SettingsUpdate.foldClearDialog(model, message),
+    ClickedKeepEverything: () => SettingsUpdate.clickedKeepEverything(model),
+    SubmittedClearAll: () => SettingsUpdate.submittedClearAll(model),
+    SucceededClearAllData: () => SettingsUpdate.succeededClearAllData(model),
+    FailedClearAllData: ({ reason }) =>
+      SettingsUpdate.failedClearAllData(model, reason),
   })
 
 // VIEW
@@ -191,6 +285,7 @@ const homeView = (
       h.div(
         [h.Class('mx-auto flex max-w-2xl flex-col gap-10')],
         [
+          siteNav('Lines', h),
           h.header(
             [h.Class('flex flex-col gap-3 text-center')],
             [
@@ -310,6 +405,39 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
       devLibraryView(Option.none(), model.maybeDevLibraryFailure, h),
     DevEntry: ({ entry }) =>
       devLibraryView(Option.some(entry), model.maybeDevLibraryFailure, h),
+    History: ({ maybeFind }) =>
+      historyView(
+        model.history,
+        maybeFind,
+        {
+          previousMonth: Message.ClickedPreviousMonth(),
+          nextMonth: Message.ClickedNextMonth(),
+          changedWords: words => Message.ChangedFindLines({ words }),
+          showMore: Message.ClickedShowMoreLines(),
+          rescore: Message.ClickedRescore(),
+        },
+        h,
+      ),
+    LineHistory: () =>
+      lineHistoryView(model.lineHistory, { draw: DrawCurvePair }, h),
+    Settings: () =>
+      settingsView(
+        model.settings,
+        model.maybeSettingsNotice,
+        model.clearDialog,
+        {
+          keepTakeAudio: keep => Message.ToggledKeepTakeAudio({ keep }),
+          askToPersist: Message.ClickedAskToPersistStorage(),
+          includeAudio: include => Message.ToggledBackupAudio({ include }),
+          saveBackup: Message.ClickedSaveBackup(),
+          restoreBackup: Message.ClickedRestoreBackup(),
+          clearAll: Message.ClickedClearAll(),
+          keepEverything: Message.ClickedKeepEverything(),
+          confirmClearAll: Message.SubmittedClearAll(),
+          dialog: message => Message.GotClearDialogMessage({ message }),
+        },
+        h,
+      ),
     NotFound: ({ path }) => notFoundView(path, h),
   }),
 })

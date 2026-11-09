@@ -13,7 +13,12 @@ import {
 } from './main'
 import { DrawCurvePair } from './take/curvePair'
 import { Take, TakeResult, TakeScore, levelMeterFloorDb } from './take/take'
-import { sampleCurve, sampleFeatures, sampleScore } from './take/testCurves'
+import {
+  sampleCurve,
+  sampleFeatures,
+  sampleKept,
+  sampleScore,
+} from './take/testCurves'
 
 // The app claims only what it compared (report section 3): no screen
 // says "accuracy", or that a take is correct. Every state of every
@@ -24,7 +29,7 @@ const line = AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })
 
 const finishedWith = (score: TakeScore) => ({
   takeNumber: 1,
-  result: TakeResult.Tracked({ curve: sampleCurve, score }),
+  result: TakeResult.Tracked({ curve: sampleCurve, score, kept: sampleKept }),
 })
 
 const everyTake: ReadonlyArray<Take> = [

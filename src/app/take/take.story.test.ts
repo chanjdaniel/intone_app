@@ -227,7 +227,11 @@ describe('the take, by its Model', () => {
         }),
       ),
       Command.expectExact(
-        AnalyseTake({ takeNumber: 1, native: nativeRecording }),
+        AnalyseTake({
+          takeNumber: 1,
+          line: { clipId: 'ame-ga-suki', lineId: '1', lineText: '雨が好き' },
+          native: nativeRecording,
+        }),
         FocusTakeControl(),
       ),
       model(state => {

@@ -3,10 +3,16 @@ import type { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { swiftF0FrameHz } from '../../engine/pitch/swift-f0'
-import { homeRouter } from '../route'
+import { homeRouter, lineHistoryRouter } from '../route'
 import { PairLearner, curvePairView, describeCurve } from '../take/curvePair'
 import { type TakePanelEvents, takePanel } from '../take/panel'
-import type { FinishedTake, Take, TakeCurve } from '../take/take'
+import {
+  type FinishedTake,
+  KeptInHistory,
+  type Take,
+  type TakeCurve,
+  type TakeScore,
+} from '../take/take'
 import { type BundledLine, lineKey } from './lines'
 import { type ListenControls, listenControls } from './listenControls'
 import type { NativeCurve } from './native'
@@ -42,39 +48,51 @@ const spanNote =
 const alignedNote =
   "Your curve is lined up with the line's by how each part of it sounds, so each part sits over the part of the line it was compared with, around your own typical pitch. The lines are 3 semitones apart."
 
-// The upper canvas for a finished take: lined up with the native's when
-// it was scored, else from its own onset; nothing when it has no curve.
-const finishedLearnerOf = (
-  finished: FinishedTake,
-): Option.Option<
-  Readonly<{ key: string; learner: PairLearner; note: string }>
-> => {
-  const { takeNumber, result } = finished
-  if (result._tag !== 'Tracked') {
-    return Option.none()
-  }
-  const score = result.score
+// The upper canvas for a finished curve and its score, its key made from
+// `name`: lined up with the native's when it was scored, else from its
+// own onset.
+export const scoredLearnerOf = (
+  name: string,
+  curve: TakeCurve,
+  score: TakeScore,
+): Readonly<{ key: string; learner: PairLearner; note: string }> => {
   if (score._tag === 'CouldNotCompare') {
-    return Option.some({
-      key: `result-${takeNumber}`,
-      learner: PairLearner.Finished({ curve: result.curve }),
+    return {
+      key: `result-${name}`,
+      learner: PairLearner.Finished({ curve }),
       note: spanNote,
-    })
+    }
   }
   const { nativeFrom, nativeTo } = score.worstStretch
-  return Option.some({
-    key: `aligned-${takeNumber}`,
+  return {
+    key: `aligned-${name}`,
     learner: PairLearner.Aligned({
       f0Hz: score.alignedF0,
-      medianHz: describeCurve(result.curve).medianHz,
+      medianHz: describeCurve(curve).medianHz,
       mark: {
         fromFrame: nativeFrom * swiftF0FrameHz,
         toFrame: nativeTo * swiftF0FrameHz,
       },
     }),
     note: alignedNote,
-  })
+  }
 }
+
+// The upper canvas for a finished take; nothing when it has no curve.
+const finishedLearnerOf = (
+  finished: FinishedTake,
+): Option.Option<
+  Readonly<{ key: string; learner: PairLearner; note: string }>
+> =>
+  finished.result._tag === 'Tracked'
+    ? Option.some(
+        scoredLearnerOf(
+          String(finished.takeNumber),
+          finished.result.curve,
+          finished.result.score,
+        ),
+      )
+    : Option.none()
 
 // What the upper canvas shows for `take`, its key, and the note under it.
 export const learnerOf = (
@@ -112,6 +130,71 @@ export const learnerOf = (
         onSome: shown => shown,
       })
     }),
+  )
+
+const finishedOf = (take: Take): Option.Option<FinishedTake> =>
+  take._tag === 'ShowingResult'
+    ? Option.some({ takeNumber: take.takeNumber, result: take.result })
+    : take._tag === 'Listening'
+      ? take.maybeTake
+      : Option.none()
+
+// Under a finished take: that it is kept in the history on this device,
+// with the way there, or why it is not.
+const keptNote = <ViewMessage>(
+  line: BundledLine,
+  take: Take,
+  h: HtmlBuilder<ViewMessage>,
+): Html =>
+  Option.match(
+    Option.flatMap(finishedOf(take), ({ result }) =>
+      result._tag === 'Tracked' ? Option.some(result.kept) : Option.none(),
+    ),
+    {
+      onNone: () => h.empty,
+      onSome: kept =>
+        KeptInHistory.match(kept, {
+          Kept: ({ maybeAudioFailure }) =>
+            h.div(
+              [
+                h.Class(
+                  'flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted',
+                ),
+              ],
+              [
+                h.span([], ['Kept in your history on this device.']),
+                h.a(
+                  [
+                    h.Href(
+                      lineHistoryRouter({
+                        clipId: line.clipId,
+                        lineId: line.lineId,
+                      }),
+                    ),
+                    h.Class(
+                      `inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 ${focusRing}`,
+                    ),
+                  ],
+                  ['See this line’s history'],
+                ),
+                ...Option.match(maybeAudioFailure, {
+                  onNone: () => [],
+                  onSome: reason => [
+                    h.span(
+                      [h.Class('basis-full text-bad break-words')],
+                      [`Its recording was not kept: ${reason}`],
+                    ),
+                  ],
+                }),
+              ],
+            ),
+          NotKept: ({ reason }) =>
+            h.p(
+              [h.Class('text-sm text-bad break-words')],
+              [`This take was not kept in your history: ${reason}`],
+            ),
+        }),
+    },
   )
 
 const playingOf = (take: Take): ListenControls<never>['playing'] =>
@@ -239,6 +322,7 @@ const readyBody = <ViewMessage>(
         h,
       ),
       takePanel(state.take, events, h),
+      keptNote(line, state.take, h),
       h.section(
         [h.AriaLabelledBy('listen-heading'), h.Class('flex flex-col gap-3')],
         [

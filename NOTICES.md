@@ -26,6 +26,7 @@ The app ships these third-party packages and model files, each under its own lic
 | @types/node | 24.19.2 | MIT |
 | effect | 4.1.2 | MIT |
 | entities | 9.0.0 | BSD-2-Clause |
+| fflate | 0.8.3 | MIT |
 | flatbuffers | 25.9.23 | Apache-2.0 |
 | foldkit | 0.170.0 | MIT |
 | guid-typescript | 1.0.9 | ISC |

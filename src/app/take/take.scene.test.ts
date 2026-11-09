@@ -23,11 +23,18 @@ import {
   update,
   view,
 } from '../main'
+import { AskToPersistStorage } from '../settings/commands'
+import type { StorageFacts } from '../settings/settings'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
 import { DrawCurvePair } from './curvePair'
 import { managedResources } from './resources'
 import { Take, TakeResult, levelMeterFloorDb } from './take'
-import { sampleCurve, sampleFeatures, sampleScore } from './testCurves'
+import {
+  sampleCurve,
+  sampleFeatures,
+  sampleKept,
+  sampleScore,
+} from './testCurves'
 
 // The native as the take is scored against it.
 const nativeRecording = { curve: sampleCurve, features: sampleFeatures }
@@ -51,6 +58,13 @@ const focused = Command.resolve(
   FocusTakeControl,
   Message.CompletedFocusTakeControl(),
 )
+
+const grantedStorage: StorageFacts = {
+  persistence: 'Granted',
+  maybeUsageBytes: Option.some(120_000),
+  maybeQuotaBytes: Option.some(1e9),
+  browser: 'Other',
+}
 
 // A short curve: silence, a rise and a fall, silence.
 const curve = {
@@ -123,7 +137,11 @@ describe('a take', () => {
       expect(text(/^Your curve, as you speak\. Each curve starts/)).toExist(),
       click(stopButton),
       Command.expectHas(
-        AnalyseTake({ takeNumber: 1, native: nativeRecording }),
+        AnalyseTake({
+          takeNumber: 1,
+          line: { clipId: 'ame-ga-suki', lineId: '1', lineText: '雨が好き' },
+          native: nativeRecording,
+        }),
       ),
       focused,
       expect(role('heading', { name: 'Finding your pitch' })).toExist(),
@@ -135,10 +153,19 @@ describe('a take', () => {
         AnalyseTake,
         Message.SucceededAnalyseTake({
           takeNumber: 1,
-          result: TakeResult.Tracked({ curve, score: sampleScore }),
+          result: TakeResult.Tracked({
+            curve,
+            score: sampleScore,
+            kept: sampleKept,
+          }),
         }),
       ),
       focused,
+      // A kept take asks the browser to keep the history.
+      Command.resolve(
+        AskToPersistStorage,
+        Message.CompletedAskToPersistStorage({ storage: grantedStorage }),
+      ),
       ManagedResource.release(managedResources.microphone),
       expect(role('heading', { name: 'Your copy' })).toExist(),
       expect(text('82% match to this clip')).toExist(),

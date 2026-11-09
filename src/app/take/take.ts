@@ -77,8 +77,17 @@ export const TakeScore = defineTaggedUnion({
 })
 export type TakeScore = typeof TakeScore.Type
 
+// Whether a tracked take was kept in the history on the device
+// (../../services/history-store.ts), and why its audio was not, when the
+// learner had asked for it and it could not be.
+export const KeptInHistory = defineTaggedUnion({
+  Kept: { id: Schema.String, maybeAudioFailure: Schema.Option(Schema.String) },
+  NotKept: { reason: Schema.String },
+})
+export type KeptInHistory = typeof KeptInHistory.Type
+
 export const TakeResult = defineTaggedUnion({
-  Tracked: { curve: TakeCurve, score: TakeScore },
+  Tracked: { curve: TakeCurve, score: TakeScore, kept: KeptInHistory },
   TooQuiet: {},
   TooNoisy: {},
 })

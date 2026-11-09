@@ -1,3 +1,4 @@
+import { Option } from 'effect'
 import {
   Mount,
   click,
@@ -21,8 +22,13 @@ import {
 } from '../main'
 import { DrawCurvePair } from './curvePair'
 import { provisionalText } from './scoreCard'
-import { Take, TakeResult, TakeScore } from './take'
-import { sampleCurve, sampleFeatures, sampleScore } from './testCurves'
+import { KeptInHistory, Take, TakeResult, TakeScore } from './take'
+import {
+  sampleCurve,
+  sampleFeatures,
+  sampleKept,
+  sampleScore,
+} from './testCurves'
 
 // The score card on the practice screen, after a take.
 
@@ -36,7 +42,7 @@ const showing = (score: TakeScore): Model => ({
   }),
   take: Take.ShowingResult({
     takeNumber: 1,
-    result: TakeResult.Tracked({ curve: sampleCurve, score }),
+    result: TakeResult.Tracked({ curve: sampleCurve, score, kept: sampleKept }),
   }),
   takesStarted: 1,
 })
@@ -151,4 +157,59 @@ describe('the score card', () => {
       )
     },
   )
+})
+
+describe('the take in the history', () => {
+  const showingKept = (kept: KeptInHistory): Model => ({
+    ...showing(sampleScore),
+    take: Take.ShowingResult({
+      takeNumber: 1,
+      result: TakeResult.Tracked({
+        curve: sampleCurve,
+        score: sampleScore,
+        kept,
+      }),
+    }),
+  })
+
+  test('says a kept take is kept on this device, with the way to the line’s history', () => {
+    scene(
+      { update, view },
+      given(showingKept(sampleKept)),
+      drawn,
+      expect(text('Kept in your history on this device.')).toExist(),
+      expect(role('link', { name: 'See this line’s history' })).toHaveAttr(
+        'href',
+        '/history/ame-ga-suki/1',
+      ),
+      expect(text(/recording was not kept/)).toBeAbsent(),
+    )
+  })
+
+  test('says why the recording, or the whole take, was not kept', () => {
+    scene(
+      { update, view },
+      given(
+        showingKept(
+          KeptInHistory.Kept({
+            id: 'a',
+            maybeAudioFailure: Option.some('The disk is full.'),
+          }),
+        ),
+      ),
+      drawn,
+      expect(text('Its recording was not kept: The disk is full.')).toExist(),
+    )
+    scene(
+      { update, view },
+      given(
+        showingKept(KeptInHistory.NotKept({ reason: 'The history was full.' })),
+      ),
+      drawn,
+      expect(
+        text('This take was not kept in your history: The history was full.'),
+      ).toExist(),
+      expect(role('link', { name: 'See this line’s history' })).toBeAbsent(),
+    )
+  })
 })

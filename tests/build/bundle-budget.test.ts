@@ -1,4 +1,10 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
@@ -26,7 +32,7 @@ const budgetScript = (budget: string) =>
   run('node', ['build/bundle-budget.ts', '--dist', dist, '--budget', budget])
 
 describe('the bundle budget', () => {
-  test('measures the module script the built page loads', async () => {
+  test('measures the module script the built page loads, and every chunk it imports at start', async () => {
     const size = await entryChunkSize(dist)
     const html = readFileSync(join(dist, 'index.html'), 'utf8')
 
@@ -34,8 +40,53 @@ describe('the bundle budget', () => {
       `<script type="module" crossorigin src="/${size.file}">`,
     )
     expect(size.gzipBytes).toBe(
-      gzipSync(readFileSync(join(dist, size.file)), { level: 9 }).length,
+      [size.file, ...size.imports].reduce(
+        (total, file) =>
+          total + gzipSync(readFileSync(join(dist, file)), { level: 9 }).length,
+        0,
+      ),
     )
+  })
+
+  test('counts the chunks the entry imports statically, through each other, and never a lazy one', async () => {
+    const planted = mkdtempSync(join(tmpdir(), 'bundle-budget-planted-'))
+    try {
+      mkdirSync(join(planted, 'assets'))
+      writeFileSync(
+        join(planted, 'index.html'),
+        '<script type="module" crossorigin src="/assets/index-a.js"></script>',
+      )
+      const files = {
+        'index-a.js':
+          'import{t as e}from"./shared-b.js";import"./side-c.js";const l=()=>import("./lazy-d.js");export{e,l}',
+        'shared-b.js': 'export{t}from"./deep-e.js"',
+        'side-c.js': 'console.log("side")',
+        'lazy-d.js': 'export const lazy=1'.repeat(200),
+        'deep-e.js': 'export const t=1',
+      }
+      Object.entries(files).forEach(([name, code]) =>
+        writeFileSync(join(planted, 'assets', name), code),
+      )
+      const gzipOf = (name: keyof typeof files) =>
+        gzipSync(files[name], { level: 9 }).length
+
+      const size = await entryChunkSize(planted)
+
+      expect(size.file).toBe('assets/index-a.js')
+      expect([...size.imports].sort()).toEqual([
+        'assets/deep-e.js',
+        'assets/shared-b.js',
+        'assets/side-c.js',
+      ])
+      expect(size.gzipBytes).toBe(
+        gzipOf('index-a.js') +
+          gzipOf('shared-b.js') +
+          gzipOf('side-c.js') +
+          gzipOf('deep-e.js'),
+      )
+    } finally {
+      rmSync(planted, { recursive: true, force: true })
+    }
   })
 
   test("the project's entry chunk is within its budget", async () => {

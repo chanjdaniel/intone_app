@@ -1,11 +1,13 @@
 import { Schema } from 'effect'
 import { readFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { join, posix, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { gzipSync } from 'node:zlib'
 
-// The bundle budget: the entry chunk's gzip size against the ceiling in
-// bundle-budget.json. CI builds, then runs this, and fails above it.
+// The bundle budget: the gzip size of the JavaScript the page loads before
+// it can start, the entry chunk and every chunk it imports statically,
+// against the ceiling in bundle-budget.json. CI builds, then runs this,
+// and fails above it.
 //
 //   node build/bundle-budget.ts [--dist <directory>] [--budget <file>]
 
@@ -16,10 +18,48 @@ export const Budget = Schema.Struct({
 })
 export type Budget = typeof Budget.Type
 
-export type ChunkSize = Readonly<{ file: string; gzipBytes: number }>
+export type ChunkSize = Readonly<{
+  file: string
+  // The chunks the entry imports statically, directly or through each
+  // other, which the page loads before it starts.
+  imports: ReadonlyArray<string>
+  gzipBytes: number
+}>
 
-// The entry chunk is the module script the built index.html loads. Gzip is
-// measured at level 9, the most a host's compression would give.
+// A chunk's static imports of other chunks, `import ... from "./x.js"`
+// and `import "./x.js"` (and their `export ... from`), never `import()`.
+const staticImportsOf = (code: string): ReadonlyArray<string> =>
+  [
+    ...code.matchAll(
+      /(?:^|[;\s}])(?:import|export)\s*(?:[^"'`();]*?\bfrom\s*)?["'](\.{1,2}\/[^"']+)["']/g,
+    ),
+  ].flatMap(match => (match[1] === undefined ? [] : [match[1]]))
+
+// Every chunk `file` imports statically, through each other.
+const importedChunks = async (
+  dist: string,
+  file: string,
+): Promise<ReadonlyArray<string>> => {
+  const seen = new Set<string>([file])
+  const visit = async (chunk: string): Promise<void> => {
+    const code = await readFile(join(dist, chunk), 'utf8')
+    const found = staticImportsOf(code)
+      .map(specifier => posix.join(posix.dirname(chunk), specifier))
+      .filter(imported => !seen.has(imported))
+    found.forEach(imported => seen.add(imported))
+    await Promise.all(found.map(visit))
+  }
+  await visit(file)
+  return [...seen].filter(chunk => chunk !== file)
+}
+
+const gzipBytesOf = async (dist: string, file: string): Promise<number> =>
+  gzipSync(await readFile(join(dist, file)), { level: 9 }).length
+
+// The entry chunk is the module script the built index.html loads; the
+// page loads it and the chunks it imports statically before it starts,
+// each gzipped on its own, as a host sends them. Gzip is measured at
+// level 9, the most a host's compression would give.
 export const entryChunkSize = async (dist: string): Promise<ChunkSize> => {
   const html = await readFile(join(dist, 'index.html'), 'utf8')
   const script = /<script\b[^>]*\btype="module"[^>]*\bsrc="\/?([^"]+)"/.exec(
@@ -28,8 +68,15 @@ export const entryChunkSize = async (dist: string): Promise<ChunkSize> => {
   if (script === undefined) {
     throw new Error(`${join(dist, 'index.html')} loads no module script`)
   }
-  const code = await readFile(join(dist, script))
-  return { file: script, gzipBytes: gzipSync(code, { level: 9 }).length }
+  const imports = await importedChunks(dist, script)
+  const sizes = await Promise.all(
+    [script, ...imports].map(file => gzipBytesOf(dist, file)),
+  )
+  return {
+    file: script,
+    imports,
+    gzipBytes: sizes.reduce((total, size) => total + size, 0),
+  }
 }
 
 export const readBudget = async (path: string): Promise<Budget> =>
@@ -46,7 +93,11 @@ if (isMain) {
   })
   const size = await entryChunkSize(resolve(values.dist))
   const budget = await readBudget(resolve(values.budget))
-  const line = `Entry chunk ${size.file}: ${size.gzipBytes} B gzip, budget ${budget.entry.gzipBytes} B`
+  const imported =
+    size.imports.length === 0
+      ? ''
+      : ` and the ${size.imports.length} it imports (${size.imports.join(', ')})`
+  const line = `Entry chunk ${size.file}${imported}: ${size.gzipBytes} B gzip, budget ${budget.entry.gzipBytes} B`
   if (size.gzipBytes > budget.entry.gzipBytes) {
     console.error(
       `${line}: over by ${size.gzipBytes - budget.entry.gzipBytes} B. A raise is justified by a base and a head build (docs/bundle-budget.md).`,

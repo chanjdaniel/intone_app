@@ -16,7 +16,12 @@ import {
 } from './main'
 import { ForgetTakeAudio } from './take/commands'
 import { Take, TakeResult } from './take/take'
-import { sampleCurve, sampleFeatures, sampleScore } from './take/testCurves'
+import {
+  sampleCurve,
+  sampleFeatures,
+  sampleKept,
+  sampleScore,
+} from './take/testCurves'
 
 const url = (path: string) =>
   Option.getOrThrow(fromString(`http://localhost${path}`))
@@ -163,6 +168,7 @@ describe('opening a line', () => {
           result: TakeResult.Tracked({
             curve: sampleCurve,
             score: sampleScore,
+            kept: sampleKept,
           }),
         }),
       }),

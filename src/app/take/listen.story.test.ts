@@ -8,7 +8,12 @@ import { FocusTakeControl, WaitForMicAnswer } from './commands'
 import { managedResources } from './resources'
 import { playOf } from './subscriptions'
 import { Take, TakeResult, TakeScore, levelMeterFloorDb } from './take'
-import { sampleCurve, sampleFeatures, sampleScore } from './testCurves'
+import {
+  sampleCurve,
+  sampleFeatures,
+  sampleKept,
+  sampleScore,
+} from './testCurves'
 
 // Listening and recording, by the Model: a voice plays only while the
 // Model is in a playing state, the microphone is held only while it is in
@@ -37,7 +42,11 @@ const plays = (state: Model): string =>
 const holdsMicrophone = (state: Model): boolean =>
   Option.isSome(managedResources.microphone.modelToMaybeRequirements(state))
 
-const tracked = TakeResult.Tracked({ curve: sampleCurve, score: sampleScore })
+const tracked = TakeResult.Tracked({
+  curve: sampleCurve,
+  score: sampleScore,
+  kept: sampleKept,
+})
 const finished = Take.ShowingResult({ takeNumber: 1, result: tracked })
 
 // One of every state a take can be in.
@@ -328,6 +337,7 @@ describe('the worst stretch', () => {
           version: 1,
           reason: 'LengthMismatch',
         }),
+        kept: sampleKept,
       }),
     })
     const state = onLine(uncompared)

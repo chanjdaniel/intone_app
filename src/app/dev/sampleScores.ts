@@ -1,3 +1,4 @@
+import { Option } from 'effect'
 import { modifyFields } from 'foldkit/struct'
 
 import type { Recording } from '../../score/score'
@@ -9,6 +10,7 @@ import {
 import { compareTake } from '../../services/compare-take'
 import {
   type FinishedTake,
+  KeptInHistory,
   type NativeRecording,
   TakeResult,
   takeCurveOf,
@@ -53,6 +55,11 @@ export const sampleNative: NativeRecording = {
   features: takeFeaturesOf(nativeRecording.features),
 }
 
+const kept = KeptInHistory.Kept({
+  id: 'sample-take',
+  maybeAudioFailure: Option.none(),
+})
+
 const finished = (
   change: Partial<SyntheticTake>,
   edit: (recording: Recording) => Recording = recording => recording,
@@ -61,7 +68,11 @@ const finished = (
   const score = takeScoreOf(compareTake(nativeRecording, take), nativeRecording)
   return {
     takeNumber: 1,
-    result: TakeResult.Tracked({ curve: takeCurveOf(take.curve), score }),
+    result: TakeResult.Tracked({
+      curve: takeCurveOf(take.curve),
+      score,
+      kept,
+    }),
   }
 }
 
@@ -75,7 +86,8 @@ const withProvisional = (
   }
   const score = modifyFields(result.score, { provisional: () => provisional })
   return modifyFields(take, {
-    result: () => TakeResult.Tracked({ curve: result.curve, score }),
+    result: () =>
+      TakeResult.Tracked({ curve: result.curve, score, kept: result.kept }),
   })
 }
 

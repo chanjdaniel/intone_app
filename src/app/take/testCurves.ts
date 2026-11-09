@@ -1,6 +1,11 @@
 import { Option } from 'effect'
 
-import { type TakeCurve, type TakeFeatures, TakeScore } from './take'
+import {
+  KeptInHistory,
+  type TakeCurve,
+  type TakeFeatures,
+  TakeScore,
+} from './take'
 
 // A short curve, its features and a score, for the app's own tests to
 // put in a Model; nothing in the app imports them.
@@ -32,4 +37,10 @@ export const sampleScore = TakeScore.Scored({
   },
   provisional: true,
   alignedF0: [0, 105, 108, 112, 0, 104, 100, 0],
+})
+
+// A take kept in the history.
+export const sampleKept = KeptInHistory.Kept({
+  id: 'sample-take',
+  maybeAudioFailure: Option.none(),
 })
