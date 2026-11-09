@@ -1,14 +1,14 @@
-import { spawnSync } from 'node:child_process'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { describe, expect, test } from 'vitest'
+
+import { root, run } from '../support/run'
 
 // The folder line (AGENTS.md) is enforced by the project's own oxlint
 // config. Each fixture under `fixtures/src/` sits where the folder it tests
 // would, and marks every line lint must refuse with `// lint: <rule>`; a
 // fixture with no marks must lint clean, so a rule cannot reach too far.
 
-const root = join(import.meta.dirname, '..', '..')
 const fixtures = join(import.meta.dirname, 'fixtures')
 
 type Diagnostic = { file: string; line: number; code: string }
@@ -37,14 +37,17 @@ const marked = (file: string): ReadonlyArray<Diagnostic> =>
         : [{ file, line: index + 1, code: mark[1] }]
     })
 
+// oxlint exits 1 when it reports a diagnostic; anything else is a crash.
 const oxlint = (args: ReadonlyArray<string>): OxlintReport => {
-  const run = spawnSync(
-    join(root, 'node_modules', '.bin', 'oxlint'),
-    ['--format', 'json', ...args],
-    { cwd: root, encoding: 'utf8' },
-  )
-  if (run.error !== undefined) throw run.error
-  return JSON.parse(run.stdout)
+  const result = run(join(root, 'node_modules', '.bin', 'oxlint'), [
+    '--format',
+    'json',
+    ...args,
+  ])
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(`oxlint exited ${result.status}:\n${result.output}`)
+  }
+  return JSON.parse(result.stdout)
 }
 
 const found = (report: OxlintReport): ReadonlyArray<Diagnostic> =>
@@ -80,12 +83,9 @@ describe('the folder line', () => {
   })
 
   test('the normal lint run skips the fixtures and passes', () => {
-    const run = spawnSync('npm', ['run', '--silent', 'lint'], {
-      cwd: root,
-      encoding: 'utf8',
-    })
+    const result = run('npm', ['run', '--silent', 'lint'])
 
-    expect(run.stdout + run.stderr).not.toContain('tests/lint/fixtures')
-    expect(run.status).toBe(0)
+    expect(result.output).not.toContain('tests/lint/fixtures')
+    expect(result.status, result.output).toBe(0)
   })
 })

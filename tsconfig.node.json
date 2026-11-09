@@ -10,7 +10,8 @@
     "playwright.config.ts",
     "tests/lint/**/*.test.ts",
     "tests/build/**/*.test.ts",
-    "tests/scripts/**/*.test.ts"
+    "tests/scripts/**/*.test.ts",
+    "tests/support/**/*.ts"
   ],
   "exclude": []
 }

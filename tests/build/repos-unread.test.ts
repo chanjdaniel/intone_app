@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process'
 import {
   mkdtempSync,
   readFileSync,
@@ -10,11 +9,11 @@ import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
+import { type Run, root, run } from '../support/run'
+
 // repos/foldkit/ is Foldkit's source, vendored as reading only. Plant files
 // there that every check would refuse, and that the build would pick up if
 // it scanned them, and prove that none of the project's checks reads them.
-
-const root = join(import.meta.dirname, '..', '..')
 
 // A Tailwind class no project file uses: if Tailwind scanned repos/, the
 // built CSS would hold it.
@@ -23,18 +22,20 @@ const plantedColour = 'a1b2c3'
 let planted = ''
 let output = ''
 
-type Run = { status: number | null; output: string }
-
-const run = (command: string, args: ReadonlyArray<string>): Run => {
-  const result = spawnSync(command, args, { cwd: root, encoding: 'utf8' })
-  if (result.error !== undefined) throw result.error
-  return { status: result.status, output: result.stdout + result.stderr }
-}
-
 const npm = (script: string): Run => run('npm', ['run', '--silent', script])
 
+// Named for this test, so that a plant an interrupted run left behind is
+// found and removed before the next one.
+const plantPrefix = 'planted-by-repos-unread-'
+const vendored = join(root, 'repos', 'foldkit')
+
 beforeAll(() => {
-  planted = mkdtempSync(join(root, 'repos', 'foldkit', 'planted-'))
+  for (const entry of readdirSync(vendored)) {
+    if (entry.startsWith(plantPrefix)) {
+      rmSync(join(vendored, entry), { recursive: true, force: true })
+    }
+  }
+  planted = mkdtempSync(join(vendored, plantPrefix))
   output = mkdtempSync(join(tmpdir(), 'repos-unread-build-'))
   writeFileSync(
     join(planted, 'wrong.ts'),
