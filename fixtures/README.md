@@ -9,6 +9,7 @@ Nothing here is hand-edited, and nothing here is real accuracy on learners (see 
 | `voices/`    | Three Japanese phrases in eight VOICEVOX voices, right and wrong, slower, faster and uneven, each clean, in room noise and through a phone band | `npm run fixtures:voices`    |
 | `real/`      | Three stretches of LibriVox's CC0 Japanese readings, real speech for tracking and cutting                                                       | `npm run fixtures:voices`    |
 | `noise/`     | The room noise mixed into `voices/`, cut from a CC BY 4.0 recording                                                                             | `npm run fixtures:voices`    |
+| `tracked/`   | Every WAV above tracked and featured as the app does it: its curve and spectral features, for the score (`docs/score.md`)                       | `npm run fixtures:tracked`   |
 
 ## Making them
 
@@ -29,6 +30,10 @@ The downloader asks the person running it to agree to the VOICEVOX ONNX Runtime 
 - where VOICEVOX CORE is set up, it remakes all four stages and fails on any byte of difference; CI has no VOICEVOX CORE, since setting it up needs the terms agreed, so there the test says it is skipped.
 
 The audio is committed, since every licence below allows it.
+
+`npm run fixtures:tracked` (`scripts/tracked-fixtures.ts`) writes `tracked/<the WAV's path>.bin` for every WAV here: the WAV's first channel resampled to 16 kHz, tracked by the take's own engine on SwiftF0 (`src/engine/pitch/take.ts`) and featured by `src/engine/features/spectral.ts`, in Node.
+Each file is a line of JSON (the analysis, the frames, the feature options) and then the curve's pitch, confidence and level and the features, as little-endian float32; `tests/support/tracked-fixtures.ts` reads and writes them.
+`tests/scripts/tracked-fixtures.test.ts` remakes them all on the real model and fails on any byte of difference, so rerun the script after changing the tracker, the features or a WAV.
 
 ## The VOICEVOX fixtures
 

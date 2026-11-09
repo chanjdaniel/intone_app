@@ -15,6 +15,7 @@
     "tests/build/**/*.test.ts",
     "tests/scripts/**/*.test.ts",
     "tests/tracker/**/*.test.ts",
+    "tests/score/**/*.test.ts",
     "tests/support/**/*.ts"
   ],
   "exclude": []

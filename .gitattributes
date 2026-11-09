@@ -15,3 +15,8 @@ fixtures/synthetic/** linguist-generated
 fixtures/voices/** linguist-generated
 fixtures/real/** linguist-generated
 fixtures/noise/** linguist-generated
+
+# Written by `npm run fixtures:tracked` and `npm run score:study`; tests
+# check they are what each writes.
+fixtures/tracked/** linguist-generated binary
+docs/score-study.md linguist-generated

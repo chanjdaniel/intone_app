@@ -140,7 +140,10 @@ describe('the fixtures in many voices', () => {
       const made = filesUnder(scratch)
       expect(made).toStrictEqual(
         filesUnder(fixtures).filter(
-          file => !file.startsWith('synthetic/') && file !== 'README.md',
+          file =>
+            !file.startsWith('synthetic/') &&
+            !file.startsWith('tracked/') &&
+            file !== 'README.md',
         ),
       )
       expectSameBytes(scratch, made)

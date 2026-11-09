@@ -29,6 +29,8 @@
     "fixtures/synthetic",
     "fixtures/voices",
     "fixtures/real",
-    "fixtures/noise"
+    "fixtures/noise",
+    "fixtures/tracked",
+    "docs/score-study.md"
   ]
 }

@@ -136,6 +136,18 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
   The painter only reads a curve's frames: display smoothing never changes the raw frames kept for scoring.
 - `docs/latency.md` says how far the live curve runs behind the voice, stage by stage.
 
+## The score
+
+- `src/score/score.ts` exports `scoreTake(native, take)`: two `Recording`s (a curve and its features) in, a `Score` out (`Scored` or `CouldNotCompare`), as the spec's interface gives it; `docs/score.md` says what each step does and the numbers each was chosen from.
+  `scoreDetail` beside it adds the raw measures, for the study alone.
+- Its steps: `track.ts` (gates, the octave filter, semitones around the median, the speech span), `align.ts` (the `Aligner` interface, `normaliseFeatures`, `stretchAligner`, `dtwAligner`, `withFallback`), `compare.ts` (the pitch skill with the clamped gain, the tempo deviation).
+  The aligner never looks at pitch: it lines the take up by its features, the 24 log mel bands of `src/engine/features/spectral.ts`, or a speech model's features later (ticket 20).
+- Every constant is in `src/score/constants.ts`, each naming its data; `SCORE_VERSION` is bumped on any change that moves a score.
+- Only frames voiced in both recordings are compared, never a bridged gap, so missing pitch is never an error; the painter's bridging is for the eye alone.
+- `fixtures/tracked/` is every fixture's curve and features as the app makes them, written by `npm run fixtures:tracked`; `npm run score:study` writes `docs/score-study.md` from it, and fails while an anchor of the scale in the constants has drifted from what it measures.
+  Both scripts run the app's own source under Node through `scripts/source-imports.ts`, which lets Node resolve its extensionless imports.
+  `tests/scripts/` remakes both and fails on any difference; `tests/score/` holds the score to the fixtures, and `src/score/*.test.ts` proves its properties on the synthetic takes of `src/score/synthetic-take.ts`.
+
 ## Audio in tests
 
 End-to-end tests drive the real audio path with Chromium's fake microphone playing a known WAV; `docs/fake-microphone.md` says how faithfully it arrives and what a test must allow for (a start 32 ms in or a few 10 ms buffers later, and now and then a 10 ms slip).
@@ -144,6 +156,7 @@ A test that needs the exact samples plays them through the capture worklet with 
 - `fixtures/synthetic/` holds the synthetic voices and their labels, written by `npm run fixtures:synthetic` from a seed; never edit them by hand, and rerun the script after changing `tests/support/synthetic-voice.ts`, since a test fails on any byte of difference.
 - `fixtures/voices/`, `fixtures/real/` and `fixtures/noise/` hold the labelled fixtures in many voices (VOICEVOX phrases right and wrong, in room noise and through a phone band), the LibriVox CC0 clips and the room noise, written by `npm run fixtures:voices`; `fixtures/README.md` says what each holds, each voice's terms and credit, and how far synthetic speech is from a learner's.
   Never edit them by hand: CI remakes the derived files byte for byte, and the sources only where VOICEVOX CORE is set up (`npm run fixtures:voices-setup`, whose terms prompt is Daniel's to answer).
+- `fixtures/tracked/` holds every fixture's curve and features, written by `npm run fixtures:tracked` on the real model; rerun it after changing the tracker, the features or a fixture, since a test remakes it and fails on any byte of difference.
 - `tests/e2e/probe/` is a test-only page that drives the capture worklet; Playwright builds it to `.cache/e2e-probe` and serves it on the port after the app's, and it never ships.
 - `tests/support/` holds the measuring code the end-to-end tests share (the comparison, a plain pitch estimate, the voices), tested in the `tooling` project.
 - `tests/e2e/take.spec.ts` records each voice on the line's practice screen and reads the drawn curve back off the learner's canvas by the painter's own axis (`plotArea`, `semitonesOfY`, and the canvas's `data-span-seconds`); `tests/e2e/take-session.ts` holds what the take specs share, `openLine` among them.
@@ -167,7 +180,7 @@ npm test
 
 `npm run check:effect` runs the `effect-tsgo` check on both tsconfigs, `npm run format:check` the formatter, `npm run generate:check` that the generated files are current, `npm run check:budget` the bundle budget against `dist/`, and `npm run test:e2e` builds and runs Playwright against the production build; CI runs all of them.
 The build and its tests fetch the listed model files once, so they need the network until `.cache/models/` holds them.
-`npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, `tests/support`, `tests/tracker`, in Node, type checked by `tsconfig.node.json`).
+`npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, `tests/support`, `tests/tracker`, `tests/score`, in Node, type checked by `tsconfig.node.json`).
 
 ## Content and privacy
 
