@@ -107,6 +107,8 @@ beforeEach(() => {
     '.claude/settings.json': '{}\n',
     '.claude/skills/release/SKILL.md': 'Cut a release.\n',
     '.claude-plugin/plugin.json': '{}\n',
+    '.agents/skills/release-version/SKILL.md': 'Release Foldkit.\n',
+    'repos/effect/packages/effect/src/Effect.ts': 'export const v = 1\n',
     'packages/foldkit/CLAUDE.md': 'Package rules.\n',
     'packages/foldkit/src/index.ts': 'export const version = 1\n',
     'skills/generate-program/SKILL.md': 'Generate a program.\n',
@@ -128,9 +130,13 @@ afterEach(() => {
   rmSync(scratch, { recursive: true, force: true })
 })
 
-const maintainerFiles = (paths: ReadonlyArray<string>) =>
-  paths.filter(path =>
-    /(^|\/)(CLAUDE\.md|\.claude|\.claude-plugin)(\/|$)/.test(path),
+// What the script must drop: anything that loads as instructions in an agent
+// session, and Foldkit's own vendored repos/.
+const dropped = (paths: ReadonlyArray<string>) =>
+  paths.filter(
+    path =>
+      path.startsWith('repos/foldkit/repos/') ||
+      /(^|\/)(CLAUDE\.md|\.claude|\.claude-plugin|\.agents)(\/|$)/.test(path),
   )
 
 describe('vendoring Foldkit', () => {
@@ -138,7 +144,7 @@ describe('vendoring Foldkit', () => {
     const result = vendor()
 
     expect(result.status, result.output).toBe(0)
-    expect(maintainerFiles(tracked())).toEqual([])
+    expect(dropped(tracked())).toEqual([])
     expect(tracked()).toEqual(
       expect.arrayContaining([
         'repos/foldkit/AGENTS.md',
@@ -147,19 +153,23 @@ describe('vendoring Foldkit', () => {
         'repos/foldkit/packages/foldkit/src/index.ts',
       ]),
     )
-    expect(existsSync(join(project, 'repos/foldkit/CLAUDE.md'))).toBe(false)
-    expect(existsSync(join(project, 'repos/foldkit/.claude'))).toBe(false)
+    for (const path of ['CLAUDE.md', '.claude', '.claude-plugin', '.agents']) {
+      expect(existsSync(join(project, 'repos/foldkit', path)), path).toBe(false)
+    }
+    expect(existsSync(join(project, 'repos/foldkit/repos'))).toBe(false)
     expect(read('FOLDKIT.md')).toBe('Foldkit conventions, 1.0.0.\n')
     expect(git(project, 'status', '--porcelain')).toBe('')
     expect(git(project, 'log', '--format=%s')).toContain('foldkit@1.0.0')
   })
 
-  test('re-pins to a newer release, keeping the maintainer files out', () => {
+  test('re-pins to a newer release, keeping the dropped files out', () => {
     expect(vendor().status).toBe(0)
     release('1.1.0', {
       'CLAUDE.md': 'Foldkit maintainers: run our new checks.\n',
       '.claude/settings.json': '{ "changed": true }\n',
       'examples/counter/CLAUDE.md': 'A new nested guide.\n',
+      '.agents/skills/release-version/SKILL.md': 'Release Foldkit, v2.\n',
+      'repos/effect/packages/effect/src/Effect.ts': 'export const v = 2\n',
       'examples/stopwatch/src/main.ts': 'export const elapsed = 0\n',
       [template]: 'Foldkit conventions, 1.1.0.\n',
     })
@@ -168,14 +178,14 @@ describe('vendoring Foldkit', () => {
     const result = vendor()
 
     expect(result.status, result.output).toBe(0)
-    expect(maintainerFiles(tracked())).toEqual([])
+    expect(dropped(tracked())).toEqual([])
     expect(tracked()).toContain('repos/foldkit/examples/stopwatch/src/main.ts')
     expect(read('FOLDKIT.md')).toBe('Foldkit conventions, 1.1.0.\n')
     expect(git(project, 'status', '--porcelain')).toBe('')
     expect(git(project, 'log', '--format=%s')).toContain('foldkit@1.1.0')
   })
 
-  test('stops on a conflict outside the maintainer files, for a person', () => {
+  test('stops on a conflict outside the dropped files, for a person', () => {
     expect(vendor().status).toBe(0)
     write(project, {
       'repos/foldkit/examples/counter/src/main.ts': 'export const count = 2\n',
@@ -189,7 +199,7 @@ describe('vendoring Foldkit', () => {
     const result = vendor()
 
     expect(result.status).not.toBe(0)
-    expect(result.output).toContain('conflicts outside the maintainer files')
+    expect(result.output).toContain('conflicts outside the dropped files')
   })
 
   test('changes nothing when the subtree is already at the installed release', () => {
