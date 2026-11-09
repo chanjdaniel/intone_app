@@ -1,19 +1,19 @@
-# intone_app
+# Intone
 
-## This is an iOS application designed to teach and train Japanese pitch accent.
-
-<p>&nbsp;</p>
+Intone is a browser app for practising Japanese pitch accent by copying native lines.
+You hear a line, record your copy, and see your pitch drawn over the native speaker's.
+Everything runs on your device, with no server: no audio, pitch curve or text leaves the browser.
 
 [Slideshow presentation of background, rationale, and design](https://docs.google.com/presentation/d/1wyh0-Kk8HNgJSuamyvwcEfg6f-_GLjgRmvhXkg8kFTo/edit?usp=sharing)
 
-<p>&nbsp;</p>
+## The 2023 iOS project
 
-Native recordings provided as part of the JSUT corpus of Saruwatari-lab, University of Tokyo.
-https://sites.google.com/site/shinnosuketakamichi/publication/jsut
+The original Xcode project, its test targets and Swift files are kept on the [`legacy`](https://github.com/chanjdaniel/intone_app/tree/legacy) branch.
 
-Pitch accent representation courtesy of Prosody Tutor Suzuki-kun at University of Tokyo's OJAD.
-https://www.gavo.t.u-tokyo.ac.jp/ojad/phrasing/index
+## Licence
 
-All third-party contributions are used under a non-commercial license.
+All rights reserved; see [LICENSE](LICENSE).
+
+## Thanks
 
 Special thanks to Professor Suzuki Michiko of the UBC Department of Asian Studies for supervising this project.

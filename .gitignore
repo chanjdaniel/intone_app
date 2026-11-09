@@ -1,2 +1,31 @@
+# Team scratch and worktrees
 .scratch/
 .claude/worktrees/
+
+# Dependencies
+node_modules/
+.venv/
+
+# Build outputs and caches
+dist/
+.cache/
+*.tsbuildinfo
+
+# Daniel's local pack, never committed or built
+local/
+
+# Test outputs
+test-results/
+playwright-report/
+
+# Environment variables
+.env
+.env.*
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
