@@ -3,6 +3,8 @@ import type { Update } from 'foldkit'
 import { modifyFields } from 'foldkit/struct'
 
 import type { MicrophoneFailure } from '../../services/microphone'
+import { type TakeOutcome, outcomeOf } from '../level/progress'
+import { LinePlace, isPlaceFor } from '../line/place'
 import type { Message } from '../message'
 import type { Model } from '../model'
 import type { AppResourceServices } from '../resources'
@@ -12,6 +14,7 @@ import {
   type Extent,
   type FinishedTake,
   Take,
+  type TakeMode,
   type TakeResult,
   type Voice,
   canStartTake,
@@ -38,16 +41,16 @@ const moveTo = (
   commands: [...commands, FocusTakeControl()],
 })
 
-// A take starts by playing the line, once its native curve is ready to
-// compare with; the tracker loads while it plays.
-export const clickedRecord = (model: Model): TakeUpdate => {
+// A take, guided or blind, starts by playing the line, once its native
+// curve is ready to compare with; the tracker loads while it plays.
+export const clickedRecord = (model: Model, mode: TakeMode): TakeUpdate => {
   if (!canStartTake(model.take) || model.native._tag !== 'Ready') {
     return unchanged(model)
   }
   const takeNumber = model.takesStarted + 1
   return {
     model: modifyFields(model, {
-      take: () => Take.PlayingNative({ takeNumber, tracker: 'Loading' }),
+      take: () => Take.PlayingNative({ takeNumber, mode, tracker: 'Loading' }),
       takesStarted: () => takeNumber,
       maybePlaybackFailure: () => Option.none(),
     }),
@@ -55,10 +58,14 @@ export const clickedRecord = (model: Model): TakeUpdate => {
   }
 }
 
-const askForMicrophone = (model: Model, takeNumber: number): TakeUpdate =>
+const askForMicrophone = (
+  model: Model,
+  takeNumber: number,
+  mode: TakeMode,
+): TakeUpdate =>
   moveTo(
     model,
-    Take.AwaitingMic({ takeNumber }),
+    Take.AwaitingMic({ takeNumber, mode }),
     WaitForMicAnswer({ takeNumber }),
   )
 
@@ -72,14 +79,18 @@ export const endedNativeBeforeTake = (
     return unchanged(model)
   }
   return take.tracker === 'Ready'
-    ? askForMicrophone(model, takeNumber)
-    : moveTo(model, Take.Preparing({ takeNumber }))
+    ? askForMicrophone(model, takeNumber, take.mode)
+    : moveTo(model, Take.Preparing({ takeNumber, mode: take.mode }))
 }
 
 // The take has ended: it is tracked, then scored against the line's
 // native curve, which a take never starts without, and kept in the
-// history under its line.
-const analyse = (model: Model, takeNumber: number): TakeUpdate => {
+// history under its line, as guided or blind.
+const analyse = (
+  model: Model,
+  takeNumber: number,
+  mode: TakeMode,
+): TakeUpdate => {
   const native = model.native
   if (native._tag !== 'Ready') {
     return moveTo(
@@ -89,9 +100,10 @@ const analyse = (model: Model, takeNumber: number): TakeUpdate => {
   }
   return moveTo(
     model,
-    Take.Analysing({ takeNumber }),
+    Take.Analysing({ takeNumber, mode }),
     AnalyseTake({
       takeNumber,
+      mode,
       line: {
         clipId: native.clipId,
         lineId: native.lineId,
@@ -104,7 +116,7 @@ const analyse = (model: Model, takeNumber: number): TakeUpdate => {
 
 export const clickedStop = (model: Model): TakeUpdate =>
   model.take._tag === 'Recording'
-    ? analyse(model, model.take.takeNumber)
+    ? analyse(model, model.take.takeNumber, model.take.mode)
     : unchanged(model)
 
 export const clickedCancelTake = (model: Model): TakeUpdate =>
@@ -121,12 +133,12 @@ export const clickedCancelTake = (model: Model): TakeUpdate =>
 
 export const acquiredTracker = (model: Model): TakeUpdate =>
   Match.value(model.take).pipe(
-    Match.tag('Preparing', ({ takeNumber }) =>
-      askForMicrophone(model, takeNumber),
+    Match.tag('Preparing', ({ takeNumber, mode }) =>
+      askForMicrophone(model, takeNumber, mode),
     ),
-    Match.tag('PlayingNative', ({ takeNumber }) => ({
+    Match.tag('PlayingNative', ({ takeNumber, mode }) => ({
       model: modifyFields(model, {
-        take: () => Take.PlayingNative({ takeNumber, tracker: 'Ready' }),
+        take: () => Take.PlayingNative({ takeNumber, mode, tracker: 'Ready' }),
       }),
     })),
     Match.orElse(() => unchanged(model)),
@@ -150,10 +162,15 @@ export const completedWaitForMicAnswer = (
   takeNumber: number,
 ): TakeUpdate =>
   model.take._tag === 'AwaitingMic' && model.take.takeNumber === takeNumber
-    ? moveTo(model, Take.MicPromptIgnored({ takeNumber }))
+    ? moveTo(
+        model,
+        Take.MicPromptIgnored({ takeNumber, mode: model.take.mode }),
+      )
     : unchanged(model)
 
-const isAsking = (take: Take): take is Take & { takeNumber: number } =>
+const isAsking = (
+  take: Take,
+): take is Extract<Take, { _tag: 'AwaitingMic' | 'MicPromptIgnored' }> =>
   take._tag === 'AwaitingMic' || take._tag === 'MicPromptIgnored'
 
 export const acquiredMicrophone = (model: Model): TakeUpdate =>
@@ -162,6 +179,7 @@ export const acquiredMicrophone = (model: Model): TakeUpdate =>
         model,
         Take.Recording({
           takeNumber: model.take.takeNumber,
+          mode: model.take.mode,
           elapsedSeconds: 0,
           levelDb: levelMeterFloorDb,
           maybeOnsetSeconds: Option.none(),
@@ -197,13 +215,14 @@ export const tickedTakeMeter = (
     return unchanged(model)
   }
   if (elapsedSeconds >= longestTakeSeconds) {
-    return analyse(model, takeNumber)
+    return analyse(model, takeNumber, take.mode)
   }
   return {
     model: modifyFields(model, {
       take: () =>
         Take.Recording({
           takeNumber,
+          mode: take.mode,
           elapsedSeconds,
           levelDb,
           maybeOnsetSeconds: take.maybeOnsetSeconds,
@@ -226,6 +245,7 @@ export const detectedVoiceOnset = (
       take: () =>
         Take.Recording({
           takeNumber,
+          mode: take.mode,
           elapsedSeconds: take.elapsedSeconds,
           levelDb: take.levelDb,
           maybeOnsetSeconds: Option.some(onsetSeconds),
@@ -252,22 +272,49 @@ export const failedRecordTake = (
     ? moveTo(model, Take.AnalysisFailed({ reason }))
     : unchanged(model)
 
-// A take kept in the history is the moment to ask the browser to keep
-// the history too.
+// A take kept in the history moves its line's stars and best, when the
+// line's are known, and is the moment to ask the browser to keep the
+// history too.
 export const succeededAnalyseTake = (
   model: Model,
   takeNumber: number,
   result: TakeResult,
-): TakeUpdate =>
-  isTakeIn(model.take, ['Analysing'], takeNumber)
-    ? moveTo(
-        model,
-        Take.ShowingResult({ takeNumber, result }),
-        ...(result._tag === 'Tracked' && result.kept._tag === 'Kept'
-          ? [AskToPersistStorage()]
-          : []),
-      )
-    : unchanged(model)
+): TakeUpdate => {
+  const take = model.take
+  if (take._tag !== 'Analysing' || take.takeNumber !== takeNumber) {
+    return unchanged(model)
+  }
+  const place = model.place
+  const native = model.native
+  const kept = result._tag === 'Tracked' && result.kept._tag === 'Kept'
+  const maybeMoved =
+    result._tag === 'Tracked' &&
+    result.kept._tag === 'Kept' &&
+    place._tag === 'Ready' &&
+    native._tag === 'Ready' &&
+    isPlaceFor(place, native.clipId, native.lineId)
+      ? Option.some({
+          place,
+          ...outcomeOf(place.progress, take.mode, result.score),
+        })
+      : Option.none()
+  const placed = Option.match(maybeMoved, {
+    onNone: () => model,
+    onSome: moved =>
+      modifyFields(model, {
+        place: () => LinePlace.Ready({ ...moved.place, progress: moved.after }),
+      }),
+  })
+  const maybeOutcome: Option.Option<TakeOutcome> = Option.map(
+    maybeMoved,
+    moved => moved.outcome,
+  )
+  return moveTo(
+    placed,
+    Take.ShowingResult({ takeNumber, mode: take.mode, result, maybeOutcome }),
+    ...(kept ? [AskToPersistStorage()] : []),
+  )
+}
 
 export const failedAnalyseTake = (
   model: Model,
@@ -284,8 +331,8 @@ export const failedAnalyseTake = (
 // listening.
 const finishedTakeOf = (take: Take): Option.Option<FinishedTake> =>
   Match.value(take).pipe(
-    Match.tag('ShowingResult', ({ takeNumber, result }) =>
-      Option.some({ takeNumber, result }),
+    Match.tag('ShowingResult', ({ takeNumber, mode, result, maybeOutcome }) =>
+      Option.some({ takeNumber, mode, result, maybeOutcome }),
     ),
     Match.tag('Listening', ({ maybeTake }) => maybeTake),
     Match.orElse(() => Option.none()),
@@ -341,8 +388,7 @@ const backFromListening = (
     take: () =>
       Option.match(maybeTake, {
         onNone: () => Take.Idle(),
-        onSome: ({ takeNumber, result }) =>
-          Take.ShowingResult({ takeNumber, result }),
+        onSome: finished => Take.ShowingResult(finished),
       }),
   })
 

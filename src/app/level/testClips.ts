@@ -29,7 +29,7 @@ export const sampleClip = (count: number, hasAudio = true): LevelClip => ({
     ...noPackFields,
   })),
   maybeUndo: Option.none(),
-  isPack: false,
+  origin: 'Upload',
 })
 
 // What a line of an upload has none of.

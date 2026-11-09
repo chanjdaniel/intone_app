@@ -5,6 +5,7 @@ import { Dialog } from '@foldkit/ui'
 import { HistoryPage, LineHistoryPage } from './history/history'
 import { ClipsPage, LevelPage } from './level/level'
 import { ListenSpeed, NativeCurve } from './line/native'
+import { LinePlace } from './line/place'
 import { AppRoute } from './route'
 import { SettingsPage } from './settings/settings'
 import { Take } from './take/take'
@@ -15,6 +16,8 @@ export const Model = Schema.Struct({
   maybeDevLibraryFailure: Schema.Option(Schema.String),
   // The open line's native curve.
   native: NativeCurve,
+  // The open line's place in its level: its stars, its best, the next.
+  place: LinePlace,
   take: Take,
   // How many takes have started, so each has its own number.
   takesStarted: Schema.Finite,

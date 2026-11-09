@@ -27,6 +27,7 @@ import {
   practiceLineOfBundled,
 } from './line/lines'
 import { NativeCurve } from './line/native'
+import { LinePlace } from './line/place'
 import { practiceView } from './line/practiceView'
 import * as LineUpdate from './line/update'
 import { Message } from './message'
@@ -66,6 +67,7 @@ export const initialModel = (route: AppRoute): Model => ({
   route,
   maybeDevLibraryFailure: Option.none(),
   native: NativeCurve.NoLine(),
+  place: LinePlace.NotLoaded(),
   take: Take.Idle(),
   takesStarted: 0,
   listenSpeed: 1,
@@ -216,6 +218,23 @@ export const update = (model: Model, message: Message) =>
     FailedLoadNativeCurve: ({ clipId, lineId, failure, reason }) =>
       LineUpdate.failedLoadNativeCurve(model, clipId, lineId, failure, reason),
     ClickedRetryNativeCurve: () => LineUpdate.clickedRetryNativeCurve(model),
+    SucceededLoadLinePlace: ({
+      clipId,
+      lineId,
+      levelName,
+      progress,
+      maybeNext,
+    }) =>
+      LineUpdate.succeededLoadLinePlace(
+        model,
+        clipId,
+        lineId,
+        levelName,
+        progress,
+        maybeNext,
+      ),
+    FailedLoadLinePlace: ({ clipId, lineId, reason }) =>
+      LineUpdate.failedLoadLinePlace(model, clipId, lineId, reason),
     ClickedListen: ({ voice, extent }) =>
       TakeUpdate.clickedListen(model, voice, extent),
     ClickedStopListening: () => TakeUpdate.clickedStopListening(model),
@@ -257,6 +276,10 @@ export const update = (model: Model, message: Message) =>
       LevelUpdate.succeededLoadLevel(model, clipId, maybeClip),
     FailedLoadLevel: ({ clipId, reason }) =>
       LevelUpdate.failedLoadLevel(model, clipId, reason),
+    SucceededLoadLevelStars: ({ clipId, lines }) =>
+      LevelUpdate.succeededLoadLevelStars(model, clipId, lines),
+    FailedLoadLevelStars: ({ clipId, reason }) =>
+      LevelUpdate.failedLoadLevelStars(model, clipId, reason),
     ChangedFindLevelLines: ({ words }) =>
       LevelUpdate.changedFindLevelLines(model, words),
     CompletedReplaceLevelFind: () => ({ model }),
@@ -314,7 +337,8 @@ export const update = (model: Model, message: Message) =>
     CompletedFocusLineEditor: () => ({ model }),
     CompletedFollowLineEditorPointer: () => ({ model }),
 
-    ClickedRecord: () => TakeUpdate.clickedRecord(model),
+    ClickedRecord: () => TakeUpdate.clickedRecord(model, 'Guided'),
+    ClickedRecordBlind: () => TakeUpdate.clickedRecord(model, 'Blind'),
     EndedNativeBeforeTake: ({ takeNumber }) =>
       TakeUpdate.endedNativeBeforeTake(model, takeNumber),
     ClickedStop: () => TakeUpdate.clickedStop(model),
@@ -527,6 +551,7 @@ const lineView = (
       : Option.map(lineOf(clipId, lineId), practiceLineOfBundled),
     {
       native: model.native,
+      place: model.place,
       take: model.take,
       speed: model.listenSpeed,
       canPlayLine: TakeUpdate.canListenTo(model, 'Line'),
@@ -535,6 +560,7 @@ const lineView = (
     },
     {
       record: Message.ClickedRecord(),
+      recordBlind: Message.ClickedRecordBlind(),
       stop: Message.ClickedStop(),
       cancel: Message.ClickedCancelTake(),
       retryNative: Message.ClickedRetryNativeCurve(),

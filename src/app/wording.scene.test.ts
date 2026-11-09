@@ -14,10 +14,14 @@ import {
   DeleteState,
   type LevelClip,
   LevelPage,
+  LevelStars,
   levelClipOf,
+  levelClipOfBundled,
 } from './level/level'
 import { sampleClip, samplePack } from './level/testClips'
+import { bundledClips } from './line/lines'
 import { NativeCurve } from './line/native'
+import { LinePlace } from './line/place'
 import {
   AppRoute,
   Message,
@@ -27,7 +31,14 @@ import {
   view,
 } from './main'
 import { DrawCurvePair } from './take/curvePair'
-import { Take, TakeResult, TakeScore, levelMeterFloorDb } from './take/take'
+import {
+  type FinishedTake,
+  Take,
+  TakeResult,
+  TakeScore,
+  isBlindUnderWay,
+  levelMeterFloorDb,
+} from './take/take'
 import {
   sampleCurve,
   sampleFeatures,
@@ -44,24 +55,27 @@ import { PackJob, PackStep, UploadJob, UploadStep } from './upload/upload'
 
 const line = AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })
 
-const finishedWith = (score: TakeScore) => ({
+const finishedWith = (score: TakeScore): FinishedTake => ({
   takeNumber: 1,
+  mode: 'Guided',
+  maybeOutcome: Option.none(),
   result: TakeResult.Tracked({ curve: sampleCurve, score, kept: sampleKept }),
 })
 
 const everyTake: ReadonlyArray<Take> = [
   Take.Idle(),
-  Take.PlayingNative({ takeNumber: 1, tracker: 'Loading' }),
-  Take.Preparing({ takeNumber: 1 }),
-  Take.AwaitingMic({ takeNumber: 1 }),
-  Take.MicPromptIgnored({ takeNumber: 1 }),
+  Take.PlayingNative({ mode: 'Guided', takeNumber: 1, tracker: 'Loading' }),
+  Take.Preparing({ mode: 'Guided', takeNumber: 1 }),
+  Take.AwaitingMic({ mode: 'Guided', takeNumber: 1 }),
+  Take.MicPromptIgnored({ mode: 'Guided', takeNumber: 1 }),
   Take.Recording({
+    mode: 'Guided',
     takeNumber: 1,
     elapsedSeconds: 1,
     levelDb: levelMeterFloorDb,
     maybeOnsetSeconds: Option.some(0.2),
   }),
-  Take.Analysing({ takeNumber: 1 }),
+  Take.Analysing({ mode: 'Guided', takeNumber: 1 }),
   Take.ShowingResult(finishedWith(sampleScore)),
   Take.ShowingResult(finishedWith({ ...sampleScore, provisional: false })),
   ...(['TooQuiet', 'TooLittleVoiced', 'LengthMismatch'] as const).map(reason =>
@@ -69,8 +83,18 @@ const everyTake: ReadonlyArray<Take> = [
       finishedWith(TakeScore.CouldNotCompare({ version: 1, reason })),
     ),
   ),
-  Take.ShowingResult({ takeNumber: 1, result: TakeResult.TooQuiet() }),
-  Take.ShowingResult({ takeNumber: 1, result: TakeResult.TooNoisy() }),
+  Take.ShowingResult({
+    mode: 'Guided' as const,
+    maybeOutcome: Option.none(),
+    takeNumber: 1,
+    result: TakeResult.TooQuiet(),
+  }),
+  Take.ShowingResult({
+    mode: 'Guided' as const,
+    maybeOutcome: Option.none(),
+    takeNumber: 1,
+    result: TakeResult.TooNoisy(),
+  }),
   Take.Listening({
     voice: 'Take',
     extent: 'WorstStretch',
@@ -81,7 +105,55 @@ const everyTake: ReadonlyArray<Take> = [
   Take.NoMicDevice(),
   Take.MicFailed({ reason: 'busy' }),
   Take.AnalysisFailed({ reason: 'crashed' }),
+  // A blind take, and what takes did for the line's stars.
+  Take.PlayingNative({ mode: 'Blind', takeNumber: 1, tracker: 'Ready' }),
+  Take.Recording({
+    mode: 'Blind',
+    takeNumber: 1,
+    elapsedSeconds: 1,
+    levelDb: levelMeterFloorDb,
+    maybeOnsetSeconds: Option.some(0.2),
+  }),
+  Take.Analysing({ mode: 'Blind', takeNumber: 1 }),
+  ...(
+    [
+      [0, 1, Option.some(0.6), true],
+      [1, 2, Option.some(0.8), true],
+      [2, 3, Option.some(0.95), false],
+      [3, 3, Option.none(), false],
+    ] as const
+  ).map(([starsBefore, starsAfter, maybePreviousBest, isPersonalBest]) =>
+    Take.ShowingResult({
+      ...finishedWith(sampleScore),
+      mode: starsAfter === 3 ? 'Blind' : 'Guided',
+      maybeOutcome: Option.some({
+        starsBefore,
+        starsAfter,
+        maybePreviousBest,
+        isPersonalBest,
+      }),
+    }),
+  ),
+  Take.ShowingResult({
+    ...finishedWith(
+      TakeScore.CouldNotCompare({ version: 1, reason: 'TooQuiet' }),
+    ),
+    mode: 'Blind',
+    maybeOutcome: Option.some({
+      starsBefore: 2,
+      starsAfter: 2,
+      maybePreviousBest: Option.some(0.9),
+      isPersonalBest: false,
+    }),
+  }),
 ]
+
+// What no screen offers (report section 5, "Left out"): leaderboards,
+// coins, shops, lives, or a streak to lose.
+const gamified =
+  /leaderboard|\bcoins?\b|\bshops?\b|\blives\b|\bhearts?\b|streak/i
+
+const bundledLevel = levelClipOfBundled(bundledClips[0]!)
 
 const ready = NativeCurve.Ready({
   clipId: 'ame-ga-suki',
@@ -158,6 +230,7 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
         AppRoute.Level({ clipId: 'pack-example', maybeFind: Option.none() }),
       ),
       level: LevelPage.Ready({
+        stars: LevelStars.Ready({ lines: [] }),
         clip: levelClipOf(samplePack),
         shownRows: 50,
         deleting: DeleteState.Idle(),
@@ -173,6 +246,7 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
         AppRoute.Level({ clipId: 'c1', maybeFind: Option.none() }),
       ),
       level: LevelPage.Ready({
+        stars: LevelStars.Ready({ lines: [] }),
         clip: sampleClip(20, false),
         shownRows: 50,
         deleting: DeleteState.Idle(),
@@ -203,12 +277,50 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
     },
     false,
   ],
+  [
+    'the bundled level',
+    {
+      ...initialModel(
+        AppRoute.Level({ clipId: 'ame-ga-suki', maybeFind: Option.none() }),
+      ),
+      level: LevelPage.Ready({
+        stars: LevelStars.Ready({
+          lines: [
+            {
+              lineId: '1',
+              progress: { stars: 2, maybeBestMatch: Option.some(0.93) },
+            },
+          ],
+        }),
+        clip: bundledLevel,
+        shownRows: 50,
+        deleting: DeleteState.Idle(),
+        editor: initialEditor(bundledLevel),
+      }),
+    },
+    false,
+  ],
   ...everyTake.map(
-    take =>
+    (take, k) =>
       [
-        `line, ${take._tag}`,
-        { ...initialModel(line), native: ready, take, takesStarted: 1 },
-        true,
+        `line, ${k} ${take._tag}`,
+        {
+          ...initialModel(line),
+          native: ready,
+          place: LinePlace.Ready({
+            clipId: 'ame-ga-suki',
+            lineId: '1',
+            levelName: '雨が好き',
+            progress: { stars: 2, maybeBestMatch: Option.some(0.93) },
+            maybeNext:
+              k % 2 === 0
+                ? Option.none()
+                : Option.some({ lineId: '2', title: '2', titleIsText: false }),
+          }),
+          take,
+          takesStarted: 1,
+        },
+        !isBlindUnderWay(take),
       ] as const,
   ),
 ]
@@ -225,6 +337,7 @@ describe('the wording', () => {
         ...(drawsCurves ? [drawn] : []),
         expect(text(/accura/i)).toBeAbsent(),
         expect(text(/\b(in)?correct/i)).toBeAbsent(),
+        expect(text(gamified)).toBeAbsent(),
       )
     },
   )
@@ -293,6 +406,7 @@ describe('the wording', () => {
             AppRoute.Level({ clipId: 'c1', maybeFind: Option.none() }),
           ),
           level: LevelPage.Ready({
+            stars: LevelStars.Ready({ lines: [] }),
             clip: editing,
             shownRows: 50,
             deleting: DeleteState.Idle(),
@@ -305,6 +419,7 @@ describe('the wording', () => {
         ),
         expect(text(/accura/i)).toBeAbsent(),
         expect(text(/\b(in)?correct/i)).toBeAbsent(),
+        expect(text(gamified)).toBeAbsent(),
       )
     },
   )

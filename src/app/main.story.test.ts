@@ -5,8 +5,10 @@ import { describe, expect, test } from 'vitest'
 
 import { LoadClips } from './level/commands'
 import { ClipsPage } from './level/level'
-import { LoadNativeCurve } from './line/commands'
+import { noProgress } from './level/progress'
+import { LoadLinePlace, LoadNativeCurve } from './line/commands'
 import { NativeCurve } from './line/native'
+import { LinePlace } from './line/place'
 import {
   AppRoute,
   Message,
@@ -107,18 +109,32 @@ describe('update', () => {
 
 describe('opening a line', () => {
   const line = AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })
+  const placeLoaded = Message.SucceededLoadLinePlace({
+    clipId: 'ame-ga-suki',
+    lineId: '1',
+    levelName: '雨が好き',
+    progress: noProgress,
+    maybeNext: Option.none(),
+  })
 
-  test('starting on a line asks for its native curve', () => {
+  test('starting on a line asks for its native curve and its place in its level', () => {
     const start = init(url('/line/ame-ga-suki/1'))
     expect(start.model.route).toStrictEqual(line)
     expect(start.model.native).toStrictEqual(
       NativeCurve.Loading({ clipId: 'ame-ga-suki', lineId: '1' }),
+    )
+    expect(start.model.place).toStrictEqual(
+      LinePlace.Loading({ clipId: 'ame-ga-suki', lineId: '1' }),
     )
     expect(
       (start.commands ?? []).map(({ name, args }) => ({ name, args })),
     ).toStrictEqual([
       {
         name: LoadNativeCurve.name,
+        args: { clipId: 'ame-ga-suki', lineId: '1' },
+      },
+      {
+        name: LoadLinePlace.name,
         args: { clipId: 'ame-ga-suki', lineId: '1' },
       },
     ])
@@ -131,6 +147,7 @@ describe('opening a line', () => {
       message(Message.ChangedUrl({ url: url('/line/ame-ga-suki/9') })),
       Command.expectExact(
         LoadNativeCurve({ clipId: 'ame-ga-suki', lineId: '9' }),
+        LoadLinePlace({ clipId: 'ame-ga-suki', lineId: '9' }),
       ),
       Command.resolve(
         LoadNativeCurve,
@@ -138,6 +155,14 @@ describe('opening a line', () => {
           clipId: 'ame-ga-suki',
           lineId: '9',
           failure: 'NoSuchLine',
+          reason: 'There is no such line on this device.',
+        }),
+      ),
+      Command.resolve(
+        LoadLinePlace,
+        Message.FailedLoadLinePlace({
+          clipId: 'ame-ga-suki',
+          lineId: '9',
           reason: 'There is no such line on this device.',
         }),
       ),
@@ -168,6 +193,7 @@ describe('opening a line', () => {
           reason: 'offline',
         }),
       ),
+      Command.resolve(LoadLinePlace, placeLoaded),
       message(Message.ClickedRetryNativeCurve()),
       Command.resolve(
         LoadNativeCurve,
@@ -194,7 +220,14 @@ describe('opening a line', () => {
       Command.resolve(ForgetTakeAudio, Message.CompletedForgetTakeAudio()),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
       message(Message.ChangedUrl({ url: url('/line/ame-ga-suki/1') })),
-      model(current => expect(current.native._tag).toBe('Ready')),
+      Command.expectExact(
+        LoadLinePlace({ clipId: 'ame-ga-suki', lineId: '1' }),
+      ),
+      model(current => {
+        expect(current.native._tag).toBe('Ready')
+        expect(current.place._tag).toBe('Ready')
+      }),
+      Command.resolve(LoadLinePlace, placeLoaded),
     )
   })
 
@@ -204,6 +237,8 @@ describe('opening a line', () => {
       given({
         ...on(line),
         take: Take.ShowingResult({
+          mode: 'Guided',
+          maybeOutcome: Option.none(),
           takeNumber: 1,
           result: TakeResult.Tracked({
             curve: sampleCurve,

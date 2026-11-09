@@ -6,9 +6,11 @@ import { type Edge, onSampleGrid } from '../../engine/cut/edit'
 import { HistoryPage, LineHistoryPage } from '../history/history'
 import { preciseClockText } from '../line/lines'
 import { NativeCurve } from '../line/native'
+import { LinePlace } from '../line/place'
 import type { Message } from '../message'
 import type { Model } from '../model'
 import type { AppResourceServices } from '../resources'
+import { LoadLevelStars } from './commands'
 import {
   ClipWaveform,
   EditSaving,
@@ -506,9 +508,15 @@ export const succeededEditClipLines = (
         native._tag !== 'NoLine' && native.clipId === clipId
           ? NativeCurve.NoLine()
           : native,
+      place: place =>
+        place._tag !== 'NotLoaded' && place.clipId === clipId
+          ? LinePlace.NotLoaded()
+          : place,
       lineHistory: () => LineHistoryPage.NotLoaded(),
       history: () => HistoryPage.NotLoaded(),
     }),
+    // A changed line starts its stars again, as its curve is new.
+    commands: [LoadLevelStars({ clipId })],
   }
 }
 

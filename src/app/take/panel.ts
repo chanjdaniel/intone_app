@@ -1,24 +1,30 @@
 import { Option } from 'effect'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
+import { outcomeSummary } from '../level/outcomeView'
+import type { TakeOutcome } from '../level/progress'
 import { takeFocusAttribute } from './commands'
 import { levelMeter } from './levelMeter'
 import { couldNotCompareText, scoreSummary, worstStretch } from './scoreCard'
 import {
   type Extent,
+  type FinishedTake,
   Take,
-  type TakeResult,
+  type TakeMode,
   type Voice,
   longestTakeSeconds,
 } from './take'
 
 // The mic state panel: one clear screen for every state of a take, from
-// the record button through playing the line, asking for the microphone,
+// the record buttons through playing the line, asking for the microphone,
 // recording and analysing, to the result or the reason there is none.
-// Each state offers at most one thing to do next, and that control (or
-// the heading, when there is none) carries `takeFocusAttribute`, so focus
-// follows the take. Listening again shows the screen it was started from.
-// The curves themselves are drawn above the panel (./curvePair.ts).
+// Each state offers one thing to do next, and before or after a take a
+// blind take beside it; that first control (or the heading, when there
+// is none) carries `takeFocusAttribute`, so focus follows the take.
+// Listening again shows the screen it was started from. The curves
+// themselves are drawn above the panel (./curvePair.ts); a blind take
+// hides them, and the level meter, until it ends, and its result shows
+// everything, with what it did for the line's stars.
 //
 // What a state says goes in one live region, which stays in place from
 // state to state, so a screen reader hears each change once: the take's
@@ -26,6 +32,7 @@ import {
 
 export type TakePanelEvents<ViewMessage> = Readonly<{
   record: ViewMessage
+  recordBlind: ViewMessage
   stop: ViewMessage
   cancel: ViewMessage
   // A scored take's worst stretch, in either voice.
@@ -58,12 +65,25 @@ type Screen<ViewMessage> = Readonly<{
   summary?: Html
   // Shown after the live region, out of it.
   body?: Html
-  action?: Readonly<{
-    label: string
-    message: ViewMessage
-    kind: 'primary' | 'secondary'
-  }>
+  action?: Action<ViewMessage>
+  // Beside the action, never focused by the take.
+  secondary?: Action<ViewMessage>
 }>
+
+type Action<ViewMessage> = Readonly<{
+  label: string
+  message: ViewMessage
+  kind: 'primary' | 'secondary'
+}>
+
+const blindLine =
+  'This take is blind: the curves and the level stay hidden until you stop, then you see everything.'
+
+// What a state of a take under way says, with a blind take's note.
+const linesFor = (
+  mode: TakeMode,
+  lines: ReadonlyArray<string>,
+): ReadonlyArray<string> => (mode === 'Blind' ? [...lines, blindLine] : lines)
 
 const toneMark: Readonly<Record<Tone, string>> = {
   neutral: 'bg-line',
@@ -79,54 +99,74 @@ const screenOf = <ViewMessage>(
 ): Screen<ViewMessage> =>
   Take.match<Screen<ViewMessage>>(take, {
     Idle: () => idleScreen(events),
-    PlayingNative: () => ({
+    PlayingNative: ({ mode }) => ({
       tone: 'busy',
       heading: 'Listen to the line',
-      lines: ['The microphone opens when the line ends. Then say it back.'],
+      lines: linesFor(mode, [
+        'The microphone opens when the line ends. Then say it back.',
+      ]),
       action: { label: 'Cancel', message: events.cancel, kind: 'secondary' },
     }),
-    Preparing: () => ({
+    Preparing: ({ mode }) => ({
       tone: 'busy',
       heading: 'Getting ready',
-      lines: ['Loading the pitch tracker. This takes a moment the first time.'],
+      lines: linesFor(mode, [
+        'Loading the pitch tracker. This takes a moment the first time.',
+      ]),
       action: { label: 'Cancel', message: events.cancel, kind: 'secondary' },
     }),
-    AwaitingMic: () => ({
+    AwaitingMic: ({ mode }) => ({
       tone: 'busy',
       heading: 'Allow the microphone',
-      lines: [
+      lines: linesFor(mode, [
         'Your browser is asking to use the microphone. Choose Allow to start the take.',
-      ],
+      ]),
       action: { label: 'Cancel', message: events.cancel, kind: 'secondary' },
     }),
-    MicPromptIgnored: () => ({
+    MicPromptIgnored: ({ mode }) => ({
       tone: 'problem',
       heading: 'Still waiting for the microphone',
-      lines: [
+      lines: linesFor(mode, [
         "The browser's prompt is usually next to the address bar. Choose Allow there.",
         'If you closed it, open the site settings from the icon left of the address and allow the microphone.',
-      ],
+      ]),
       action: { label: 'Cancel', message: events.cancel, kind: 'secondary' },
     }),
-    Recording: ({ elapsedSeconds, levelDb }) => ({
-      tone: 'live',
-      heading: 'Recording',
-      lines: ['Say the line, then press stop.'],
-      body: recordingBody(elapsedSeconds, levelDb, h),
-      action: { label: 'Stop', message: events.stop, kind: 'primary' },
-    }),
-    Analysing: () => ({
+    Recording: ({ mode, elapsedSeconds, levelDb }) =>
+      mode === 'Blind'
+        ? {
+            tone: 'live',
+            heading: 'Recording blind',
+            lines: [
+              'Say the line from memory, then press stop. The curves and the level are hidden until then.',
+            ],
+            body: recordingBody(elapsedSeconds, Option.none(), h),
+            action: { label: 'Stop', message: events.stop, kind: 'primary' },
+          }
+        : {
+            tone: 'live',
+            heading: 'Recording',
+            lines: ['Say the line, then press stop.'],
+            body: recordingBody(elapsedSeconds, Option.some(levelDb), h),
+            action: { label: 'Stop', message: events.stop, kind: 'primary' },
+          },
+    Analysing: ({ mode }) => ({
       tone: 'busy',
       heading: 'Finding your pitch',
-      lines: ['The microphone is off. Tracking your take now.'],
+      lines:
+        mode === 'Blind'
+          ? [
+              'The microphone is off. Tracking your take now; then you see everything.',
+            ]
+          : ['The microphone is off. Tracking your take now.'],
     }),
-    ShowingResult: ({ result }) => resultScreen(result, 'Nothing', events, h),
+    ShowingResult: finished => resultScreen(finished, 'Nothing', events, h),
     Listening: ({ voice, extent, maybeTake }) =>
       Option.match(maybeTake, {
         onNone: () => idleScreen(events),
-        onSome: ({ result }) =>
+        onSome: finished =>
           resultScreen(
-            result,
+            finished,
             extent === 'WorstStretch' ? voice : 'Nothing',
             events,
             h,
@@ -171,14 +211,25 @@ const idleScreen = <ViewMessage>(
   heading: 'Copy the line',
   lines: [
     'Press record: the line plays once, then the microphone opens for you to say it back. Press stop when you are done.',
+    'Record blind to say it with the curves hidden until you stop.',
   ],
   action: { label: 'Record', message: events.record, kind: 'primary' },
+  secondary: blindAction(events),
 })
 
-// The clock and the level meter, while the microphone is on.
+const blindAction = <ViewMessage>(
+  events: TakePanelEvents<ViewMessage>,
+): Action<ViewMessage> => ({
+  label: 'Record blind',
+  message: events.recordBlind,
+  kind: 'secondary',
+})
+
+// The clock and the level meter, while the microphone is on; the clock
+// alone during a blind take.
 const recordingBody = <ViewMessage>(
   elapsedSeconds: number,
-  levelDb: number,
+  maybeLevelDb: Option.Option<number>,
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   h.div(
@@ -197,34 +248,66 @@ const recordingBody = <ViewMessage>(
           `${formatClock(elapsedSeconds)} of ${formatClock(longestTakeSeconds)}`,
         ],
       ),
-      h.div([h.Class('w-full sm:max-w-xs')], [levelMeter(levelDb, h)]),
+      ...Option.match(maybeLevelDb, {
+        onNone: () => [],
+        onSome: levelDb => [
+          h.div([h.Class('w-full sm:max-w-xs')], [levelMeter(levelDb, h)]),
+        ],
+      }),
     ],
   )
 
-// A finished take: its score, or why it has none. `stretchPlaying` is the
-// voice whose worst stretch plays now, if either.
+// What a kept take did for its line, said with its score.
+const outcomeOf = <ViewMessage>(
+  maybeOutcome: Option.Option<TakeOutcome>,
+  compared: boolean,
+  h: HtmlBuilder<ViewMessage>,
+): ReadonlyArray<Html> =>
+  Option.match(maybeOutcome, {
+    onNone: () => [],
+    onSome: outcome => [outcomeSummary(outcome, compared, h)],
+  })
+
+// A finished take: its score, or why it has none, and what it did for
+// its line's stars. `stretchPlaying` is the voice whose worst stretch
+// plays now, if either.
 const resultScreen = <ViewMessage>(
-  result: TakeResult,
+  finished: FinishedTake,
   stretchPlaying: Voice | 'Nothing',
   events: TakePanelEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Screen<ViewMessage> => {
+  const { result, mode, maybeOutcome } = finished
   const again: Screen<ViewMessage>['action'] = {
     label: 'Record again',
     message: events.record,
     kind: 'primary',
   }
+  const secondary = blindAction(events)
   if (result._tag === 'Tracked') {
     const score = result.score
     if (score._tag === 'CouldNotCompare') {
       const { heading, lines } = couldNotCompareText[score.reason]
-      return { tone: 'problem', heading, lines, action: again }
+      return {
+        tone: 'problem',
+        heading,
+        lines,
+        summary: h.div(
+          [h.Class('flex flex-col gap-4 empty:hidden')],
+          outcomeOf(maybeOutcome, false, h),
+        ),
+        action: again,
+        secondary,
+      }
     }
     return {
       tone: 'neutral',
-      heading: 'Your copy',
+      heading: mode === 'Blind' ? 'Your copy, blind' : 'Your copy',
       lines: [],
-      summary: scoreSummary(score, h),
+      summary: h.div(
+        [h.Class('flex flex-col gap-4')],
+        [scoreSummary(score, h), ...outcomeOf(maybeOutcome, true, h)],
+      ),
       body: worstStretch(
         score,
         {
@@ -235,6 +318,7 @@ const resultScreen = <ViewMessage>(
         h,
       ),
       action: again,
+      secondary,
     }
   }
   return result._tag === 'TooQuiet'
@@ -245,6 +329,7 @@ const resultScreen = <ViewMessage>(
           'The microphone hardly heard you. Move closer to it or speak up, then record again.',
         ],
         action: again,
+        secondary,
       }
     : {
         tone: 'problem',
@@ -253,6 +338,7 @@ const resultScreen = <ViewMessage>(
           'There was more sound around you than voice. Try somewhere quieter, or closer to the microphone.',
         ],
         action: again,
+        secondary,
       }
 }
 
@@ -263,6 +349,7 @@ export const takePanel = <ViewMessage>(
 ): Html => {
   const screen = screenOf(take, events, h)
   const action = screen.action
+  const secondary = screen.secondary
   return h.section(
     [
       h.AriaLabelledBy(headingId),
@@ -321,6 +408,18 @@ export const takePanel = <ViewMessage>(
                   ],
                   [action.label],
                 ),
+                ...(secondary === undefined
+                  ? []
+                  : [
+                      h.button(
+                        [
+                          h.Type('button'),
+                          h.OnClick(secondary.message),
+                          h.Class(secondaryButton),
+                        ],
+                        [secondary.label],
+                      ),
+                    ]),
               ],
             ),
           ]),

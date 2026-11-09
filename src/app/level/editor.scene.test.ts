@@ -22,6 +22,7 @@ import {
   update,
   view,
 } from '../main'
+import { LoadLevelStars } from './commands'
 import { ClipWaveform, EditSaving, initialEditor } from './editor'
 import {
   EditClipLines,
@@ -30,7 +31,13 @@ import {
   WaitForKeysToRest,
 } from './editorCommands'
 import { FollowLineEditorPointer } from './editorPointer'
-import { DeleteState, type LevelClip, LevelPage, levelClipOf } from './level'
+import {
+  DeleteState,
+  type LevelClip,
+  LevelPage,
+  LevelStars,
+  levelClipOf,
+} from './level'
 
 // The line editor through its view: the selected line's edges and the
 // playhead are sliders that say their time, step 10 ms and 100 ms by key,
@@ -82,6 +89,7 @@ const onLevel = (
 ): Model => ({
   ...initialModel(AppRoute.Level({ clipId: 'c1', maybeFind: Option.none() })),
   level: LevelPage.Ready({
+    stars: LevelStars.Ready({ lines: [] }),
     clip,
     shownRows: 50,
     deleting: DeleteState.Idle(),
@@ -234,6 +242,10 @@ describe('the line editor', () => {
           clipId: 'c1',
           clip: levelClipOf(entry),
         }),
+      ),
+      Command.resolve(
+        LoadLevelStars,
+        Message.SucceededLoadLevelStars({ clipId: 'c1', lines: [] }),
       ),
       expect(text('The last change is undone.')).toExist(),
       expect(role('button', { name: /^Undo/ })).not.toExist(),

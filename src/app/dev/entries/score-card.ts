@@ -42,6 +42,7 @@ export type Model = typeof Model.Type
 export const Message = defineMessageUnion({
   SelectedSample: { sample: SampleName },
   ClickedRecord: {},
+  ClickedRecordBlind: {},
   ClickedListen: { voice: Voice, extent: Extent },
   ClickedStopListening: {},
   CompletedDrawCurvePair: {},
@@ -72,6 +73,11 @@ export const update = (model: Model, message: Message) =>
     ClickedRecord: () => ({
       model: modifyFields(model, {
         maybePressed: () => Option.some('record again'),
+      }),
+    }),
+    ClickedRecordBlind: () => ({
+      model: modifyFields(model, {
+        maybePressed: () => Option.some('record blind'),
       }),
     }),
     ClickedListen: ({ voice, extent }) => ({
@@ -183,6 +189,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
           take,
           {
             record: Message.ClickedRecord(),
+            recordBlind: Message.ClickedRecordBlind(),
             stop: Message.ClickedStopListening(),
             cancel: Message.ClickedStopListening(),
             listen: (voice, extent) => Message.ClickedListen({ voice, extent }),

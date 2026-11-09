@@ -15,9 +15,11 @@ import {
   TrendPoint,
 } from './history/history'
 import { EdgeName } from './level/editor'
-import { ClipSummary, LevelClip } from './level/level'
+import { ClipSummary, LevelClip, LineStars } from './level/level'
+import { LineProgress } from './level/progress'
 import { PracticeLine } from './line/lines'
 import { ListenSpeed, NativeFailure } from './line/native'
+import { NextLine } from './line/place'
 import { SettingsFacts, StorageFacts } from './settings/settings'
 import { Extent, TakeCurve, TakeFeatures, TakeResult, Voice } from './take/take'
 import { PackStep, UploadStep } from './upload/upload'
@@ -47,6 +49,18 @@ export const Message = defineMessageUnion({
     reason: Schema.String,
   },
   ClickedRetryNativeCurve: {},
+  SucceededLoadLinePlace: {
+    clipId: Schema.String,
+    lineId: Schema.String,
+    levelName: Schema.String,
+    progress: LineProgress,
+    maybeNext: Schema.Option(NextLine),
+  },
+  FailedLoadLinePlace: {
+    clipId: Schema.String,
+    lineId: Schema.String,
+    reason: Schema.String,
+  },
   ClickedListen: { voice: Voice, extent: Extent },
   ClickedStopListening: {},
   EndedListening: { voice: Voice, extent: Extent },
@@ -77,6 +91,11 @@ export const Message = defineMessageUnion({
     maybeClip: Schema.Option(LevelClip),
   },
   FailedLoadLevel: { clipId: Schema.String, reason: Schema.String },
+  SucceededLoadLevelStars: {
+    clipId: Schema.String,
+    lines: Schema.Array(LineStars),
+  },
+  FailedLoadLevelStars: { clipId: Schema.String, reason: Schema.String },
   ChangedFindLevelLines: { words: Schema.String },
   CompletedReplaceLevelFind: {},
   ClickedShowMoreLevelLines: {},
@@ -128,6 +147,7 @@ export const Message = defineMessageUnion({
 
   // The take.
   ClickedRecord: {},
+  ClickedRecordBlind: {},
   EndedNativeBeforeTake: { takeNumber },
   ClickedStop: {},
   ClickedCancelTake: {},

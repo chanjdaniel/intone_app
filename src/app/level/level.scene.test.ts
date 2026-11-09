@@ -27,7 +27,13 @@ import {
 import { DeleteClip, FocusLevelRow } from './commands'
 import { initialEditor } from './editor'
 import { FollowLineEditorPointer } from './editorPointer'
-import { ClipsPage, DeleteState, LevelPage, levelRowsPerPage } from './level'
+import {
+  ClipsPage,
+  DeleteState,
+  LevelPage,
+  LevelStars,
+  levelRowsPerPage,
+} from './level'
 import { sampleClip } from './testClips'
 
 const onLevel = (
@@ -36,6 +42,7 @@ const onLevel = (
 ): Model => ({
   ...initialModel(AppRoute.Level({ clipId: clip.id, maybeFind })),
   level: LevelPage.Ready({
+    stars: LevelStars.Ready({ lines: [] }),
     clip,
     shownRows: levelRowsPerPage,
     deleting: DeleteState.Idle(),

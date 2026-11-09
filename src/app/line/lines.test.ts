@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
 
-import { clockText } from './lines'
+import ameGaSukiInline from '../../../fixtures/voices/ame-ga-suki/meimei-himari/right.wav?inline'
+import { decodeWav } from '../../engine/audio/wav'
+import { bundledClips, bundledLines, clockText } from './lines'
 
 describe('clockText', () => {
   test('gives minutes and seconds, and tenths when asked, never rounding up', () => {
@@ -13,5 +15,21 @@ describe('clockText', () => {
     expect(clockText(14.1, true)).toBe('0:14.1')
     expect(clockText(0.3, true)).toBe('0:00.3')
     expect(clockText(6.7, true)).toBe('0:06.7')
+  })
+})
+
+describe('bundledClips', () => {
+  test('the bundled line lasts as long as its file, which its level shows', () => {
+    const [clip] = bundledClips
+    const [line] = clip?.lines ?? []
+    const bytes = Uint8Array.from(
+      atob(ameGaSukiInline.slice(ameGaSukiInline.indexOf(',') + 1)),
+      character => character.charCodeAt(0),
+    )
+    const wav = decodeWav(bytes)
+    expect(line?.seconds).toBe((wav.channels[0]?.length ?? 0) / wav.sampleRate)
+    expect(bundledClips.flatMap(found => found.lines)).toStrictEqual(
+      bundledLines,
+    )
   })
 })

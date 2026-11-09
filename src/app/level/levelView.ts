@@ -14,6 +14,7 @@ import {
   type LevelClip,
   type LevelLine,
   LevelPage,
+  LevelStars,
   levelFindFromRows,
   levelLineTitle,
   levelLinesFound,
@@ -21,15 +22,18 @@ import {
 } from './level'
 import { type LineEditorEvents, lineEditorView } from './lineEditorView'
 import { marksOf } from './lineMarks'
+import type { StarCount } from './progress'
+import { starRow, starRules } from './starRow'
 
-// /level/:clipId: a clip's lines in order, in the app's one frame for a
-// long list (spec, "Frontend patterns applied"): a find field once there
-// are more than 12, a count line, the first 50 rows and "Show N more",
-// the find words in the address. Each line with a native curve opens its
-// practice screen, and each can be chosen in the line editor above the
-// list (./lineEditorView.ts) to fix where it starts and ends; a line with
-// a mark says why. The clip can be deleted with everything of it, behind
-// a confirming dialog.
+// /level/:clipId: a clip's lines in order, each with its stars, in the
+// app's one frame for a long list (spec, "Frontend patterns applied"): a
+// find field once there are more than 12, a count line, the first 50
+// rows and "Show N more", the find words in the address. Each line with
+// a native curve opens its practice screen; each line of an upload can
+// be chosen in the line editor above the list (./lineEditorView.ts) to
+// fix where it starts and ends; a line with a mark says why. The
+// learner's clip can be deleted with everything of it, behind a
+// confirming dialog; a clip the app brings cannot.
 
 export type LevelEvents<ViewMessage> = Readonly<{
   changedWords: (words: string) => ViewMessage
@@ -51,7 +55,18 @@ const dangerButton = `${buttonBase} bg-bad text-on-accent disabled:opacity-60`
 export const levelFindInputId = 'find-level-lines'
 
 // What a level is called where it is deleted: a clip, or a local pack.
-const nounOf = (clip: LevelClip): string => (clip.isPack ? 'pack' : 'clip')
+const nounOf = (clip: LevelClip): string =>
+  clip.origin === 'Pack' ? 'pack' : 'clip'
+
+// A line's stars, once the level's are read: none for a line with no
+// take yet.
+export const starsOfLine = (
+  stars: LevelStars,
+  lineId: string,
+): StarCount | null =>
+  stars._tag === 'Ready'
+    ? (stars.lines.find(line => line.lineId === lineId)?.progress.stars ?? 0)
+    : null
 
 // How long a clip is: in seconds under a minute, else as on a clock.
 export const lengthText = (seconds: number): string =>
@@ -128,15 +143,19 @@ const lineRowBody = <ViewMessage>(
   ),
 ]
 
-const lineRow = <ViewMessage>(
+// A line's row: its name, where it is, its stars and any mark, the whole
+// row a link to its practice screen when it can be copied.
+export const levelRow = <ViewMessage>(
   clipId: string,
   hasAudio: boolean,
   line: LevelLine,
+  stars: StarCount | null,
   index: number,
   editLine: ((lineId: string) => ViewMessage) | null,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
   const maybeWhy = unplayable(line, hasAudio)
+  const starsShown = stars === null ? [] : [starRow(stars, h)]
   const rowClass =
     'flex min-h-11 min-w-0 flex-1 items-center justify-between gap-4 rounded-lg border border-line bg-raised px-4 py-3 text-ink'
   const row = h.div(
@@ -149,7 +168,7 @@ const lineRow = <ViewMessage>(
               h.Tabindex(-1),
               h.Class(`${rowClass} focus:outline-none`),
             ],
-            lineRowBody(line, maybeWhy, h),
+            [...lineRowBody(line, maybeWhy, h), ...starsShown],
           )
         : h.a(
             [
@@ -160,11 +179,17 @@ const lineRow = <ViewMessage>(
             [
               ...lineRowBody(line, maybeWhy, h),
               h.span(
+                [h.Class('flex shrink-0 flex-col items-end gap-1')],
                 [
-                  h.AriaHidden(true),
-                  h.Class('shrink-0 text-base font-semibold text-accent'),
+                  ...starsShown,
+                  h.span(
+                    [
+                      h.AriaHidden(true),
+                      h.Class('text-base font-semibold text-accent'),
+                    ],
+                    ['Copy →'],
+                  ),
                 ],
-                ['Copy →'],
               ),
             ],
           ),
@@ -208,6 +233,7 @@ const countLine = (found: number, all: number, words: string): string =>
 
 export const levelLineList = <ViewMessage>(
   clip: LevelClip,
+  stars: LevelStars,
   words: string,
   shownRows: number,
   events: Pick<LevelEvents<ViewMessage>, 'changedWords' | 'showMore'> &
@@ -252,12 +278,15 @@ export const levelLineList = <ViewMessage>(
       h.ul(
         [h.Class('flex flex-col gap-2')],
         shown.map((line, index) =>
-          lineRow(
+          levelRow(
             clip.id,
             clip.hasAudio,
             line,
+            starsOfLine(stars, line.id),
             index,
-            clip.hasAudio && !clip.isPack ? (events.editLine ?? null) : null,
+            clip.hasAudio && clip.origin === 'Upload'
+              ? (events.editLine ?? null)
+              : null,
             h,
           ),
         ),
@@ -327,7 +356,7 @@ const deleteDialogView = <ViewMessage>(
                     h.p(
                       [...description, h.Class('text-base text-ink')],
                       [
-                        clip.isPack
+                        clip.origin === 'Pack'
                           ? `The pack’s ${countText(clip.lines.length, 'line')}, their audio, their curves and every take of them will be deleted from this device. Your files in local/ stay where they are. This cannot be undone.`
                           : `The clip, its ${countText(clip.lines.length, 'line')}, their curves and every take of them will be deleted from this device. This cannot be undone.`,
                       ],
@@ -427,31 +456,28 @@ const readyBody = <ViewMessage>(
       [h.Class('flex flex-col gap-2')],
       [
         h.h1(
-          [h.Class('text-3xl font-bold break-words sm:text-5xl')],
+          [
+            ...(clip.origin === 'Bundled' ? [h.Lang('ja')] : []),
+            h.Class('text-3xl font-bold break-words sm:text-5xl'),
+          ],
           [clip.name],
         ),
-        h.p(
-          [h.Class('text-base text-muted')],
-          [
-            clip.isPack
-              ? `${countText(clip.lines.length, 'line')} from your local pack, kept on this device. To change them, change its pack.json and import it again.`
-              : `${countText(clip.lines.length, 'line')} from ${lengthText(clip.seconds)} of audio, kept on this device.`,
-          ],
-        ),
+        h.p([h.Class('text-base text-muted')], [aboutText(clip)]),
       ],
     ),
+    starsSummary(clip, page.stars, h),
     ...(clip.hasAudio
       ? []
       : [
           statusBox(
-            clip.isPack
+            clip.origin === 'Pack'
               ? 'This pack came from a backup that left its audio out, so its lines cannot be played. Import the pack again to practise them.'
               : 'This clip came from a backup that left its audio out, so its lines cannot be played. Bring the file again to practise them.',
             'status',
             h,
           ),
         ]),
-    ...(clip.hasAudio && !clip.isPack
+    ...(clip.hasAudio && clip.origin === 'Upload'
       ? [lineEditorView(clip, page.editor, events.editor, h)]
       : []),
     h.section(
@@ -461,42 +487,103 @@ const readyBody = <ViewMessage>(
           [h.Id('level-lines-heading'), h.Class('text-xl font-bold')],
           ['Lines to copy'],
         ),
-        levelLineList(clip, words, page.shownRows, events, h),
+        levelLineList(clip, page.stars, words, page.shownRows, events, h),
       ],
     ),
-    h.section(
-      [
-        h.AriaLabelledBy('delete-clip-heading'),
-        h.Class(
-          'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
-        ),
-      ],
-      [
-        h.h2(
-          [h.Id('delete-clip-heading'), h.Class('text-xl font-bold')],
-          [`Delete this ${nounOf(clip)}`],
-        ),
-        h.p(
-          [h.Class('text-base text-ink')],
-          [
-            clip.isPack
-              ? 'Deletes the pack from this device with its lines, their audio, their curves and your takes of them. Your files in local/ stay where they are.'
-              : 'Deletes the clip from this device with its lines, their curves and your takes of them.',
-          ],
-        ),
-        h.button(
-          [
-            h.Type('button'),
-            h.OnClick(events.deleteClip),
-            h.Class(`${dangerButton} self-start`),
-          ],
-          [`Delete this ${nounOf(clip)}`],
-        ),
-      ],
-    ),
-    deleteDialogView(dialog, clip, page.deleting, events, h),
+    ...(clip.origin === 'Bundled'
+      ? []
+      : [
+          deleteSection(clip, events, h),
+          deleteDialogView(dialog, clip, page.deleting, events, h),
+        ]),
   ]
 }
+
+const deleteSection = <ViewMessage>(
+  clip: LevelClip,
+  events: LevelEvents<ViewMessage>,
+  h: HtmlBuilder<ViewMessage>,
+): Html =>
+  h.section(
+    [
+      h.AriaLabelledBy('delete-clip-heading'),
+      h.Class(
+        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
+      ),
+    ],
+    [
+      h.h2(
+        [h.Id('delete-clip-heading'), h.Class('text-xl font-bold')],
+        [`Delete this ${nounOf(clip)}`],
+      ),
+      h.p(
+        [h.Class('text-base text-ink')],
+        [
+          clip.origin === 'Pack'
+            ? 'Deletes the pack from this device with its lines, their audio, their curves and your takes of them. Your files in local/ stay where they are.'
+            : 'Deletes the clip from this device with its lines, their curves and your takes of them.',
+        ],
+      ),
+      h.button(
+        [
+          h.Type('button'),
+          h.OnClick(events.deleteClip),
+          h.Class(`${dangerButton} self-start`),
+        ],
+        [`Delete this ${nounOf(clip)}`],
+      ),
+    ],
+  )
+
+// What the level is and where its lines are kept.
+const aboutText = (clip: LevelClip): string => {
+  const lines = countText(clip.lines.length, 'line')
+  return clip.origin === 'Bundled'
+    ? `${lines}, bundled with the app.`
+    : clip.origin === 'Pack'
+      ? `${lines} from your local pack, kept on this device. To change them, change its pack.json and import it again.`
+      : `${lines} from ${lengthText(clip.seconds)} of audio, kept on this device.`
+}
+
+// The level's stars together, out of three a line, and how each is
+// earned; or why they could not be read.
+const starsSummary = <ViewMessage>(
+  clip: LevelClip,
+  stars: LevelStars,
+  h: HtmlBuilder<ViewMessage>,
+): Html =>
+  LevelStars.match(stars, {
+    Loading: () => h.empty,
+    Failed: ({ reason }) =>
+      h.p(
+        [h.Role('alert'), h.Class('text-base text-bad break-words')],
+        [`Your stars could not be read. ${reason}`],
+      ),
+    Ready: ({ lines }) =>
+      h.section(
+        [
+          h.AriaLabelledBy('level-stars-heading'),
+          h.Class(
+            'flex flex-col gap-2 rounded-lg border border-line bg-raised p-4 sm:p-5',
+          ),
+        ],
+        [
+          h.h2(
+            [
+              h.Id('level-stars-heading'),
+              h.Class('text-lg font-bold tabular-nums'),
+            ],
+            [
+              `${lines.reduce((sum, line) => sum + line.progress.stars, 0)} of ${3 * clip.lines.length} stars`,
+            ],
+          ),
+          h.ul(
+            [h.Class('flex flex-col gap-0.5 text-sm text-muted')],
+            starRules().map(rule => h.li([], [rule])),
+          ),
+        ],
+      ),
+  })
 
 export const levelView = <ViewMessage>(
   page: LevelPage,

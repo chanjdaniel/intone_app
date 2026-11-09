@@ -25,20 +25,42 @@ export type BundledLine = Readonly<{
   reading: string
   // Who or what is speaking, as the voice's terms ask it to be credited.
   credit: string
-  // The clip's audio, from the app's own origin.
+  // The clip's audio, from the app's own origin, and how long it is.
   audioUrl: string
+  seconds: number
 }>
 
-export const bundledLines: ReadonlyArray<BundledLine> = [
+// A level the app brings: a clip of its own and its lines, in order.
+export type BundledClip = Readonly<{
+  id: string
+  name: string
+  lines: ReadonlyArray<BundledLine>
+}>
+
+export const bundledClips: ReadonlyArray<BundledClip> = [
   {
-    clipId: 'ame-ga-suki',
-    lineId: '1',
-    text: '雨が好き',
-    reading: 'あめがすき',
-    credit: 'VOICEVOX:冥鳴ひまり',
-    audioUrl: ameGaSukiAudio,
+    id: 'ame-ga-suki',
+    name: '雨が好き',
+    lines: [
+      {
+        clipId: 'ame-ga-suki',
+        lineId: '1',
+        text: '雨が好き',
+        reading: 'あめがすき',
+        credit: 'VOICEVOX:冥鳴ひまり',
+        audioUrl: ameGaSukiAudio,
+        seconds: 30464 / 24000,
+      },
+    ],
   },
 ]
+
+export const bundledLines: ReadonlyArray<BundledLine> = bundledClips.flatMap(
+  clip => clip.lines,
+)
+
+export const bundledClipOf = (clipId: string): Option.Option<BundledClip> =>
+  Array.findFirst(bundledClips, clip => clip.id === clipId)
 
 export const lineOf = (
   clipId: string,

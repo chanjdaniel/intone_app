@@ -70,7 +70,11 @@ describe('the take, by its Model', () => {
       focused,
       model(state => {
         expect(state.take).toStrictEqual(
-          Take.PlayingNative({ takeNumber: 1, tracker: 'Loading' }),
+          Take.PlayingNative({
+            mode: 'Guided',
+            takeNumber: 1,
+            tracker: 'Loading',
+          }),
         )
         expect(holds(state)).toStrictEqual({ tracker: true, microphone: false })
         expect(plays(state)).toBe('LineBeforeTake')
@@ -78,14 +82,20 @@ describe('the take, by its Model', () => {
       message(Message.AcquiredTracker()),
       model(state => {
         expect(state.take).toStrictEqual(
-          Take.PlayingNative({ takeNumber: 1, tracker: 'Ready' }),
+          Take.PlayingNative({
+            mode: 'Guided',
+            takeNumber: 1,
+            tracker: 'Ready',
+          }),
         )
         expect(holds(state)).toStrictEqual({ tracker: true, microphone: false })
       }),
       message(Message.EndedNativeBeforeTake({ takeNumber: 1 })),
       focused,
       model(state => {
-        expect(state.take).toStrictEqual(Take.AwaitingMic({ takeNumber: 1 }))
+        expect(state.take).toStrictEqual(
+          Take.AwaitingMic({ mode: 'Guided', takeNumber: 1 }),
+        )
         expect(holds(state)).toStrictEqual({ tracker: true, microphone: true })
         expect(plays(state)).toBe('nothing')
       }),
@@ -96,7 +106,7 @@ describe('the take, by its Model', () => {
       focused,
       model(state =>
         expect(state.take).toStrictEqual(
-          Take.MicPromptIgnored({ takeNumber: 1 }),
+          Take.MicPromptIgnored({ mode: 'Guided', takeNumber: 1 }),
         ),
       ),
       message(Message.AcquiredMicrophone()),
@@ -108,7 +118,9 @@ describe('the take, by its Model', () => {
       message(Message.ClickedStop()),
       focused,
       model(state => {
-        expect(state.take).toStrictEqual(Take.Analysing({ takeNumber: 1 }))
+        expect(state.take).toStrictEqual(
+          Take.Analysing({ mode: 'Guided', takeNumber: 1 }),
+        )
         expect(holds(state)).toStrictEqual({ tracker: true, microphone: false })
       }),
       Command.resolve(
@@ -136,6 +148,7 @@ describe('the take, by its Model', () => {
         given(
           onLine(
             Take.Recording({
+              mode: 'Guided',
               takeNumber: 4,
               elapsedSeconds: 3,
               levelDb: levelMeterFloorDb,
@@ -162,6 +175,7 @@ describe('the take, by its Model', () => {
     // nothing.
     const recording = onLine(
       Take.Recording({
+        mode: 'Guided',
         takeNumber: 2,
         elapsedSeconds: 1,
         levelDb: levelMeterFloorDb,
@@ -174,16 +188,18 @@ describe('the take, by its Model', () => {
     ).toStrictEqual({ model: recording })
     story(
       update,
-      given(onLine(Take.AwaitingMic({ takeNumber: 3 }), 3)),
+      given(onLine(Take.AwaitingMic({ mode: 'Guided', takeNumber: 3 }), 3)),
       message(Message.CompletedWaitForMicAnswer({ takeNumber: 2 })),
       model(state =>
-        expect(state.take).toStrictEqual(Take.AwaitingMic({ takeNumber: 3 })),
+        expect(state.take).toStrictEqual(
+          Take.AwaitingMic({ mode: 'Guided', takeNumber: 3 }),
+        ),
       ),
       message(Message.CompletedWaitForMicAnswer({ takeNumber: 3 })),
       focused,
       model(state =>
         expect(state.take).toStrictEqual(
-          Take.MicPromptIgnored({ takeNumber: 3 }),
+          Take.MicPromptIgnored({ mode: 'Guided', takeNumber: 3 }),
         ),
       ),
     )
@@ -192,7 +208,7 @@ describe('the take, by its Model', () => {
   test('ignores a result that comes back for an earlier take', () => {
     story(
       update,
-      given(onLine(Take.Analysing({ takeNumber: 5 }), 5)),
+      given(onLine(Take.Analysing({ mode: 'Guided', takeNumber: 5 }), 5)),
       message(
         Message.SucceededAnalyseTake({
           takeNumber: 4,
@@ -201,7 +217,9 @@ describe('the take, by its Model', () => {
       ),
       message(Message.FailedAnalyseTake({ takeNumber: 4, reason: 'late' })),
       model(state =>
-        expect(state.take).toStrictEqual(Take.Analysing({ takeNumber: 5 })),
+        expect(state.take).toStrictEqual(
+          Take.Analysing({ mode: 'Guided', takeNumber: 5 }),
+        ),
       ),
     )
   })
@@ -212,6 +230,7 @@ describe('the take, by its Model', () => {
       given(
         onLine(
           Take.Recording({
+            mode: 'Guided',
             takeNumber: 1,
             elapsedSeconds: 29.8,
             levelDb: levelMeterFloorDb,
@@ -230,13 +249,16 @@ describe('the take, by its Model', () => {
       Command.expectExact(
         AnalyseTake({
           takeNumber: 1,
+          mode: 'Guided',
           line: { clipId: 'ame-ga-suki', lineId: '1', lineText: '雨が好き' },
           native: nativeRecording,
         }),
         FocusTakeControl(),
       ),
       model(state => {
-        expect(state.take).toStrictEqual(Take.Analysing({ takeNumber: 1 }))
+        expect(state.take).toStrictEqual(
+          Take.Analysing({ mode: 'Guided', takeNumber: 1 }),
+        )
         expect(holds(state).microphone).toBe(false)
       }),
       focused,
@@ -254,6 +276,7 @@ describe('the take, by its Model', () => {
       given(
         onLine(
           Take.Recording({
+            mode: 'Guided',
             takeNumber: 1,
             elapsedSeconds: 1,
             levelDb: levelMeterFloorDb,
@@ -275,6 +298,7 @@ describe('the take, by its Model', () => {
     const elsewhere: Model = {
       ...onLine(
         Take.Recording({
+          mode: 'Guided',
           takeNumber: 1,
           elapsedSeconds: 1,
           levelDb: levelMeterFloorDb,

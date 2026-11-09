@@ -8,6 +8,7 @@ import type { ClipEntry } from '../../services/history-records'
 import { LineHistoryPage } from '../history/history'
 import { NativeCurve } from '../line/native'
 import { AppRoute, Message, type Model, initialModel, update } from '../main'
+import { LoadLevelStars } from './commands'
 import { ClipWaveform, EditSaving, LevelPlay, initialEditor } from './editor'
 import {
   EditClipLines,
@@ -15,7 +16,13 @@ import {
   UndoClipLineChange,
   WaitForKeysToRest,
 } from './editorCommands'
-import { DeleteState, type LevelClip, LevelPage, levelClipOf } from './level'
+import {
+  DeleteState,
+  type LevelClip,
+  LevelPage,
+  LevelStars,
+  levelClipOf,
+} from './level'
 
 // The line editor's Model (ticket 14): an edge dragged or stepped by key
 // is a draft until it is let go or the keys rest; a split, a merge and a
@@ -67,6 +74,7 @@ const peaks = new Uint8Array(1200)
 const onLevel = (shown: LevelClip = clip, held = true): Model => ({
   ...initialModel(AppRoute.Level({ clipId: 'c1', maybeFind: Option.none() })),
   level: LevelPage.Ready({
+    stars: LevelStars.Ready({ lines: [] }),
     clip: shown,
     shownRows: 50,
     deleting: DeleteState.Idle(),
@@ -178,6 +186,10 @@ describe('moving a line’s edge', () => {
           clip: levelClipOf(moved),
         }),
       ),
+      Command.resolve(
+        LoadLevelStars,
+        Message.SucceededLoadLevelStars({ clipId: 'c1', lines: [] }),
+      ),
       model(current => {
         expect(clipOf(current).lines[0]).toMatchObject({ from: 1, to: 4 })
         expect(editorOf(current).maybeDraft).toStrictEqual(Option.none())
@@ -228,6 +240,10 @@ describe('moving a line’s edge', () => {
             }),
           ),
         }),
+      ),
+      Command.resolve(
+        LoadLevelStars,
+        Message.SucceededLoadLevelStars({ clipId: 'c1', lines: [] }),
       ),
       model(current =>
         expect(clipOf(current).lines[1]).toMatchObject({ from: 3.89, to: 6 }),
@@ -377,6 +393,10 @@ describe('splitting, merging and deleting', () => {
           clip: levelClipOf(split),
         }),
       ),
+      Command.resolve(
+        LoadLevelStars,
+        Message.SucceededLoadLevelStars({ clipId: 'c1', lines: [] }),
+      ),
       model(current => {
         expect(lineIds(current)).toStrictEqual(['1', '4', '2', '3'])
         expect(clipOf(current).lines.map(line => line.number)).toStrictEqual([
@@ -407,6 +427,10 @@ describe('splitting, merging and deleting', () => {
           clip: levelClipOf(merged),
         }),
       ),
+      Command.resolve(
+        LoadLevelStars,
+        Message.SucceededLoadLevelStars({ clipId: 'c1', lines: [] }),
+      ),
       model(current => {
         expect(lineIds(current)).toStrictEqual(['1', '3'])
         expect(clipOf(current).lines[0]).toMatchObject({ from: 1, to: 6 })
@@ -432,6 +456,10 @@ describe('splitting, merging and deleting', () => {
           clipId: 'c1',
           clip: levelClipOf(deleted),
         }),
+      ),
+      Command.resolve(
+        LoadLevelStars,
+        Message.SucceededLoadLevelStars({ clipId: 'c1', lines: [] }),
       ),
       model(current => {
         expect(lineIds(current)).toStrictEqual(['1', '3'])
@@ -530,6 +558,10 @@ describe('undoing', () => {
           clipId: 'c1',
           clip: levelClipOf(undone),
         }),
+      ),
+      Command.resolve(
+        LoadLevelStars,
+        Message.SucceededLoadLevelStars({ clipId: 'c1', lines: [] }),
       ),
       model(current => {
         expect(lineIds(current)).toStrictEqual(['1', '2', '3'])

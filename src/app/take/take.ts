@@ -2,7 +2,9 @@ import { Option, Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 import type { Recording } from '../../score/score'
+import { TakeMode } from '../../services/history-records'
 import type { Comparison } from '../../services/scorer'
+import { TakeOutcome } from '../level/progress'
 
 // A take, as the practice screen's Model sees it: one state at a time, so
 // playing, recording, asking and showing a result cannot overlap by
@@ -12,6 +14,12 @@ import type { Comparison } from '../../services/scorer'
 // is held from PlayingNative to Analysing, the microphone from
 // AwaitingMic to Recording (./resources.ts), and a voice plays only in
 // PlayingNative and Listening (./subscriptions.ts).
+//
+// A take is guided, with the native's curve and the learner's drawn as
+// they speak, or blind, with both hidden, and the level and closeness
+// with them, from its start until it ends (report section 5); its mode
+// goes with it from PlayingNative to its result, which shows everything.
+export { TakeMode } from '../../services/history-records'
 
 // The finished curve, the one time pitch frames enter the Model: plain
 // arrays, so the Model stays a plain Schema value.
@@ -107,31 +115,46 @@ export type Voice = typeof Voice.Type
 export const Extent = Schema.Literals(['Whole', 'WorstStretch'])
 export type Extent = typeof Extent.Type
 
-// A finished take, kept while its voices are listened to again.
-export const FinishedTake = Schema.Struct({ takeNumber, result: TakeResult })
+const mode = TakeMode
+
+// A finished take, kept while its voices are listened to again, with
+// what it did for its line's stars and best (../level/progress.ts), once
+// it was kept and the line's were known.
+const finishedFields = {
+  takeNumber,
+  mode,
+  result: TakeResult,
+  maybeOutcome: Schema.Option(TakeOutcome),
+}
+export const FinishedTake = Schema.Struct(finishedFields)
 export type FinishedTake = typeof FinishedTake.Type
 
 export const Take = defineTaggedUnion({
   Idle: {},
   // The line plays before the take, while the tracker Worker loads.
-  PlayingNative: { takeNumber, tracker: Schema.Literals(['Loading', 'Ready']) },
+  PlayingNative: {
+    takeNumber,
+    mode,
+    tracker: Schema.Literals(['Loading', 'Ready']),
+  },
   // The line has played and the tracker Worker is still loading.
-  Preparing: { takeNumber },
+  Preparing: { takeNumber, mode },
   // The browser is asking for the microphone.
-  AwaitingMic: { takeNumber },
+  AwaitingMic: { takeNumber, mode },
   // Still asking, a few seconds on: the prompt may never be answered.
-  MicPromptIgnored: { takeNumber },
+  MicPromptIgnored: { takeNumber, mode },
   // `levelDb` is the microphone's peak over the last tenth of a second,
   // from `levelMeterFloorDb` to 0; the onset is in seconds from the take's
   // start, once the voice is heard.
   Recording: {
     takeNumber,
+    mode,
     elapsedSeconds: Schema.Finite,
     levelDb: Schema.Finite,
     maybeOnsetSeconds: Schema.Option(Schema.Finite),
   },
-  Analysing: { takeNumber },
-  ShowingResult: { takeNumber, result: TakeResult },
+  Analysing: { takeNumber, mode },
+  ShowingResult: finishedFields,
   // Listening again, from the start or from the take it came from.
   Listening: {
     voice: Voice,
@@ -185,6 +208,17 @@ export const worstStretchOf = (
   result._tag === 'Tracked' && result.score._tag === 'Scored'
     ? Option.some(result.score.worstStretch)
     : Option.none()
+
+// The mode of the take under way, if one is.
+export const runningMode = (take: Take): Option.Option<TakeMode> =>
+  'mode' in take && take._tag !== 'ShowingResult'
+    ? Option.some(take.mode)
+    : Option.none()
+
+// Whether `take` is a blind take under way, whose curves and feedback are
+// hidden until it ends.
+export const isBlindUnderWay = (take: Take): boolean =>
+  Option.contains(runningMode(take), 'Blind')
 
 // Whether a new take may start from here.
 export const canStartTake = (take: Take): boolean =>

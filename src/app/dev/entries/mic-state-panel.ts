@@ -7,7 +7,7 @@ import { modifyFields } from 'foldkit/struct'
 import { takePanel } from '../../take/panel'
 import { Extent, Take, TakeResult, Voice } from '../../take/take'
 import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
-import { sampleScores } from '../sampleScores'
+import { sampleScores, withOutcome } from '../sampleScores'
 
 // The mic state panel in every state a take can be in, each picked from
 // the list, with the button it offers read out when pressed.
@@ -16,22 +16,73 @@ export const samples: ReadonlyArray<Readonly<{ name: string; take: Take }>> = [
   { name: 'Idle', take: Take.Idle() },
   {
     name: 'Playing the line',
-    take: Take.PlayingNative({ takeNumber: 1, tracker: 'Loading' }),
+    take: Take.PlayingNative({
+      mode: 'Guided',
+      takeNumber: 1,
+      tracker: 'Loading',
+    }),
   },
-  { name: 'Preparing', take: Take.Preparing({ takeNumber: 1 }) },
-  { name: 'Asking', take: Take.AwaitingMic({ takeNumber: 1 }) },
-  { name: 'Prompt ignored', take: Take.MicPromptIgnored({ takeNumber: 1 }) },
+  {
+    name: 'Preparing',
+    take: Take.Preparing({ mode: 'Guided', takeNumber: 1 }),
+  },
+  { name: 'Asking', take: Take.AwaitingMic({ mode: 'Guided', takeNumber: 1 }) },
+  {
+    name: 'Prompt ignored',
+    take: Take.MicPromptIgnored({ mode: 'Guided', takeNumber: 1 }),
+  },
   {
     name: 'Recording',
     take: Take.Recording({
+      mode: 'Guided',
       takeNumber: 1,
       elapsedSeconds: 2.6,
       levelDb: -14,
       maybeOnsetSeconds: Option.some(0.5),
     }),
   },
-  { name: 'Analysing', take: Take.Analysing({ takeNumber: 1 }) },
+  {
+    name: 'Recording blind',
+    take: Take.Recording({
+      mode: 'Blind',
+      takeNumber: 1,
+      elapsedSeconds: 2.6,
+      levelDb: -14,
+      maybeOnsetSeconds: Option.some(0.5),
+    }),
+  },
+  {
+    name: 'Analysing',
+    take: Take.Analysing({ mode: 'Guided', takeNumber: 1 }),
+  },
   { name: 'Scored', take: Take.ShowingResult(sampleScores.Provisional) },
+  {
+    name: 'A first star',
+    take: Take.ShowingResult(
+      withOutcome(sampleScores.Provisional, 'Guided', {
+        stars: 0,
+        maybeBestMatch: Option.some(0.62),
+      }),
+    ),
+  },
+  {
+    name: 'Stars kept',
+    take: Take.ShowingResult(
+      withOutcome(sampleScores['Fall held'], 'Guided', {
+        stars: 2,
+        maybeBestMatch: Option.some(0.93),
+      }),
+    ),
+  },
+  {
+    name: 'Blind, three stars',
+    take: Take.ShowingResult(
+      withOutcome(sampleScores.Provisional, 'Blind', {
+        stars: 2,
+        maybeBestMatch: Option.some(0.91),
+      }),
+    ),
+  },
   {
     name: 'Listening',
     take: Take.Listening({
@@ -42,11 +93,18 @@ export const samples: ReadonlyArray<Readonly<{ name: string; take: Take }>> = [
   },
   {
     name: "Couldn't compare",
-    take: Take.ShowingResult(sampleScores['Length far off']),
+    take: Take.ShowingResult(
+      withOutcome(sampleScores['Length far off'], 'Blind', {
+        stars: 2,
+        maybeBestMatch: Option.some(0.91),
+      }),
+    ),
   },
   {
     name: 'Too quiet',
     take: Take.ShowingResult({
+      mode: 'Guided',
+      maybeOutcome: Option.none(),
       takeNumber: 1,
       result: TakeResult.TooQuiet(),
     }),
@@ -54,6 +112,8 @@ export const samples: ReadonlyArray<Readonly<{ name: string; take: Take }>> = [
   {
     name: 'Too noisy',
     take: Take.ShowingResult({
+      mode: 'Guided',
+      maybeOutcome: Option.none(),
       takeNumber: 1,
       result: TakeResult.TooNoisy(),
     }),
@@ -85,6 +145,7 @@ export type Model = typeof Model.Type
 export const Message = defineMessageUnion({
   SelectedSample: { name: Schema.String },
   ClickedRecord: {},
+  ClickedRecordBlind: {},
   ClickedStop: {},
   ClickedCancelTake: {},
   ClickedListen: { voice: Voice, extent: Extent },
@@ -113,6 +174,7 @@ export const update = (model: Model, message: Message) =>
       }),
     }),
     ClickedRecord: () => pressed(model, 'record'),
+    ClickedRecordBlind: () => pressed(model, 'record blind'),
     ClickedStop: () => pressed(model, 'stop'),
     ClickedCancelTake: () => pressed(model, 'cancel'),
     ClickedListen: ({ voice, extent }) =>
@@ -173,6 +235,8 @@ export const choices: ReadonlyArray<string> = [
   'Recording shows a pulsing red dot, the clock and the level meter; your curve draws above the panel as you speak. Is the clock useful, or noise?',
   'Pressing record plays the line once at its own speed, then opens the microphone. Should it play at the speed you chose for listening instead?',
   'A blocked microphone explains where Chrome keeps the setting. Should it name the steps for Safari and Firefox too?',
+  'A blind take hides the level meter as well as the curves, keeping only the clock. Would you rather keep the meter, which says nothing of pitch, to see the microphone hears you?',
+  'Each result offers Record again, a guided take, first, and Record blind beside it. After a blind take, should blind come first?',
 ]
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
@@ -180,13 +244,14 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
     {
       title: 'Mic state panel',
       summary:
-        'One clear screen for every state of a take, from the record button through playing the line to the result, each with one thing to do next.',
+        'One clear screen for every state of a take, from the record buttons through playing the line to the result and what it did for the line’s stars, each with one thing to do next and a blind take beside it.',
       demo: [
         pickerView(model, h),
         takePanel(
           takeOf(model.sample),
           {
             record: Message.ClickedRecord(),
+            recordBlind: Message.ClickedRecordBlind(),
             stop: Message.ClickedStop(),
             cancel: Message.ClickedCancelTake(),
             listen: (voice, extent) => Message.ClickedListen({ voice, extent }),

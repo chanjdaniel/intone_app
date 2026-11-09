@@ -2,6 +2,7 @@ import { Clock, Duration, Effect, Schema } from 'effect'
 import { Calendar, Command, Dom } from 'foldkit'
 
 import type { Recording } from '../../score/score'
+import { TakeMode } from '../../services/history-records'
 import { HistoryStore } from '../../services/history-store'
 import { type Comparison, Scorer } from '../../services/scorer'
 import { recordingOfTracked } from '../../services/tracker'
@@ -45,6 +46,7 @@ export type TakeLine = typeof TakeLine.Type
 // shown, and says so.
 const keepTake = (
   takeNumber: number,
+  mode: TakeMode,
   line: TakeLine,
   native: Recording,
   take: Recording,
@@ -56,7 +58,7 @@ const keepTake = (
     const audio = yield* takeAudioOf(takeNumber)
     const kept = yield* history.keep({
       ...line,
-      mode: 'Guided',
+      mode,
       takenAt,
       day: isoDayOf(Calendar.fromDateLocal(new Date(takenAt))),
       native,
@@ -79,11 +81,17 @@ const keepTake = (
 // Scorer for its score against `native`, and the history to keep it: the
 // one Message that brings the take's curve into the Model, with its
 // score. The take's features go from the tracker to the score and the
-// history, never into the Model.
+// history, never into the Model. The history keeps it as guided or
+// blind, which is what its stars are read by.
 export const AnalyseTake = Command.define('AnalyseTake', {
-  args: { takeNumber: Schema.Finite, line: TakeLine, native: NativeRecording },
+  args: {
+    takeNumber: Schema.Finite,
+    mode: TakeMode,
+    line: TakeLine,
+    native: NativeRecording,
+  },
   messages: [Message.SucceededAnalyseTake, Message.FailedAnalyseTake],
-  execute: ({ takeNumber, line, native }) =>
+  execute: ({ takeNumber, mode, line, native }) =>
     Effect.gen(function* () {
       const tracker = yield* TrackerResource.get
       const result = yield* tracker.finish
@@ -102,6 +110,7 @@ export const AnalyseTake = Command.define('AnalyseTake', {
       const comparison = yield* scorer.score(nativeRecording, take)
       const kept = yield* keepTake(
         takeNumber,
+        mode,
         line,
         nativeRecording,
         take,

@@ -8,6 +8,8 @@ import {
   withGap,
 } from '../../score/synthetic-take'
 import { compareTake } from '../../services/compare-take'
+import type { TakeMode } from '../../services/history-records'
+import { type LineProgress, outcomeOf } from '../level/progress'
 import {
   type FinishedTake,
   KeptInHistory,
@@ -68,6 +70,8 @@ const finished = (
   const score = takeScoreOf(compareTake(nativeRecording, take), nativeRecording)
   return {
     takeNumber: 1,
+    mode: 'Guided',
+    maybeOutcome: Option.none(),
     result: TakeResult.Tracked({
       curve: takeCurveOf(take.curve),
       score,
@@ -114,4 +118,21 @@ export const sampleScores: Readonly<Record<SampleScoreName, FinishedTake>> = {
   ),
   'Too little voiced': finished({}, recording => withGap(recording, 30, 66)),
   'Length far off': finished({ moraFrames: 22 }),
+}
+
+// A sample take, made `mode`, with what it did for a line whose stars
+// and best were `before`, by the app's own rules (../level/progress.ts).
+export const withOutcome = (
+  take: FinishedTake,
+  mode: TakeMode,
+  before: LineProgress,
+): FinishedTake => {
+  const result = take.result
+  return result._tag === 'Tracked'
+    ? modifyFields(take, {
+        mode: () => mode,
+        maybeOutcome: () =>
+          Option.some(outcomeOf(before, mode, result.score).outcome),
+      })
+    : take
 }

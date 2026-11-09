@@ -141,6 +141,7 @@ describe('a take', () => {
       Command.expectHas(
         AnalyseTake({
           takeNumber: 1,
+          mode: 'Guided',
           line: { clipId: 'ame-ga-suki', lineId: '1', lineText: '雨が好き' },
           native: nativeRecording,
         }),
@@ -186,7 +187,7 @@ describe('a take', () => {
   test('releases the microphone and the tracker when the microphone is refused', () => {
     scene(
       { update, view },
-      given(onLine(Take.AwaitingMic({ takeNumber: 3 }), 3)),
+      given(onLine(Take.AwaitingMic({ mode: 'Guided', takeNumber: 3 }), 3)),
       drawn,
       ManagedResource.failAcquire(
         managedResources.microphone,
@@ -216,6 +217,7 @@ describe('a take', () => {
       given(
         onLine(
           Take.Recording({
+            mode: 'Guided',
             takeNumber: 2,
             elapsedSeconds: 1,
             levelDb: levelMeterFloorDb,
@@ -244,7 +246,9 @@ describe('a take', () => {
   test('releases both when the learner cancels while the browser asks', () => {
     scene(
       { update, view },
-      given(onLine(Take.MicPromptIgnored({ takeNumber: 1 }), 1)),
+      given(
+        onLine(Take.MicPromptIgnored({ mode: 'Guided', takeNumber: 1 }), 1),
+      ),
       drawn,
       click(role('button', { name: 'Cancel' })),
       focused,
@@ -257,7 +261,7 @@ describe('a take', () => {
   test('releases the tracker when it cannot start, and says so', () => {
     scene(
       { update, view },
-      given(onLine(Take.Preparing({ takeNumber: 1 }), 1)),
+      given(onLine(Take.Preparing({ mode: 'Guided', takeNumber: 1 }), 1)),
       drawn,
       ManagedResource.failAcquire(
         managedResources.tracker,
@@ -287,19 +291,29 @@ describe('the mic state panel', () => {
       'Try again',
     ],
     [
-      Take.AwaitingMic({ takeNumber: 1 }),
+      Take.AwaitingMic({ mode: 'Guided', takeNumber: 1 }),
       'Allow the microphone',
       'Your browser is asking to use the microphone. Choose Allow to start the take.',
       'Cancel',
     ],
     [
-      Take.ShowingResult({ takeNumber: 1, result: TakeResult.TooQuiet() }),
+      Take.ShowingResult({
+        mode: 'Guided',
+        maybeOutcome: Option.none(),
+        takeNumber: 1,
+        result: TakeResult.TooQuiet(),
+      }),
       'That take was too quiet to track',
       'The microphone hardly heard you. Move closer to it or speak up, then record again.',
       'Record again',
     ],
     [
-      Take.ShowingResult({ takeNumber: 1, result: TakeResult.TooNoisy() }),
+      Take.ShowingResult({
+        mode: 'Guided',
+        maybeOutcome: Option.none(),
+        takeNumber: 1,
+        result: TakeResult.TooNoisy(),
+      }),
       'That take was too noisy to track',
       'There was more sound around you than voice. Try somewhere quieter, or closer to the microphone.',
       'Record again',
@@ -318,7 +332,7 @@ describe('the mic state panel', () => {
   test('says it is analysing, with nothing to press, once the microphone is off', () => {
     scene(
       { update, view },
-      given(onLine(Take.Analysing({ takeNumber: 1 }), 1)),
+      given(onLine(Take.Analysing({ mode: 'Guided', takeNumber: 1 }), 1)),
       drawn,
       expect(role('heading', { name: 'Finding your pitch' })).toExist(),
       expect(text('The microphone is off. Tracking your take now.')).toExist(),

@@ -36,6 +36,7 @@ export const plannedEntries: ReadonlyArray<
   { name: 'score-card', title: 'Score card' },
   { name: 'star-row', title: 'Star row' },
   { name: 'line-row', title: 'Line row' },
+  { name: 'level-row', title: 'Level row: a line and its stars' },
   { name: 'upload-panel', title: 'Upload: choosing a file and the cut' },
   { name: 'clip-lines', title: 'A clip’s lines' },
   { name: 'line-editor', title: 'Line editor' },

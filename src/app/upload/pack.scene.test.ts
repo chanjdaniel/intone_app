@@ -19,6 +19,7 @@ import { initialEditor } from '../level/editor'
 import {
   DeleteState,
   LevelPage,
+  LevelStars,
   levelClipOf,
   levelRowsPerPage,
 } from '../level/level'
@@ -125,6 +126,7 @@ const onPackLevel = (): Model => {
       AppRoute.Level({ clipId: clip.id, maybeFind: Option.none() }),
     ),
     level: LevelPage.Ready({
+      stars: LevelStars.Ready({ lines: [] }),
       clip,
       shownRows: levelRowsPerPage,
       deleting: DeleteState.Idle(),

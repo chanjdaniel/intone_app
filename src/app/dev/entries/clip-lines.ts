@@ -4,7 +4,12 @@ import { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { modifyFields } from 'foldkit/struct'
 
-import { LevelClip, levelLinesFound, levelRowsPerPage } from '../../level/level'
+import {
+  LevelClip,
+  LevelStars,
+  levelLinesFound,
+  levelRowsPerPage,
+} from '../../level/level'
 import { levelLineList } from '../../level/levelView'
 import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
 import { cutStudyClip, musicStudyClip } from '../sampleClips'
@@ -54,7 +59,7 @@ const longClip = (): LevelClip => ({
     maybeSource: Option.none(),
   })),
   maybeUndo: Option.none(),
-  isPack: false,
+  origin: 'Upload',
 })
 
 export const init: Runtime.ElementInit<Model, Message> = () => ({
@@ -137,6 +142,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
         ),
         levelLineList(
           model.clip,
+          LevelStars.Ready({ lines: [] }),
           model.words,
           model.shownRows,
           {

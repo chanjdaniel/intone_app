@@ -35,7 +35,9 @@ describe('the library index', () => {
           : expect(role('link', { name: title })).toBeAbsent(),
       ),
       expect(role('link', { name: 'Tokens' })).toExist(),
-      expect(text('coming')).toExist(),
+      Array.every(plannedEntries, ({ name }) => isBuilt(name))
+        ? expect(text('coming')).toBeAbsent()
+        : expect(text('coming')).toExist(),
     )
   })
 

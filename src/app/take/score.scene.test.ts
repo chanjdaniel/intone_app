@@ -43,6 +43,8 @@ const showing = (score: TakeScore): Model => ({
     features: sampleFeatures,
   }),
   take: Take.ShowingResult({
+    mode: 'Guided',
+    maybeOutcome: Option.none(),
     takeNumber: 1,
     result: TakeResult.Tracked({ curve: sampleCurve, score, kept: sampleKept }),
   }),
@@ -165,6 +167,8 @@ describe('the take in the history', () => {
   const showingKept = (kept: KeptInHistory): Model => ({
     ...showing(sampleScore),
     take: Take.ShowingResult({
+      mode: 'Guided',
+      maybeOutcome: Option.none(),
       takeNumber: 1,
       result: TakeResult.Tracked({
         curve: sampleCurve,

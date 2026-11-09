@@ -6,7 +6,11 @@ import { modifyFields } from 'foldkit/struct'
 
 import { FileDrop } from '@foldkit/ui'
 
-import { levelLinesFound, levelRowsPerPage } from '../../level/level'
+import {
+  LevelStars,
+  levelLinesFound,
+  levelRowsPerPage,
+} from '../../level/level'
 import { levelLineList } from '../../level/levelView'
 import { packPanel } from '../../upload/packView'
 import {
@@ -223,6 +227,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
         ),
         levelLineList(
           examplePackClip,
+          LevelStars.Ready({ lines: [] }),
           model.words,
           model.shownRows,
           {

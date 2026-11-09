@@ -64,7 +64,7 @@ describe('a line of the learner’s clip', () => {
 
   test('plays its stretch of the clip before a take, from the clip store', () => {
     const playing = onClipLine(
-      Take.PlayingNative({ takeNumber: 1, tracker: 'Loading' }),
+      Take.PlayingNative({ mode: 'Guided', takeNumber: 1, tracker: 'Loading' }),
     )
     expect(Option.getOrThrow(playOf(playing))).toStrictEqual({
       _tag: 'LineBeforeTake',
@@ -88,6 +88,7 @@ describe('a line of the learner’s clip', () => {
       given(
         onClipLine(
           Take.Recording({
+            mode: 'Guided',
             takeNumber: 1,
             elapsedSeconds: 2,
             levelDb: levelMeterFloorDb,
@@ -99,6 +100,7 @@ describe('a line of the learner’s clip', () => {
       Command.expectHas(
         AnalyseTake({
           takeNumber: 1,
+          mode: 'Guided',
           line: { clipId: 'c1', lineId: '2', lineText: 'reading.mp3, line 2' },
           native: { curve: sampleCurve, features: sampleFeatures },
         }),

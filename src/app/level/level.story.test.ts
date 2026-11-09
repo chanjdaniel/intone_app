@@ -21,10 +21,17 @@ import {
   GoHome,
   LoadClips,
   LoadLevel,
+  LoadLevelStars,
   ReplaceLevelFind,
 } from './commands'
 import { initialEditor } from './editor'
-import { ClipsPage, DeleteState, LevelPage, levelRowsPerPage } from './level'
+import {
+  ClipsPage,
+  DeleteState,
+  LevelPage,
+  LevelStars,
+  levelRowsPerPage,
+} from './level'
 import { sampleClip } from './testClips'
 
 const url = (path: string) =>
@@ -35,6 +42,7 @@ const onLevel = (clip = sampleClip(120)): Model => ({
     AppRoute.Level({ clipId: clip.id, maybeFind: Option.none() }),
   ),
   level: LevelPage.Ready({
+    stars: LevelStars.Ready({ lines: [] }),
     clip,
     shownRows: levelRowsPerPage,
     deleting: DeleteState.Idle(),
@@ -74,9 +82,18 @@ describe('a clip’s lines', () => {
           maybeClip: Option.some(clip),
         }),
       ),
+      Command.expectExact(LoadLevelStars({ clipId: 'c1' })),
+      model(current =>
+        expect(current.level).toMatchObject({ stars: LevelStars.Loading() }),
+      ),
+      Command.resolve(
+        LoadLevelStars,
+        Message.SucceededLoadLevelStars({ clipId: 'c1', lines: [] }),
+      ),
       model(current =>
         expect(current.level).toStrictEqual(
           LevelPage.Ready({
+            stars: LevelStars.Ready({ lines: [] }),
             clip,
             shownRows: levelRowsPerPage,
             deleting: DeleteState.Idle(),

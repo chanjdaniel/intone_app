@@ -3,7 +3,9 @@ import { Calendar } from 'foldkit'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 import { SCORE_VERSION } from '../../score/constants'
+import { starThresholds, starsOf } from '../../score/stars'
 import type { TakeEntry } from '../../services/history-records'
+import { type LineProgress, noProgress } from '../level/progress'
 import { TakeCurve, TakeScore } from '../take/take'
 
 // The history screens' part of the Model: what /history and a line's
@@ -272,6 +274,27 @@ export const lineTakesOf = (
     latest: Array.lastNonEmpty(takes),
   })
 }
+
+// A line's stars and best match, from its takes of the line as it is
+// now (../level/progress.ts).
+export const lineProgressOf = (
+  entries: ReadonlyArray<TakeEntry>,
+  clipId: string,
+  lineId: string,
+  asKept: LineAsKept,
+): LineProgress =>
+  Option.match(lineTakesOf(entries, clipId, lineId, asKept), {
+    onNone: () => noProgress,
+    onSome: ({ takes }) => {
+      const matches = Array.getSomes(Array.map(takes, matchOf))
+      return {
+        stars: starsOf(takes, starThresholds()),
+        maybeBestMatch: Array.isArrayNonEmpty(matches)
+          ? Option.some(Math.max(...matches))
+          : Option.none(),
+      }
+    },
+  })
 
 export const trendOf = (
   takes: ReadonlyArray<TakeEntry>,

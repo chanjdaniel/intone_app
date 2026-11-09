@@ -4,6 +4,8 @@ import { Command } from 'foldkit'
 import { lineAudioOf } from '../../services/history-records'
 import { HistoryStore } from '../../services/history-store'
 import { NativeCurves } from '../../services/native-curves'
+import { lineProgressOf } from '../history/history'
+import { levelSourceOf, nextLineOf } from '../level/commands'
 import { Message } from '../message'
 import { takeCurveOf, takeFeaturesOf } from '../take/take'
 import {
@@ -105,6 +107,49 @@ export const LoadNativeCurve = Command.define('LoadNativeCurve', {
             failure: 'Failed',
             reason: error.reason,
           }),
+        ),
+      ),
+    ),
+})
+
+// Reads the line's place in its level: the level's name, the line's
+// stars and best from its takes kept on the device, and the next line
+// that can be copied.
+export const LoadLinePlace = Command.define('LoadLinePlace', {
+  args: { clipId: Schema.String, lineId: Schema.String },
+  messages: [Message.SucceededLoadLinePlace, Message.FailedLoadLinePlace],
+  execute: ({ clipId, lineId }) =>
+    Effect.gen(function* () {
+      const history = yield* HistoryStore
+      const maybeSource = yield* levelSourceOf(history, clipId)
+      const maybeLine = Option.flatMap(maybeSource, source =>
+        Option.fromNullishOr(source.lines.find(line => line.lineId === lineId)),
+      )
+      if (Option.isNone(maybeSource) || Option.isNone(maybeLine)) {
+        return Message.FailedLoadLinePlace({
+          clipId,
+          lineId,
+          reason: 'There is no such line on this device.',
+        })
+      }
+      const { entries } = yield* history.entries
+      return Message.SucceededLoadLinePlace({
+        clipId,
+        lineId,
+        levelName: maybeSource.value.name,
+        progress: lineProgressOf(
+          entries,
+          clipId,
+          lineId,
+          maybeLine.value.asKept,
+        ),
+        maybeNext: nextLineOf(maybeSource.value, lineId),
+      })
+    }).pipe(
+      Effect.provide(HistoryStore.layer),
+      Effect.catch(error =>
+        Effect.succeed(
+          Message.FailedLoadLinePlace({ clipId, lineId, reason: error.reason }),
         ),
       ),
     ),

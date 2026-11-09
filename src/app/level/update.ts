@@ -6,6 +6,7 @@ import { Dialog } from '@foldkit/ui'
 
 import { HistoryPage, LineHistoryPage } from '../history/history'
 import { NativeCurve } from '../line/native'
+import { LinePlace } from '../line/place'
 import { Message } from '../message'
 import type { Model } from '../model'
 import type { AppResourceServices } from '../resources'
@@ -15,6 +16,7 @@ import {
   GoHome,
   LoadClips,
   LoadLevel,
+  LoadLevelStars,
   ReplaceLevelFind,
 } from './commands'
 import { initialEditor } from './editor'
@@ -24,6 +26,8 @@ import {
   DeleteState,
   type LevelClip,
   LevelPage,
+  LevelStars,
+  type LineStars,
   levelRowsPerPage,
 } from './level'
 
@@ -60,9 +64,11 @@ const isLevelOf = (page: LevelPage, clipId: string): boolean =>
   (page._tag === 'Ready' && page.clip.id === clipId) ||
   (page._tag !== 'Ready' && page._tag !== 'NotLoaded' && page.clipId === clipId)
 
+// A level open already reads its stars again, since a take kept since
+// may have moved them; its lines and the line editor stay as they are.
 export const openedLevel = (model: Model, clipId: string): LevelUpdate =>
   model.level._tag === 'Ready' && model.level.clip.id === clipId
-    ? unchanged(model)
+    ? { model, commands: [LoadLevelStars({ clipId })] }
     : {
         model: modifyFields(model, {
           level: () => LevelPage.Loading({ clipId }),
@@ -70,27 +76,59 @@ export const openedLevel = (model: Model, clipId: string): LevelUpdate =>
         commands: [LoadLevel({ clipId })],
       }
 
+// Once a level's lines are read, its stars are.
 export const succeededLoadLevel = (
   model: Model,
   clipId: string,
   maybeClip: Option.Option<LevelClip>,
 ): LevelUpdate =>
   model.level._tag === 'Loading' && isLevelOf(model.level, clipId)
-    ? {
-        model: modifyFields(model, {
-          level: () =>
-            Option.match(maybeClip, {
-              onNone: () => LevelPage.Missing({ clipId }),
-              onSome: clip =>
-                LevelPage.Ready({
-                  clip,
-                  shownRows: levelRowsPerPage,
-                  deleting: DeleteState.Idle(),
-                  editor: initialEditor(clip),
-                }),
-            }),
+    ? Option.match(maybeClip, {
+        onNone: () => ({
+          model: modifyFields(model, {
+            level: () => LevelPage.Missing({ clipId }),
+          }),
         }),
-      }
+        onSome: clip => ({
+          model: modifyFields(model, {
+            level: () =>
+              LevelPage.Ready({
+                clip,
+                stars: LevelStars.Loading(),
+                shownRows: levelRowsPerPage,
+                deleting: DeleteState.Idle(),
+                editor: initialEditor(clip),
+              }),
+          }),
+          commands: [LoadLevelStars({ clipId })],
+        }),
+      })
+    : unchanged(model)
+
+export const succeededLoadLevelStars = (
+  model: Model,
+  clipId: string,
+  lines: ReadonlyArray<LineStars>,
+): LevelUpdate =>
+  model.level._tag === 'Ready' && model.level.clip.id === clipId
+    ? whenReady(model, page =>
+        modifyFields(page, { stars: () => LevelStars.Ready({ lines }) }),
+      )
+    : unchanged(model)
+
+// Stars that could not be read leave what was shown; with none shown
+// yet, the level says why.
+export const failedLoadLevelStars = (
+  model: Model,
+  clipId: string,
+  reason: string,
+): LevelUpdate =>
+  model.level._tag === 'Ready' && model.level.clip.id === clipId
+    ? whenReady(model, page =>
+        page.stars._tag === 'Ready'
+          ? page
+          : modifyFields(page, { stars: () => LevelStars.Failed({ reason }) }),
+      )
     : unchanged(model)
 
 export const failedLoadLevel = (
@@ -234,6 +272,10 @@ export const succeededDeleteClip = (
           native._tag !== 'NoLine' && native.clipId === clipId
             ? NativeCurve.NoLine()
             : native,
+        place: place =>
+          place._tag !== 'NotLoaded' && place.clipId === clipId
+            ? LinePlace.NotLoaded()
+            : place,
       }),
       commands: [GoHome()],
     }),

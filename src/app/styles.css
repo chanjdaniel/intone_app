@@ -33,6 +33,12 @@
   --color-closeness-5: #c2410c;
   /* The stretch where a take differed most, shaded behind both curves. */
   --color-mark: #fbe6bd;
+  /*
+   * A star a line has earned; one still to earn is outlined in the
+   * native's grey. Each at least 3:1 on surface and raised, as a graphic
+   * needs.
+   */
+  --color-star: #b07400;
   --color-good: #1d7038;
   --color-warn: #8f5100;
   --color-bad: #b4232a;
@@ -69,4 +75,20 @@
     YuGothic, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-serif: initial;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* A star just earned grows into place, once, where motion is welcome. */
+  --animate-star-earned: star-earned 700ms ease-out both;
+  @keyframes star-earned {
+    0% {
+      transform: scale(0.4);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
 }

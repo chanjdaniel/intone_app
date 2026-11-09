@@ -2,11 +2,18 @@ import { Array, Option, Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 import { type ClipEntry, clipHasAudio } from '../../services/history-records'
-import { SourceLink, clockText, sourceLinkOf } from '../line/lines'
+import {
+  type BundledClip,
+  SourceLink,
+  clockText,
+  sourceLinkOf,
+} from '../line/lines'
 import { LineEditor } from './editor'
+import { LineProgress } from './progress'
 
 // The learner's clips as the Model knows them: the list on the home
-// screen, and one clip's lines on its level, /level/:clipId. Each is read
+// screen, and one clip's lines on its level, /level/:clipId, a clip the
+// app brings among them, each line with its stars. Each is read
 // from the device when its screen opens; only these few facts of a clip
 // enter the Model, never its audio or its curves; the line editor's
 // waveform is the one exception, a byte per 10 ms of the clip, read once
@@ -49,6 +56,12 @@ export const LevelChange = Schema.Struct({
 })
 export type LevelChange = typeof LevelChange.Type
 
+// Where a level's clip came from: the app, an upload, or the local pack,
+// whose manifest alone changes its lines. Only an upload's lines can be
+// fixed in the line editor, and only the learner's clips deleted.
+export const LevelOrigin = Schema.Literals(['Bundled', 'Upload', 'Pack'])
+export type LevelOrigin = typeof LevelOrigin.Type
+
 export const LevelClip = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -59,8 +72,7 @@ export const LevelClip = Schema.Struct({
   hasAudio: Schema.Boolean,
   lines: Schema.Array(LevelLine),
   maybeUndo: Schema.Option(LevelChange),
-  // Imported from the local pack, whose manifest alone changes its lines.
-  isPack: Schema.Boolean,
+  origin: LevelOrigin,
 })
 export type LevelClip = typeof LevelClip.Type
 
@@ -86,7 +98,31 @@ export const levelClipOf = (clip: ClipEntry): LevelClip => ({
     maybeSource: Option.map(Option.fromNullishOr(line.source), sourceLinkOf),
   })),
   maybeUndo: Option.map(Option.fromNullishOr(clip.undo), undo => undo.change),
-  isPack: clip.pack !== undefined,
+  origin: clip.pack === undefined ? 'Upload' : 'Pack',
+})
+
+// A level the app brings: each line its whole file, from its first
+// sample to its last.
+export const levelClipOfBundled = (clip: BundledClip): LevelClip => ({
+  id: clip.id,
+  name: clip.name,
+  seconds: clip.lines.reduce((sum, line) => sum + line.seconds, 0),
+  addedAt: 0,
+  hasAudio: true,
+  lines: clip.lines.map((line, k) => ({
+    id: line.lineId,
+    number: k + 1,
+    from: 0,
+    to: line.seconds,
+    native: 'Tracked',
+    maybeQuality: Option.none(),
+    maybeFile: Option.none(),
+    maybeText: Option.some(line.text),
+    maybeKana: Option.some(line.reading),
+    maybeSource: Option.none(),
+  })),
+  maybeUndo: Option.none(),
+  origin: 'Bundled',
 })
 
 // A clip on the home screen.
@@ -125,11 +161,28 @@ export const DeleteState = defineTaggedUnion({
 })
 export type DeleteState = typeof DeleteState.Type
 
+// One line's stars on its level.
+export const LineStars = Schema.Struct({
+  lineId: Schema.String,
+  progress: LineProgress,
+})
+export type LineStars = typeof LineStars.Type
+
+// The level's stars, read from the takes kept on the device each time
+// the level opens.
+export const LevelStars = defineTaggedUnion({
+  Loading: {},
+  Ready: { lines: Schema.Array(LineStars) },
+  Failed: { reason: Schema.String },
+})
+export type LevelStars = typeof LevelStars.Type
+
 export const LevelPage = defineTaggedUnion({
   NotLoaded: {},
   Loading: { clipId: Schema.String },
   Ready: {
     clip: LevelClip,
+    stars: LevelStars,
     // How many rows of the list are shown, a page at a time.
     shownRows: Schema.Finite,
     deleting: DeleteState,

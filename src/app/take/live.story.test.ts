@@ -66,6 +66,7 @@ const trackerOf = Effect.gen(function* () {
 const recording = (takeNumber: number): Model => ({
   ...initialModel(AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })),
   take: TakeState.Recording({
+    mode: 'Guided',
     takeNumber,
     elapsedSeconds: 0,
     levelDb: levelMeterFloorDb,
@@ -141,6 +142,7 @@ describe('the take, as its Model hears it', () => {
           model(state => {
             expect(state.take).toStrictEqual(
               TakeState.Recording({
+                mode: 'Guided',
                 takeNumber: 3,
                 elapsedSeconds: last?.elapsedSeconds ?? Number.NaN,
                 levelDb: 20 * Math.log10(0.5),

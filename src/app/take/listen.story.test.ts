@@ -49,39 +49,60 @@ const tracked = TakeResult.Tracked({
   score: sampleScore,
   kept: sampleKept,
 })
-const finished = Take.ShowingResult({ takeNumber: 1, result: tracked })
+const finished = Take.ShowingResult({
+  mode: 'Guided',
+  maybeOutcome: Option.none(),
+  takeNumber: 1,
+  result: tracked,
+})
 
 // One of every state a take can be in.
 const everyState: ReadonlyArray<Take> = [
   Take.Idle(),
-  Take.PlayingNative({ takeNumber: 1, tracker: 'Loading' }),
-  Take.PlayingNative({ takeNumber: 1, tracker: 'Ready' }),
-  Take.Preparing({ takeNumber: 1 }),
-  Take.AwaitingMic({ takeNumber: 1 }),
-  Take.MicPromptIgnored({ takeNumber: 1 }),
+  Take.PlayingNative({ mode: 'Guided', takeNumber: 1, tracker: 'Loading' }),
+  Take.PlayingNative({ mode: 'Guided', takeNumber: 1, tracker: 'Ready' }),
+  Take.Preparing({ mode: 'Guided', takeNumber: 1 }),
+  Take.AwaitingMic({ mode: 'Guided', takeNumber: 1 }),
+  Take.MicPromptIgnored({ mode: 'Guided', takeNumber: 1 }),
   Take.Recording({
+    mode: 'Guided',
     takeNumber: 1,
     elapsedSeconds: 1,
     levelDb: levelMeterFloorDb,
     maybeOnsetSeconds: Option.none(),
   }),
-  Take.Analysing({ takeNumber: 1 }),
+  Take.Analysing({ mode: 'Guided', takeNumber: 1 }),
   finished,
   Take.Listening({ voice: 'Line', extent: 'Whole', maybeTake: Option.none() }),
   Take.Listening({
     voice: 'Take',
     extent: 'Whole',
-    maybeTake: Option.some({ takeNumber: 1, result: tracked }),
+    maybeTake: Option.some({
+      mode: 'Guided',
+      maybeOutcome: Option.none(),
+      takeNumber: 1,
+      result: tracked,
+    }),
   }),
   Take.Listening({
     voice: 'Line',
     extent: 'WorstStretch',
-    maybeTake: Option.some({ takeNumber: 1, result: tracked }),
+    maybeTake: Option.some({
+      mode: 'Guided',
+      maybeOutcome: Option.none(),
+      takeNumber: 1,
+      result: tracked,
+    }),
   }),
   Take.Listening({
     voice: 'Take',
     extent: 'WorstStretch',
-    maybeTake: Option.some({ takeNumber: 1, result: tracked }),
+    maybeTake: Option.some({
+      mode: 'Guided',
+      maybeOutcome: Option.none(),
+      takeNumber: 1,
+      result: tracked,
+    }),
   }),
   Take.MicDenied(),
   Take.NoMicDevice(),
@@ -128,7 +149,12 @@ describe('playing and recording', () => {
           Take.Listening({
             voice: 'Take',
             extent: 'Whole',
-            maybeTake: Option.some({ takeNumber: 1, result: tracked }),
+            maybeTake: Option.some({
+              mode: 'Guided',
+              maybeOutcome: Option.none(),
+              takeNumber: 1,
+              result: tracked,
+            }),
           }),
         ),
       ),
@@ -136,7 +162,11 @@ describe('playing and recording', () => {
       focused,
       model(state => {
         expect(state.take).toStrictEqual(
-          Take.PlayingNative({ takeNumber: 2, tracker: 'Loading' }),
+          Take.PlayingNative({
+            mode: 'Guided',
+            takeNumber: 2,
+            tracker: 'Loading',
+          }),
         )
         expect(plays(state)).toBe('LineBeforeTake')
       }),
@@ -147,12 +177,21 @@ describe('playing and recording', () => {
     story(
       update,
       given(
-        onLine(Take.PlayingNative({ takeNumber: 2, tracker: 'Loading' }), 2),
+        onLine(
+          Take.PlayingNative({
+            mode: 'Guided',
+            takeNumber: 2,
+            tracker: 'Loading',
+          }),
+          2,
+        ),
       ),
       message(Message.EndedNativeBeforeTake({ takeNumber: 2 })),
       focused,
       model(state => {
-        expect(state.take).toStrictEqual(Take.Preparing({ takeNumber: 2 }))
+        expect(state.take).toStrictEqual(
+          Take.Preparing({ mode: 'Guided', takeNumber: 2 }),
+        )
         expect(plays(state)).toBe('nothing')
         expect(holdsMicrophone(state)).toBe(false)
       }),
@@ -228,7 +267,15 @@ describe('listening again', () => {
   test('a line that will not play before a take ends the take and says why', () => {
     story(
       update,
-      given(onLine(Take.PlayingNative({ takeNumber: 1, tracker: 'Ready' }))),
+      given(
+        onLine(
+          Take.PlayingNative({
+            mode: 'Guided',
+            takeNumber: 1,
+            tracker: 'Ready',
+          }),
+        ),
+      ),
       message(Message.FailedPlayback({ reason: 'NotAllowedError' })),
       focused,
       model(state => {
@@ -257,7 +304,12 @@ describe('listening again', () => {
           Take.Listening({
             voice: 'Take',
             extent: 'Whole',
-            maybeTake: Option.some({ takeNumber: 1, result: tracked }),
+            maybeTake: Option.some({
+              mode: 'Guided',
+              maybeOutcome: Option.none(),
+              takeNumber: 1,
+              result: tracked,
+            }),
           }),
         ),
       ),
@@ -287,7 +339,12 @@ describe('the worst stretch', () => {
           Take.Listening({
             voice: 'Line',
             extent: 'WorstStretch',
-            maybeTake: Option.some({ takeNumber: 1, result: tracked }),
+            maybeTake: Option.some({
+              mode: 'Guided',
+              maybeOutcome: Option.none(),
+              takeNumber: 1,
+              result: tracked,
+            }),
           }),
         )
         expect(Option.getOrThrow(playOf(state))).toStrictEqual({
@@ -335,6 +392,8 @@ describe('the worst stretch', () => {
 
   test('cannot be heard from a take that could not be compared', () => {
     const uncompared = Take.ShowingResult({
+      mode: 'Guided',
+      maybeOutcome: Option.none(),
       takeNumber: 1,
       result: TakeResult.Tracked({
         curve: sampleCurve,
