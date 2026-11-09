@@ -23,6 +23,8 @@
     "dist",
     "repos",
     "*.tsbuildinfo",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    "NOTICES.md",
+    "src/virtual-modules.d.ts"
   ]
 }

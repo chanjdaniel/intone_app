@@ -11,6 +11,11 @@
     "exactOptionalPropertyTypes": true,
     "isolatedModules": true,
     "noEmit": true,
+    "types": ["vite/client"],
+    // build/ runs under Node's own type stripping, which needs the
+    // extension on every relative import, and the end-to-end tests import
+    // its readers.
+    "allowImportingTsExtensions": true,
     "plugins": [
       {
         "name": "@effect/language-service",

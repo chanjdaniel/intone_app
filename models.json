@@ -1,0 +1,14 @@
+{
+  "models": [
+    {
+      "id": "swift-f0",
+      "name": "SwiftF0 0.3.0",
+      "file": "model.onnx",
+      "url": "https://raw.githubusercontent.com/lars76/swift-f0/d1ba77fe5331310b778ebe126b6cb3656d41d24f/swift_f0/model.onnx",
+      "bytes": 135090,
+      "sha256": "6385e8c2ebc3872e82c9ff5946228de44cd3be77a750ea53698b7dbfe94b0a22",
+      "licence": "MIT",
+      "source": "https://github.com/lars76/swift-f0/tree/v0.3.0"
+    }
+  ]
+}

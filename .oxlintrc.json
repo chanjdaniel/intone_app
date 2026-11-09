@@ -53,7 +53,30 @@
       }
     },
     {
+      // src/app imports Foldkit, Effect and every folder below it, but never
+      // the dev-only component library, by any path (`./dev`, `../dev/x`,
+      // `../../app/dev/x`, `/src/app/dev/x`), statically or not: only the
+      // dynamic import in src/app/devLibrary.ts reaches it, inside a
+      // development-only branch.
       "files": ["**/src/app/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^((\\.{1,2}/)+|/)(.+/)?dev(/|$)",
+                "message": "Only src/app/devLibrary.ts opens the dev library, by a dynamic import (AGENTS.md, the dev library)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // The dev library's own files import each other and the app, and the
+      // bridge opens it.
+      "files": ["**/src/app/dev/**", "**/src/app/devLibrary.ts"],
       "rules": {
         "no-restricted-imports": "off"
       }

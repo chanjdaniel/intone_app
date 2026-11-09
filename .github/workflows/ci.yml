@@ -26,6 +26,12 @@ jobs:
 
       - run: npm ci
 
+      # Model files listed in models.json, fetched and checked by the build.
+      - uses: actions/cache@v6
+        with:
+          path: .cache/models
+          key: models-${{ hashFiles('models.json') }}
+
       - name: Format
         run: npm run format:check
 
@@ -38,11 +44,17 @@ jobs:
       - name: Effect check
         run: npm run check:effect
 
+      - name: Generated files are current
+        run: npm run generate:check
+
       - name: Unit, Story and Scene tests
         run: npm test
 
       - name: Build
         run: npm run build
+
+      - name: Bundle budget
+        run: npm run check:budget
 
       - name: Install Chromium
         run: npx playwright install chromium

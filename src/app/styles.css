@@ -2,3 +2,58 @@
 
 /* repos/ is reading only (AGENTS.md): never scan it for classes. */
 @source not '../../repos';
+
+/*
+ * The app's tokens, defined once. Tailwind's own colours, radii and type
+ * steps are cleared, so a class outside this set (`bg-gray-100`,
+ * `rounded-xl`, `text-7xl`) builds to nothing. The /dev library's tokens
+ * entry reads this block, so a line here shows up there.
+ */
+@theme {
+  --color-*: initial;
+  --color-surface: #ffffff;
+  --color-raised: #f5f6f8;
+  --color-line: #d5d9e0;
+  --color-ink: #16181d;
+  --color-muted: #555c69;
+  --color-accent: #3346c4;
+  --color-on-accent: #ffffff;
+  --color-native: #2b5fc0;
+  --color-take: #c2410c;
+  --color-good: #1d7038;
+  --color-warn: #8f5100;
+  --color-bad: #b4232a;
+
+  --spacing: 0.25rem;
+
+  --radius-*: initial;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  --text-*: initial;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 1;
+
+  /* System faces only, Japanese first, so no font is ever downloaded. */
+  --font-sans:
+    'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic',
+    YuGothic, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: initial;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
