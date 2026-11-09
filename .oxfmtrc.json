@@ -34,6 +34,7 @@
     "fixtures/tracked",
     "docs/score-study.md",
     "docs/cut-study.md",
+    "docs/sounds-study.md",
     "src/app/dev/cutStudyLines.json"
   ]
 }

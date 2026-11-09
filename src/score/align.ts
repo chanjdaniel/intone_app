@@ -12,8 +12,9 @@ export type AlignmentPath = Readonly<{
   take: Int32Array
 }>
 
-// Spec, "The score's interface": ticket 10 chooses one, and ticket 20 may
-// plug in a speech model's features. An aligner that cannot line the two
+// Spec, "The score's interface": ticket 10 chose one, and a speech
+// model's frames go through it too, put on the curve's frames by
+// `onCurveFrames` (docs/sounds.md, "The aligner, answered"). An aligner that cannot line the two
 // up answers null, and the score falls back (`withFallback`).
 export interface Aligner {
   readonly name: string

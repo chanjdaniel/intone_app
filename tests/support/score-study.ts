@@ -44,7 +44,7 @@ import type { VoiceFixtureLabels } from './voice-fixtures.ts'
 
 // A right accent, said at the voice's own pace, slower, faster or
 // unevenly; and the two wrong accents. `mora-changed` keeps the accent and
-// changes a sound, for ticket 20.
+// changes a sound, for the sounds study (docs/sounds.md).
 export const rightVariants = ['right', 'slower', 'faster', 'uneven'] as const
 export const wrongVariants = ['fall-moved', 'fall-lost'] as const
 export const studiedVariants: ReadonlyArray<Variant> = [
@@ -138,7 +138,7 @@ const chosenDtw = dtwAligner({
   failDistance: Number.POSITIVE_INFINITY,
 })
 
-const onSpans =
+export const onSpans =
   (aligner: Aligner, featuresOf: (fixture: StudyFixture) => Features) =>
   (pair: StudyPair) =>
     aligner.align(

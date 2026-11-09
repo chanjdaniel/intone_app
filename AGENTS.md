@@ -149,12 +149,14 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 - `src/score/score.ts` exports `scoreTake(native, take)`: two `Recording`s (a curve and its features) in, a `Score` out (`Scored` or `CouldNotCompare`), as the spec's interface gives it; `docs/score.md` says what each step does and the numbers each was chosen from.
   `scoreWithAlignment` adds the pairs of frames it lined up, which `alignedTakeF0` (`align.ts`) turns into the take's pitch at each native frame, for drawing; `scoreDetail` adds the raw measures, for the study alone.
 - Its steps: `track.ts` (gates, the octave filter, semitones around the median, the speech span), `align.ts` (the `Aligner` interface, `normaliseFeatures`, `stretchAligner`, `dtwAligner`, `withFallback`), `compare.ts` (the pitch skill with the clamped gain, the tempo deviation).
-  The aligner never looks at pitch: it lines the take up by its features, the 24 log mel bands of `src/engine/features/spectral.ts`, or a speech model's features later (ticket 20).
+  The aligner never looks at pitch: it lines the take up by its features, the 24 log mel bands of `src/engine/features/spectral.ts`; a speech model's frames go through it too, put on the curve's frames by `onCurveFrames` (`src/score/features.ts`), though the app uses none (`docs/sounds.md`).
 - Every constant is in `src/score/constants.ts`, each naming its data; `SCORE_VERSION` is bumped on any change that moves a score.
 - Only frames voiced in both recordings are compared, never a bridged gap, so missing pitch is never an error; the painter's bridging is for the eye alone.
 - `fixtures/tracked/` is every fixture's curve and features as the app makes them, written by `npm run fixtures:tracked`; `npm run score:study` writes `docs/score-study.md` from it, and fails while an anchor of the scale in the constants has drifted from what it measures.
   Both scripts run the app's own source under Node through `scripts/source-imports.ts`, which lets Node resolve its extensionless imports.
   `tests/scripts/` remakes both and fails on any difference; `tests/score/` holds the score to the fixtures, and `src/score/*.test.ts` proves its properties on the synthetic takes of `src/score/synthetic-take.ts`.
+- The match has no sounds part: `docs/sounds.md` states the bar a speech model's sounds score had to pass, written before anything was measured, and finds that none of Whisper-base's encoder, WavLM-Base+ and WavLM-Large passes it.
+  `npm run sounds:features` keeps each model's frames of every voice fixture in the git-ignored `.cache/sounds/`, `npm run sounds:study` writes `docs/sounds-study.md` from them (remade by `tests/scripts/sounds-study.test.ts` only where they are kept, so not in CI), and `npm run sounds:bench` runs each model in a Worker in Chromium; the models are the pinned files of `tests/support/sound-models.ts`, none of them in `models.json`.
 
 ## The practice loop
 

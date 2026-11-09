@@ -16,7 +16,7 @@ Every screen, test, doc and name in the code uses these words with these meaning
 - **Features:** what a recording sounds like frame by frame, never its pitch: the bands of its spectrum, which the score lines a take up with the line by.
 - **Alignment:** the pairs of line and take frames that say the same sound, found from their features; the pitch accent part compares along it and the timing part reads its pace.
 - **Match:** the headline, "N% match to this clip".
-  Its **parts** are pitch accent, timing and sounds.
+  Its **parts** are pitch accent and timing; a **sounds** part (the vowels and consonants) joins them only once a speech model passes the bar in `docs/sounds.md`, which none has.
 - **Worst stretch:** the 400 ms of the line where the take's pitch part is lowest.
 - **Couldn't compare:** the score's answer when a take cannot be scored fairly.
 - **Score card:** what the practice screen shows after a take: the match and its parts by name, and the worst stretch, shaded on both curves and playable from both voices; or, when it couldn't compare, what to try and no number.

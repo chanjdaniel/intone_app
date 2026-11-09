@@ -50,7 +50,8 @@ Its wrong takes keep a median skill of 0.07, near the labelled boundaries' 0.04,
 The band's width changed nothing measurable from 10% up (measured on this branch with the band at 5%, 10%, 20%, 35% and 100% before the speech's reach was added); 20% leaves room for a learner's hesitation, and the cost is small at a line's length.
 Weighting DTW's diagonal steps double, the usual unbiased step pattern, lined the morae up worse (13 ms median, 51 ms at the 90th percentile, measured the same way), so each step costs one distance.
 
-The aligner is behind the `Aligner` interface, which takes two `Features` and answers a path or null; ticket 20 can give it a speech model's features in place of the bands.
+The aligner is behind the `Aligner` interface, which takes two `Features` and answers a path or null; a speech model's frames go through it too, put on the curve's frames by `onCurveFrames` (`src/score/features.ts`).
+Whisper-base's encoder and WavLM line the fixtures up a little better than the bands (27 ms at the 90th percentile, 0.980 at 19 morae), but none of them is on the device for a take and each costs seconds a take, so the bands stay (`docs/sounds.md`, "The aligner, answered").
 `chosenAligner` falls back to `stretchAligner` when DTW answers null: for features that cannot be compared (different dimensions or frame rates, under two frames), or a path whose paired frames stand more than 6 apart on average, which no fixture pair reaches (takes of the same words reach 5.71 at most, takes of other words 5.94, and unrelated frames of 24 normalised bands stand about 6.9 apart).
 So on the fixtures the fallback never runs; it is there for a recording DTW cannot use.
 
@@ -75,7 +76,7 @@ For each native and condition, the other voices' right takes score within 0.17, 
 The widest spreads are pairs of voices whose own pitch patterns differ, such as 白上虎太郎 copying 中国うさぎ on the shortest phrase, whose pitch accent part is 0.19 to 0.21 in every condition.
 A test holds the spread under 0.55 at worst and 0.25 at the median.
 Faster takes score a little lower on pitch accent than takes at the voice's own pace (0.91 median against 0.99).
-A take with one mora's sound changed and its accent kept scores as a right take does (0.92 against 0.93 median match), so the pitch part ignores sounds, as it should until ticket 20 adds them.
+A take with one mora's sound changed and its accent kept scores as a right take does (0.92 against 0.93 median match), so the pitch part ignores sounds, as it should; no speech model measured gave a sounds part that passes its bar (`docs/sounds.md`), so the match has none.
 
 ## Pitch range
 

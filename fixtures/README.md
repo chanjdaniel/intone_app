@@ -77,7 +77,7 @@ Each phrase has a devoiced mora: す in すき, す in ます, し in ました.
 | `right`            | The right accent, at VOICEVOX's own timing                                                                                              |
 | `fall-moved`       | One accent phrase's fall moved to another mora                                                                                          |
 | `fall-lost`        | One accent phrase that should fall does not                                                                                             |
-| `mora-changed`     | One mora's sound changed, every accent kept, for the sounds part (ticket 20)                                                            |
+| `mora-changed`     | One mora's sound changed, every accent kept, for the sounds study (`docs/sounds.md`)                                                    |
 | `slower`, `faster` | The right accent at 0.8 and 1.25 times VOICEVOX's speed                                                                                 |
 | `uneven`           | The right accent with about a third of the morae's vowels held 1.6 times as long and about a quarter clipped to 0.6, seeded per fixture |
 

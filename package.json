@@ -25,6 +25,9 @@
     "fixtures:tracked": "node --import ./scripts/source-imports.ts scripts/tracked-fixtures.ts",
     "score:study": "node --import ./scripts/source-imports.ts scripts/score-study.ts",
     "cut:study": "node --import ./scripts/source-imports.ts scripts/cut-study.ts",
+    "sounds:features": "node --import ./scripts/source-imports.ts scripts/sound-features.ts",
+    "sounds:study": "node --import ./scripts/source-imports.ts scripts/sounds-study.ts",
+    "sounds:bench": "node --import ./scripts/source-imports.ts scripts/sounds-bench.ts",
     "vendor:foldkit": "scripts/vendor-foldkit.sh"
   },
   "dependencies": {
