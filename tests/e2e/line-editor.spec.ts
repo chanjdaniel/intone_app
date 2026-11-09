@@ -134,8 +134,14 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         const endDragged = await valueOf(end)
         expect(endDragged).toBeCloseTo(endBefore - pixels * secondsPerPixel, 1)
         expect(await nativesKept(page)).toBe(cutNatives + 1)
+        // The row's length is the difference of the two times it shows,
+        // each read down to the tenth.
+        const tenths = (seconds: number) => Math.floor(seconds * 10 + 1e-6)
+        const startNow = await valueOf(
+          page.getByRole('slider', { name: 'Start of Line 3' }),
+        )
         await expect(lineRows(page).nth(2)).toContainText(
-          `${(endDragged - (await valueOf(page.getByRole('slider', { name: 'Start of Line 3' })))).toFixed(1)} s`,
+          `${((tenths(endDragged) - tenths(startNow)) / 10).toFixed(1)} s`,
         )
 
         // Undone: the edge goes back, and the curve it made with it.
