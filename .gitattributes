@@ -1,0 +1,3 @@
+# Foldkit vendored as reading only (AGENTS.md): kept out of language stats and
+# collapsed in pull request diffs.
+repos/** linguist-vendored linguist-generated

@@ -1,1 +1,4 @@
 @import 'tailwindcss';
+
+/* repos/ is reading only (AGENTS.md): never scan it for classes. */
+@source not '../../repos';

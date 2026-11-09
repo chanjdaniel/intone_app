@@ -25,6 +25,9 @@ export default defineConfig({
           include: ['tests/{lint,build,scripts}/**/*.test.ts'],
           environment: 'node',
           testTimeout: 180_000,
+          // They run the project's own lint, whose first step may patch the
+          // oxlint binary in node_modules, and its build: one file at a time.
+          fileParallelism: false,
         },
       },
     ],
