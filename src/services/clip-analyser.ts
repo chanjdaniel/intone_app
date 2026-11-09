@@ -378,6 +378,31 @@ export const editWith =
       return { seconds, peaks, track: session.track }
     })
 
+// One clip Worker for many files, until the scope closes, as a local
+// pack's import uses it (./local-pack.ts): each file decoded and held in
+// turn, refused over ten minutes, and spans of it tracked as a cut tracks
+// them; a file's `track` holds only until the next file is opened.
+export const trackerWith = (
+  browser: ClipBrowser,
+): Effect.Effect<OpenFile, ClipAnalyserError, Scope.Scope> =>
+  Effect.map(
+    openClipWorker(browser.makeWorker, browser.assets),
+    session => (file: Blob) =>
+      Effect.gen(function* () {
+        const samples = yield* browser.decode(file)
+        const seconds = samples.length / clipSampleRate
+        if (seconds > longestClipSeconds) {
+          return yield* tooLong(seconds)
+        }
+        const peaks = yield* session.hold(samples)
+        return { seconds, peaks, track: session.track }
+      }),
+  )
+
+export type OpenFile = (
+  file: Blob,
+) => Effect.Effect<ClipEditing, ClipAnalyserError>
+
 // The file's length from its header, by an audio element told to load
 // only that: what the browser says when it cannot play the file is that
 // it is not supported.
@@ -484,6 +509,8 @@ export class ClipAnalyser extends Context.Service<
     readonly edit: (
       file: Blob,
     ) => Effect.Effect<ClipEditing, ClipAnalyserError, Scope.Scope>
+    // One Worker that opens file after file, until the scope closes.
+    readonly tracker: Effect.Effect<OpenFile, ClipAnalyserError, Scope.Scope>
   }
 >()('intone/services/ClipAnalyser') {
   // The browser's own audio element and decoder, and Silero VAD and
@@ -506,18 +533,25 @@ export class ClipAnalyser extends Context.Service<
     return ClipAnalyser.of({
       analyse: analyseWith(browser),
       edit: editWith(browser),
+      tracker: trackerWith(browser),
     })
   })
 
   // Answers each file with the events `respond` gives it, and fails with
-  // its error, with no browser, Worker or model; a clip opened to edit
-  // is `editing` as `openEditing` gives it, or that error.
+  // its error, with no browser, Worker or model; a clip opened to edit,
+  // or by the tracker, is as `openEditing` gives it, or that error.
   static readonly layerTest = (
     respond: (file: Blob) => ReadonlyArray<ClipEvent> | ClipAnalyserError,
     openEditing: (file: Blob) => ClipEditing | ClipAnalyserError = () =>
       failed('Failed', 'This test opens no clip to edit.'),
-  ): Layer.Layer<ClipAnalyser> =>
-    Layer.succeed(
+  ): Layer.Layer<ClipAnalyser> => {
+    const opened = (file: Blob) => {
+      const answer = openEditing(file)
+      return answer instanceof ClipAnalyserError
+        ? Effect.fail(answer)
+        : Effect.succeed(answer)
+    }
+    return Layer.succeed(
       ClipAnalyser,
       ClipAnalyser.of({
         analyse: file => {
@@ -526,12 +560,9 @@ export class ClipAnalyser extends Context.Service<
             ? Stream.fail(answer)
             : Stream.fromIterable(answer)
         },
-        edit: file => {
-          const answer = openEditing(file)
-          return answer instanceof ClipAnalyserError
-            ? Effect.fail(answer)
-            : Effect.succeed(answer)
-        },
+        edit: file => opened(file),
+        tracker: Effect.succeed(opened),
       }),
     )
+  }
 }

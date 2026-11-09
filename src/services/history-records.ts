@@ -194,17 +194,33 @@ export const LineQuality = Schema.Struct({
 })
 export type LineQuality = typeof LineQuality.Type
 
+// Where a line of the local pack came from (docs/local-pack.md): a link
+// and the times in it, which the app shows as a link opened in a new tab
+// and never fetches.
+export const LineSource = Schema.Struct({
+  url: Schema.String.check(Schema.isPattern(/^https?:\/\/[^\s/?#]+[^\s]*$/)),
+  from: Schema.optionalKey(Schema.Finite),
+  to: Schema.optionalKey(Schema.Finite),
+})
+export type LineSource = typeof LineSource.Type
+
 export const ClipLine = Schema.Struct({
   // Unique in its clip, and never used again once the line is gone, since
   // its takes keep it: the line's number when the clip was cut, or the
   // clip's next id when a split made it.
   id: Schema.String,
-  // Seconds from the clip's start.
+  // Seconds from the start of its audio: the clip's, or its pack file's.
   from: Schema.Finite,
   to: Schema.Finite,
   native: LineNative,
   // A tracked line's quality; none on a line cut before it was measured.
   quality: Schema.optionalKey(LineQuality),
+  // A line of a local pack: the path of its file in the pack, and the
+  // text, kana and source its manifest gives, each only when given.
+  file: Schema.optionalKey(Schema.String),
+  text: Schema.optionalKey(Schema.String),
+  kana: Schema.optionalKey(Schema.String),
+  source: Schema.optionalKey(LineSource),
 })
 export type ClipLine = typeof ClipLine.Type
 
@@ -224,6 +240,25 @@ export const ClipUndo = Schema.Struct({
 })
 export type ClipUndo = typeof ClipUndo.Type
 
+// A file of a local pack (ticket 15): its path in the pack, its SHA-256,
+// which tells a changed file from the same one imported again, its length
+// and where it is kept, by its content (null when it came from a backup
+// that left its audio out).
+export const PackFile = Schema.Struct({
+  path: Schema.String,
+  sha256: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/)),
+  seconds: Schema.Finite,
+  audio: Schema.NullOr(ClipAudio),
+})
+export type PackFile = typeof PackFile.Type
+
+export const ClipPack = Schema.Struct({
+  // The manifest's own id, which a later import of it is matched by.
+  id: Schema.String,
+  files: Schema.Array(PackFile),
+})
+export type ClipPack = typeof ClipPack.Type
+
 export const ClipEntry = Schema.Struct({
   format: Format,
   id: Schema.String,
@@ -240,8 +275,72 @@ export const ClipEntry = Schema.Struct({
   nextLineId: Schema.optionalKey(Schema.Finite),
   // The last change to the lines, until it is undone.
   undo: Schema.optionalKey(ClipUndo),
+  // A level imported from the local pack: its files, each line naming
+  // one. Its `audio` is null, and its lines change only by importing its
+  // manifest again.
+  pack: Schema.optionalKey(ClipPack),
 })
 export type ClipEntry = typeof ClipEntry.Type
+
+// Every audio file a clip keeps: an upload's one, or its pack's.
+export const clipAudioFiles = (clip: ClipEntry): ReadonlyArray<ClipAudio> =>
+  [clip.audio, ...(clip.pack?.files ?? []).map(file => file.audio)].filter(
+    (audio): audio is ClipAudio => audio !== null,
+  )
+
+// The audio a line plays from: its pack file's, or its clip's.
+export const lineAudioOf = (
+  clip: ClipEntry,
+  line: Pick<ClipLine, 'file'>,
+): ClipAudio | null =>
+  line.file === undefined
+    ? clip.audio
+    : (clip.pack?.files.find(file => file.path === line.file)?.audio ?? null)
+
+// Whether every line's audio is on this device.
+export const clipHasAudio = (clip: ClipEntry): boolean =>
+  clip.pack === undefined
+    ? clip.audio !== null
+    : clip.pack.files.every(file => file.audio !== null)
+
+// The clip with no reference to its audio, as a backup without the
+// recordings carries it.
+export const clipWithoutAudio = (clip: ClipEntry): ClipEntry =>
+  clip.pack === undefined
+    ? { ...clip, audio: null }
+    : {
+        ...clip,
+        audio: null,
+        pack: {
+          id: clip.pack.id,
+          files: clip.pack.files.map(file => ({ ...file, audio: null })),
+        },
+      }
+
+// The clip, each file it has no audio for taking the audio `here` keeps
+// of the same file (by its SHA-256 for a pack's), as a restore does.
+export const clipKeepingAudioOf = (
+  clip: ClipEntry,
+  here: ClipEntry | undefined,
+): ClipEntry =>
+  clip.pack === undefined
+    ? { ...clip, audio: clip.audio ?? here?.audio ?? null }
+    : {
+        ...clip,
+        pack: {
+          id: clip.pack.id,
+          files: clip.pack.files.map(file => ({
+            ...file,
+            audio:
+              file.audio ??
+              here?.pack?.files.find(
+                found =>
+                  found.path === file.path && found.sha256 === file.sha256,
+              )?.audio ??
+              null,
+          })),
+        },
+      }
 
 // The native curves a clip's records name: its lines', and those of its
 // lines before the last change, kept so it can be undone.

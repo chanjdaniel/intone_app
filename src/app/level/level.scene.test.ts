@@ -194,6 +194,7 @@ describe('the home screen’s clips', () => {
               seconds: 130,
               lines: 41,
               hasAudio: true,
+              isPack: false,
             },
             {
               id: 'c1',
@@ -201,6 +202,7 @@ describe('the home screen’s clips', () => {
               seconds: 9.5,
               lines: 3,
               hasAudio: false,
+              isPack: false,
             },
           ],
         }),

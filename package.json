@@ -21,6 +21,7 @@
     "fixtures:voices": "node scripts/voice-fixtures.ts",
     "fixtures:voices-setup": "scripts/voicevox/setup.sh",
     "fixtures:formats": "node scripts/format-fixtures.ts",
+    "fixtures:local-pack": "node scripts/local-pack-fixture.ts",
     "fixtures:tracked": "node --import ./scripts/source-imports.ts scripts/tracked-fixtures.ts",
     "score:study": "node --import ./scripts/source-imports.ts scripts/score-study.ts",
     "cut:study": "node --import ./scripts/source-imports.ts scripts/cut-study.ts",

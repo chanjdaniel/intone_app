@@ -39,7 +39,8 @@ export const clipNeedingEditor = (model: Model): Option.Option<string> =>
   model.route._tag === 'Level' &&
   model.level._tag === 'Ready' &&
   model.level.clip.id === model.route.clipId &&
-  model.level.clip.hasAudio
+  model.level.clip.hasAudio &&
+  !model.level.clip.isPack
     ? Option.some(model.level.clip.id)
     : Option.none()
 

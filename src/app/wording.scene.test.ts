@@ -14,8 +14,9 @@ import {
   DeleteState,
   type LevelClip,
   LevelPage,
+  levelClipOf,
 } from './level/level'
-import { sampleClip } from './level/testClips'
+import { sampleClip, samplePack } from './level/testClips'
 import { NativeCurve } from './line/native'
 import {
   AppRoute,
@@ -34,7 +35,7 @@ import {
   sampleLine,
   sampleScore,
 } from './take/testCurves'
-import { UploadJob, UploadStep } from './upload/upload'
+import { PackJob, PackStep, UploadJob, UploadStep } from './upload/upload'
 
 // The app claims only what it compared (report section 3): no screen
 // says "accuracy", or that a take is correct. Every state of every
@@ -98,7 +99,14 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
       ...initialModel(AppRoute.Home()),
       clips: ClipsPage.Ready({
         clips: [
-          { id: 'c1', name: 'a.mp3', seconds: 9, lines: 3, hasAudio: false },
+          {
+            id: 'c1',
+            name: 'a.mp3',
+            seconds: 9,
+            lines: 3,
+            hasAudio: false,
+            isPack: false,
+          },
         ],
       }),
     },
@@ -124,6 +132,40 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
         false,
       ] as const,
   ),
+  ...[
+    PackJob.Working({
+      jobNumber: 1,
+      files: [new File(['{}'], 'pack.json')],
+      step: PackStep.TrackingLines({ done: 1, total: 3 }),
+    }),
+    PackJob.Refused({ reason: 'pack.json is not JSON.' }),
+    PackJob.Cancelled(),
+  ].map(
+    packJob =>
+      [
+        `upload, the pack ${packJob._tag}`,
+        {
+          ...initialModel(AppRoute.Upload()),
+          upload: { ...initialModel(AppRoute.Upload()).upload, packJob },
+        },
+        false,
+      ] as const,
+  ),
+  [
+    'a level from the local pack',
+    {
+      ...initialModel(
+        AppRoute.Level({ clipId: 'pack-example', maybeFind: Option.none() }),
+      ),
+      level: LevelPage.Ready({
+        clip: levelClipOf(samplePack),
+        shownRows: 50,
+        deleting: DeleteState.Idle(),
+        editor: initialEditor(levelClipOf(samplePack)),
+      }),
+    },
+    false,
+  ],
   [
     'level',
     {

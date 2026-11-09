@@ -20,7 +20,7 @@ import { PracticeLine } from './line/lines'
 import { ListenSpeed, NativeFailure } from './line/native'
 import { SettingsFacts, StorageFacts } from './settings/settings'
 import { Extent, TakeCurve, TakeFeatures, TakeResult, Voice } from './take/take'
-import { UploadStep } from './upload/upload'
+import { PackStep, UploadStep } from './upload/upload'
 
 const takeNumber = Schema.Finite
 
@@ -60,6 +60,12 @@ export const Message = defineMessageUnion({
   SucceededUpload: { jobNumber: Schema.Finite, clipId: Schema.String },
   FailedUpload: { jobNumber: Schema.Finite, reason: Schema.String },
   ClickedCancelUpload: {},
+  GotPackDropMessage: { message: FileDrop.Message },
+  GotPackFolderMessage: { message: FileDrop.Message },
+  ProgressedPackImport: { jobNumber: Schema.Finite, step: PackStep },
+  SucceededPackImport: { jobNumber: Schema.Finite, clipId: Schema.String },
+  FailedPackImport: { jobNumber: Schema.Finite, reason: Schema.String },
+  ClickedCancelPackImport: {},
   CompletedOpenLevel: {},
   CompletedFocusUploadStatus: {},
 

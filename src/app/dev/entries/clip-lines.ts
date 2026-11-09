@@ -48,8 +48,13 @@ const longClip = (): LevelClip => ({
     to: k * 3 + 2.6 + (k % 5) * 0.08,
     native: k % 37 === 5 ? 'TooNoisy' : 'Tracked',
     maybeQuality: Option.none(),
+    maybeFile: Option.none(),
+    maybeText: Option.none(),
+    maybeKana: Option.none(),
+    maybeSource: Option.none(),
   })),
   maybeUndo: Option.none(),
+  isPack: false,
 })
 
 export const init: Runtime.ElementInit<Model, Message> = () => ({

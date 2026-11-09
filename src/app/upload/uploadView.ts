@@ -5,10 +5,11 @@ import { FileDrop } from '@foldkit/ui'
 
 import { pageFrame } from '../history/historyView'
 import { uploadStatusAttribute } from './commands'
+import { type PackEvents, packPanel } from './packView'
+import { progressBar } from './progressBar'
 import {
   UploadJob,
   type UploadPage,
-  type UploadStep,
   acceptedFiles,
   progressOf,
   stepText,
@@ -40,7 +41,8 @@ const dropZone = <ViewMessage>(
     view: FileDrop.view,
     viewInputs: {
       accept: acceptedFiles,
-      isDisabled: page.job._tag === 'Working',
+      isDisabled:
+        page.job._tag === 'Working' || page.packJob._tag === 'Working',
       toView: attributes =>
         h.label(
           [
@@ -70,31 +72,6 @@ const dropZone = <ViewMessage>(
     toParentMessage: events.fileDrop,
   })
 
-const progressBar = <ViewMessage>(
-  step: UploadStep,
-  h: HtmlBuilder<ViewMessage>,
-): Html => {
-  const percent = Math.round(100 * progressOf(step))
-  return h.div(
-    [
-      h.Role('progressbar'),
-      h.AriaLabel('Cutting the clip into lines'),
-      h.AriaValuemin(0),
-      h.AriaValuemax(100),
-      h.AriaValuenow(percent),
-      h.Class(
-        'h-3 w-full overflow-hidden rounded-full border border-line bg-surface',
-      ),
-    ],
-    [
-      h.div([
-        h.Class('h-full rounded-full bg-accent motion-safe:transition-all'),
-        h.Style({ width: `${percent}%` }),
-      ]),
-    ],
-  )
-}
-
 const working = <ViewMessage>(
   job: Extract<UploadJob, { _tag: 'Working' }>,
   events: UploadEvents<ViewMessage>,
@@ -117,7 +94,7 @@ const working = <ViewMessage>(
         ],
         [`Cutting ${File.name(job.file)} into lines`],
       ),
-      progressBar(job.step, h),
+      progressBar(progressOf(job.step), 'Cutting the clip into lines', h),
       h.p([h.Class('text-base text-ink')], [stepText(job.step)]),
       h.button(
         [
@@ -184,7 +161,7 @@ export const uploadPanel = <ViewMessage>(
 
 export const uploadView = <ViewMessage>(
   page: UploadPage,
-  events: UploadEvents<ViewMessage>,
+  events: UploadEvents<ViewMessage> & PackEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   pageFrame(
@@ -207,6 +184,7 @@ export const uploadView = <ViewMessage>(
         ],
       ),
       uploadPanel(page, events, h),
+      packPanel(page, events, h),
     ],
     h,
   )

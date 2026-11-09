@@ -30,6 +30,7 @@ The database is at version 3.
 Version 1 (ticket 09) held `nativeCurves` alone; opening it adds the history's stores and `meta`'s format, and keeps the native curves, which `src/services/history-store.test.ts` and `tests/e2e/history.spec.ts` prove on a planted version 1 database.
 Version 3 (ticket 13) adds `clips`, the learner's own clips and their lines (`docs/uploads.md`); the records of version 2 are unchanged, so the history's format stays 1.
 Ticket 14 adds three keys a clip record may lack, so a record written before them still decodes and the format stays 1: each tracked line's `quality`, the clip's `nextLineId` and its `undo` (the lines before the last change).
+Ticket 15 adds a level from the local pack as a clip record with a `pack` key (its files, each by path, SHA-256, length and kept audio) and `audio: null`, and keys a line may have: its `file`, `text`, `kana` and `source` (`docs/local-pack.md`); older records lack them and still decode, so the format stays 1.
 A change to a clip's lines keeps the curves its undo names, and deletes each curve the clip stops naming that no other clip, undo or take names.
 A later format bumps the version, converts the records it changes in `upgrade` (`src/services/indexed-db.ts`), and writes its number to `meta`; a copy of the app older than the database refuses to open it, and says to reload.
 
@@ -43,7 +44,7 @@ When `SCORE_VERSION` moves, `/history` offers to score the older takes again fro
 One zip file, `intone-history-<day>.zip`, saved by the browser where the learner chooses:
 
 - `history.json`: `{ app: "intone", kind: "history backup", format, exportedAt, settings, natives, takes, clips }`, the same records as the stores, each frame array as base64 of its little-endian Float32 bytes, so every value comes back exactly; a backup made before clips has no `clips`, and reads as having none.
-- `audio/<take id>.wav`: the kept audio, and `clips/<clip id>.<extension>`: each clip's own file, only when the learner asks for the recordings; a take or clip whose audio is left out keeps no reference to it, and a clip restored without it keeps the file the device already has, or says its audio is not on the device.
+- `audio/<take id>.wav`: the kept audio, and `clips/<clip id>.<extension>`: each clip's own file (a local pack's files are `clips/pack-<id>-<first 16 hex of the file's SHA-256>.<extension>`), only when the learner asks for the recordings; a take or clip whose audio is left out keeps no reference to it, and a clip restored without it keeps the file the device already has, or says its audio is not on the device.
 
 Every entry is dated by the backup, so the same history saved at the same moment is the same file, byte for byte.
 Restoring reads the file whole first, by the same Schemas, and refuses it, restoring nothing, when it is not a zip, has no `history.json`, holds anything that does not decode, names a native it does not hold, or misses or damages an audio file or clip file it names.

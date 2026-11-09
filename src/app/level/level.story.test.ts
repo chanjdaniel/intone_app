@@ -144,6 +144,7 @@ describe('deleting a clip', () => {
               seconds: 9,
               lines: 3,
               hasAudio: true,
+              isPack: false,
             },
             {
               id: 'c2',
@@ -151,6 +152,7 @@ describe('deleting a clip', () => {
               seconds: 9,
               lines: 3,
               hasAudio: true,
+              isPack: false,
             },
           ],
         }),
@@ -191,6 +193,7 @@ describe('deleting a clip', () => {
                 seconds: 9,
                 lines: 3,
                 hasAudio: true,
+                isPack: false,
               },
             ],
           }),

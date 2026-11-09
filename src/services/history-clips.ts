@@ -10,6 +10,7 @@ import {
   type LineQuality,
   NativeEntry,
   TakeEntry,
+  clipAudioFiles,
   clipNativeIds,
   historyFormat,
   recordingId,
@@ -103,7 +104,21 @@ export type ClipOperations = Readonly<{
   readonly undoClipEdit: (
     clipId: string,
   ) => Effect.Effect<Option.Option<ClipEntry>, HistoryError>
+  // Writes `next` over `before` (none: there must be no such clip yet),
+  // unless the clip was changed meanwhile, with `natives` and the files
+  // in `writes`; then deletes the curves and the
+  // files `before` named that nothing names any more. A local pack's
+  // import (./local-pack.ts) plans what to write.
+  readonly replaceClip: (
+    before: Option.Option<ClipEntry>,
+    next: ClipEntry,
+    natives: ReadonlyArray<NativeEntry>,
+    writes: ReadonlyArray<ClipFileWrite>,
+  ) => Effect.Effect<ClipEntry, HistoryError>
 }>
+
+// A file to keep in the clip store, read only when it is written.
+export type ClipFileWrite = Readonly<{ file: string; blob: Blob }>
 
 export type WithDatabase = <A>(
   lead: string,
@@ -170,11 +185,10 @@ const nativeEntriesOf = (
     ),
   )
 
-// Two readings of a clip's lines are the same lines.
-const sameLines = (
-  a: ReadonlyArray<ClipLine>,
-  b: ReadonlyArray<ClipLine>,
-): boolean => JSON.stringify(a) === JSON.stringify(b)
+// Two readings of a clip are the same clip: both decoded by its Schema,
+// so their keys are in the same order.
+const sameClip = (a: ClipEntry, b: ClipEntry): boolean =>
+  JSON.stringify(a) === JSON.stringify(b)
 
 // In `transaction`, once its earlier writes are made: deletes each of
 // `candidates` that no clip's records and no take name.
@@ -365,9 +379,7 @@ export const makeClipOperations = (
               transaction.objectStore(stores.natives).delete(nativeId),
             )
             itsClips.forEach(found => {
-              if (found.audio !== null) {
-                removed.push(found.audio.file)
-              }
+              removed.push(...clipAudioFiles(found).map(audio => audio.file))
             })
             clipStore.delete(id)
           }
@@ -382,58 +394,91 @@ export const makeClipOperations = (
       ),
     )
 
-  // Writes `next` over `before` in one transaction, unless the clip was
-  // changed meanwhile, with `natives`, and deletes the curves `before`
-  // named that nothing names any more.
-  const rewrite = (
-    lead: string,
-    before: ClipEntry,
+  const replaceClip = (
+    before: Option.Option<ClipEntry>,
     next: ClipEntry,
     natives: ReadonlyArray<NativeEntry>,
+    writes: ReadonlyArray<ClipFileWrite>,
+    lead = 'The clip was not kept.',
   ) =>
-    withDatabase(lead, database =>
-      transact(
-        database,
-        [stores.clips, stores.natives, stores.takes],
-        'readwrite',
-        transaction => {
-          const clipStore = transaction.objectStore(stores.clips)
-          const current = clipStore.get(before.id)
-          const outcome = { written: false }
-          current.onsuccess = () => {
-            const found = decodeClip(current.result)
-            if (
-              Option.isNone(found) ||
-              !sameLines(found.value.lines, before.lines)
-            ) {
-              return
+    Effect.gen(function* () {
+      const beforeFiles = new Set(
+        Option.match(before, {
+          onNone: () => [],
+          onSome: clipAudioFiles,
+        }).map(audio => audio.file),
+      )
+      const nextFiles = new Set(clipAudioFiles(next).map(audio => audio.file))
+      yield* Effect.forEach(writes, ({ file, blob }) =>
+        Effect.tryPromise({
+          try: async () => new Uint8Array(await blob.arrayBuffer()),
+          catch: error => ({
+            reason: `A file could not be read: ${error instanceof Error ? error.message : String(error)}`,
+          }),
+        }).pipe(Effect.flatMap(bytes => files.write(file, bytes))),
+      ).pipe(Effect.mapError(failWith(lead)))
+      const isWritten = yield* withDatabase(lead, database =>
+        transact(
+          database,
+          [stores.clips, stores.natives, stores.takes],
+          'readwrite',
+          transaction => {
+            const clipStore = transaction.objectStore(stores.clips)
+            const current = clipStore.get(next.id)
+            const outcome = { written: false }
+            current.onsuccess = () => {
+              const found = decodeClip(current.result)
+              const unchanged = Option.match(before, {
+                onNone: () => current.result === undefined,
+                onSome: was =>
+                  Option.isSome(found) && sameClip(found.value, was),
+              })
+              if (!unchanged) {
+                return
+              }
+              natives.forEach(native =>
+                transaction.objectStore(stores.natives).put(native),
+              )
+              clipStore.put(next)
+              outcome.written = true
+              const named = new Set(clipNativeIds(next))
+              deleteUnusedNatives(
+                transaction,
+                new Set(
+                  Option.match(before, {
+                    onNone: () => [],
+                    onSome: clipNativeIds,
+                  }).filter(nativeId => !named.has(nativeId)),
+                ),
+              )
             }
-            natives.forEach(native =>
-              transaction.objectStore(stores.natives).put(native),
-            )
-            clipStore.put(next)
-            outcome.written = true
-            const named = new Set(clipNativeIds(next))
-            deleteUnusedNatives(
-              transaction,
-              new Set(
-                clipNativeIds(before).filter(nativeId => !named.has(nativeId)),
+            return () => outcome.written
+          },
+        ),
+      )
+      if (!isWritten) {
+        return yield* failWith(lead)({
+          reason:
+            'The clip was changed or deleted elsewhere, perhaps in another tab. Open it again.',
+        })
+      }
+      yield* Effect.forEach(
+        [...beforeFiles].filter(file => !nextFiles.has(file)),
+        file => files.remove(file),
+      ).pipe(Effect.ignore)
+      return next
+    }).pipe(
+      // A file this wrote that `before` did not name goes again.
+      Effect.tapError(() =>
+        Effect.forEach(
+          writes.filter(
+            ({ file }) =>
+              !Option.exists(before, was =>
+                clipAudioFiles(was).some(audio => audio.file === file),
               ),
-            )
-          }
-          return () => outcome.written
-        },
-      ),
-    ).pipe(
-      Effect.flatMap(written =>
-        written
-          ? Effect.succeed(next)
-          : Effect.fail(
-              failWith(lead)({
-                reason:
-                  'The clip was changed or deleted elsewhere, perhaps in another tab. Open it again.',
-              }),
-            ),
+          ),
+          ({ file }) => files.remove(file),
+        ).pipe(Effect.ignore),
       ),
     )
 
@@ -448,7 +493,9 @@ export const makeClipOperations = (
         return Option.none()
       }
       const before = maybeClip.value
-      const maybePlan = planEdit(before, edit)
+      // A pack's lines change only by importing its manifest again.
+      const maybePlan =
+        before.pack === undefined ? planEdit(before, edit) : Option.none()
       if (Option.isNone(maybePlan)) {
         return maybeClip
       }
@@ -482,11 +529,12 @@ export const makeClipOperations = (
         undo: plan.undo,
       }
       return Option.some(
-        yield* rewrite(
-          'The lines were not changed.',
-          before,
+        yield* replaceClip(
+          Option.some(before),
           next,
           nativeEntriesOf(tracked),
+          [],
+          'The lines were not changed.',
         ),
       )
     })
@@ -503,11 +551,12 @@ export const makeClipOperations = (
         return maybeClip
       }
       return Option.some(
-        yield* rewrite(
-          'The change was not undone.',
-          before,
+        yield* replaceClip(
+          Option.some(before),
           maybeUndone.value,
           [],
+          [],
+          'The change was not undone.',
         ),
       )
     })
@@ -520,5 +569,7 @@ export const makeClipOperations = (
     removeClip,
     editClipLines,
     undoClipEdit,
+    replaceClip: (before, next, natives, writes) =>
+      replaceClip(before, next, natives, writes),
   }
 }

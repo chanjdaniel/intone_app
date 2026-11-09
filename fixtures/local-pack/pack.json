@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "id": "example",
+  "name": "Example local pack",
+  "lines": [
+    {
+      "file": "audio/hashi.wav",
+      "text": "橋を渡ります",
+      "kana": "はしをわたります",
+      "source": {
+        "url": "https://www.youtube.com/watch?v=intone-local-pack-fixture",
+        "start": 12.5,
+        "end": 14.1
+      }
+    },
+    {
+      "file": "audio/kyou.wav",
+      "text": "今日は駅で古い友達に会いました"
+    },
+    {
+      "file": "audio/gongitsune.wav",
+      "start": 0.68,
+      "end": 3.69,
+      "source": {
+        "url": "https://archive.org/details/gongitsune_um_librivox",
+        "start": 30.43,
+        "end": 33.44
+      }
+    },
+    {
+      "file": "audio/gongitsune.wav",
+      "start": 3.79,
+      "end": 6.7
+    }
+  ]
+}

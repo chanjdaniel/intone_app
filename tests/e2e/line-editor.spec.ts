@@ -103,7 +103,7 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
       async session => {
         const { page, context } = session
         await page.goto('/upload')
-        await page.locator('input[type="file"]').setInputFiles(clip)
+        await page.locator('#upload-file').setInputFiles(clip)
         await page.waitForURL(/\/level\//, { timeout: 120_000 })
         await expect(waveform(page).locator('svg path')).toBeVisible({
           timeout: 30_000,

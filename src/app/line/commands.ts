@@ -1,6 +1,7 @@
 import { Effect, Option, Schema } from 'effect'
 import { Command } from 'foldkit'
 
+import { lineAudioOf } from '../../services/history-records'
 import { HistoryStore } from '../../services/history-store'
 import { NativeCurves } from '../../services/native-curves'
 import { Message } from '../message'
@@ -53,13 +54,16 @@ const clipNative = (clipId: string, lineId: string) =>
       })
     }
     const { clip, line, maybeNative } = maybeFound.value
-    if (clip.audio === null) {
+    const audio = lineAudioOf(clip, line)
+    if (audio === null) {
       return Message.FailedLoadNativeCurve({
         clipId,
         lineId,
         failure: 'Failed',
         reason:
-          'This clip’s audio is not on this device: the backup it came from left it out. Bring the file again to practise it.',
+          clip.pack === undefined
+            ? 'This clip’s audio is not on this device: the backup it came from left it out. Bring the file again to practise it.'
+            : 'This line’s audio is not on this device: the backup it came from left it out. Import the pack again to practise it.',
       })
     }
     if (Option.isNone(maybeNative)) {
@@ -76,7 +80,7 @@ const clipNative = (clipId: string, lineId: string) =>
     return Message.SucceededLoadNativeCurve({
       clipId,
       lineId,
-      line: practiceLineOfClip(clip, line, clip.audio),
+      line: practiceLineOfClip(clip, line, audio),
       curve: takeCurveOf(maybeNative.value.curve),
       features: takeFeaturesOf(maybeNative.value.features),
     })

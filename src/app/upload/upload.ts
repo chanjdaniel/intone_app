@@ -40,20 +40,78 @@ export const UploadJob = defineTaggedUnion({
 })
 export type UploadJob = typeof UploadJob.Type
 
+// A local pack being imported (../../services/local-pack.ts): its
+// manifest and audio files, chosen together or as their folder.
+export const PackStep = defineTaggedUnion({
+  Reading: {},
+  // `done` of `total` files read and checked.
+  CheckingFiles: { done: Schema.Finite, total: Schema.Finite },
+  // `done` of `total` new lines' pitch found.
+  TrackingLines: { done: Schema.Finite, total: Schema.Finite },
+  Keeping: {},
+})
+export type PackStep = typeof PackStep.Type
+
+export const PackJob = defineTaggedUnion({
+  Idle: {},
+  Working: {
+    jobNumber: Schema.Finite,
+    files: Schema.Array(ChosenFile),
+    step: PackStep,
+  },
+  Refused: { reason: Schema.String },
+  Cancelled: {},
+})
+export type PackJob = typeof PackJob.Type
+
 export const UploadPage = Schema.Struct({
   fileDrop: FileDrop.Model,
   job: UploadJob,
   jobsStarted: Schema.Finite,
+  // The local pack's files, chosen or dropped, or its folder chosen.
+  packDrop: FileDrop.Model,
+  packFolder: FileDrop.Model,
+  packJob: PackJob,
 })
 export type UploadPage = typeof UploadPage.Type
 
 export const fileDropId = 'upload-file'
+export const packDropId = 'pack-files'
+export const packFolderId = 'pack-folder'
 
 export const initialUpload: UploadPage = {
   fileDrop: FileDrop.init({ id: fileDropId }),
   job: UploadJob.Idle(),
   jobsStarted: 0,
+  packDrop: FileDrop.init({ id: packDropId }),
+  packFolder: FileDrop.init({ id: packFolderId }),
+  packJob: PackJob.Idle(),
 }
+
+// Whether this browser lets a page choose a folder.
+export const canChooseFolder: boolean =
+  typeof HTMLInputElement !== 'undefined' &&
+  'webkitdirectory' in HTMLInputElement.prototype
+
+export const packProgressOf = (step: PackStep): number =>
+  PackStep.match(step, {
+    Reading: () => 0,
+    CheckingFiles: ({ done, total }) =>
+      0.02 + 0.08 * (total === 0 ? 1 : done / total),
+    TrackingLines: ({ done, total }) =>
+      0.1 + 0.85 * (total === 0 ? 1 : done / total),
+    Keeping: () => 0.97,
+  })
+
+export const packStepText = (step: PackStep): string =>
+  PackStep.match(step, {
+    Reading: () => 'Reading pack.json.',
+    CheckingFiles: ({ done, total }) =>
+      `Reading the pack’s audio files: ${done} of ${total}.`,
+    TrackingLines: ({ done, total }) =>
+      `Finding the pitch of each new line: ${done} of ${total}.`,
+    Keeping: () => 'Keeping the pack and its lines on this device.',
+  })
 
 // What the file picker offers: audio of any kind, and the containers a
 // recording often comes in, by their extensions, for a browser that

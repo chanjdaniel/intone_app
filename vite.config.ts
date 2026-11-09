@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 import { contentSecurityPolicyMeta } from './build/content-security-policy.ts'
 import { devLibraryGuard } from './build/dev-library-guard.ts'
+import { localPackGuard } from './build/local-pack-guard.ts'
 import { models } from './build/models.ts'
 import { onnxRuntime } from './build/onnx-runtime.ts'
 
@@ -16,6 +17,7 @@ export default defineConfig({
     models(),
     onnxRuntime(),
     devLibraryGuard(),
+    localPackGuard(),
   ],
   resolve: {
     // ONNX Runtime's build that loads its WebAssembly from `wasmPaths`, the

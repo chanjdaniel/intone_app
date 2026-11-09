@@ -2,7 +2,12 @@ import { Array, Option, Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 import ameGaSukiAudio from '../../../fixtures/voices/ame-ga-suki/meimei-himari/right.wav?url'
-import type { ClipEntry, ClipLine } from '../../services/history-records'
+import type {
+  ClipAudio,
+  ClipEntry,
+  ClipLine,
+  LineSource,
+} from '../../services/history-records'
 
 // The lines to copy: those the app brings with it, and those of the
 // clips the learner brings (../upload/). For now the app brings one:
@@ -62,6 +67,21 @@ export const LineAudio = defineTaggedUnion({
 })
 export type LineAudio = typeof LineAudio.Type
 
+// Where a line of the local pack came from: a link, never fetched, and
+// the times in it.
+export const SourceLink = Schema.Struct({
+  url: Schema.String,
+  maybeFrom: Schema.Option(Schema.Finite),
+  maybeTo: Schema.Option(Schema.Finite),
+})
+export type SourceLink = typeof SourceLink.Type
+
+export const sourceLinkOf = (source: LineSource): SourceLink => ({
+  url: source.url,
+  maybeFrom: Option.fromNullishOr(source.from),
+  maybeTo: Option.fromNullishOr(source.to),
+})
+
 // A line as its practice screen shows it.
 export const PracticeLine = Schema.Struct({
   clipId: Schema.String,
@@ -72,11 +92,15 @@ export const PracticeLine = Schema.Struct({
   titleIsText: Schema.Boolean,
   // Its reading in kana, or where it is in its clip.
   detail: Schema.String,
+  // Whether the detail is Japanese text, read as such.
+  detailIsText: Schema.Boolean,
   // What the screen's footer says of the voice.
   credit: Schema.String,
   // What the history calls it, after its clip may be gone.
   historyText: Schema.String,
   audio: LineAudio,
+  // Where a line of the local pack came from, when its manifest says.
+  maybeSource: Schema.Option(SourceLink),
 })
 export type PracticeLine = typeof PracticeLine.Type
 
@@ -86,20 +110,23 @@ export const practiceLineOfBundled = (line: BundledLine): PracticeLine => ({
   title: line.text,
   titleIsText: true,
   detail: line.reading,
+  detailIsText: true,
   credit: `Voice: ${line.credit}, made with VOICEVOX.`,
   historyText: line.text,
   audio: LineAudio.Bundled({ url: line.audioUrl }),
+  maybeSource: Option.none(),
 })
 
 // Minutes and seconds, as 1:05, and tenths of a second under a minute's
 // line, as 0:05.3.
+// A time a hair under a tenth, as 14.1 is in floating point, is read as
+// that tenth.
 export const clockText = (seconds: number, tenths = false): string => {
-  const whole = Math.floor(seconds)
+  const inTenths = Math.floor(seconds * 10 + 1e-6)
+  const whole = Math.floor(inTenths / 10)
   const minutes = Math.floor(whole / 60)
   const rest = String(whole % 60).padStart(2, '0')
-  return tenths
-    ? `${minutes}:${rest}.${Math.floor((seconds - whole) * 10)}`
-    : `${minutes}:${rest}`
+  return tenths ? `${minutes}:${rest}.${inTenths % 10}` : `${minutes}:${rest}`
 }
 
 // Minutes, seconds and hundredths, as 1:05.32: the line editor's 10 ms
@@ -113,29 +140,38 @@ export const preciseClockText = (seconds: number): string => {
 // A line of a clip is named by its place in the clip, counting from 1.
 export const clipLineTitle = (number: number): string => `Line ${number}`
 
+// Where a line is: its clip, or its file in the local pack, and its times.
 export const clipLineDetail = (
   clip: Pick<ClipEntry, 'name'>,
-  line: Pick<ClipLine, 'from' | 'to'>,
+  line: Pick<ClipLine, 'from' | 'to' | 'file'>,
 ): string =>
-  `${clip.name}, ${clockText(line.from, true)} to ${clockText(line.to, true)}`
+  `${line.file ?? clip.name}, ${clockText(line.from, true)} to ${clockText(line.to, true)}`
 
-// A line of the learner's clip, whose audio is on this device.
+// A line of the learner's clip or of their local pack, whose audio is on
+// this device: called by its manifest's text when it has one, else by its
+// place.
 export const practiceLineOfClip = (
   clip: ClipEntry,
   line: ClipLine,
-  audio: NonNullable<ClipEntry['audio']>,
+  audio: ClipAudio,
 ): PracticeLine => {
-  const title = clipLineTitle(
+  const name = clipLineTitle(
     clip.lines.findIndex(found => found.id === line.id) + 1,
   )
+  const text = line.text ?? ''
   return {
     clipId: clip.id,
     lineId: line.id,
-    title,
-    titleIsText: false,
-    detail: clipLineDetail(clip, line),
-    credit: 'From your own clip, kept on this device.',
-    historyText: `${clip.name}, ${title.toLowerCase()}`,
+    title: text === '' ? name : text,
+    titleIsText: text !== '',
+    detail: line.kana ?? clipLineDetail(clip, line),
+    detailIsText: line.kana !== undefined,
+    credit:
+      clip.pack === undefined
+        ? 'From your own clip, kept on this device.'
+        : 'From your local pack, kept on this device.',
+    historyText: text === '' ? `${clip.name}, ${name.toLowerCase()}` : text,
+    maybeSource: Option.map(Option.fromNullishOr(line.source), sourceLinkOf),
     audio: LineAudio.Clip({
       file: audio.file,
       type: audio.type,

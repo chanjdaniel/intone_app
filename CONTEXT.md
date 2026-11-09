@@ -29,7 +29,7 @@ Every screen, test, doc and name in the code uses these words with these meaning
 - **Cut:** making an upload's lines: its speech found by Silero VAD, cut at pauses of about 300 ms into lines of about 1 to 4 s, and each line's native curve tracked, all in the clip Worker, with its progress shown and a way to stop it.
 - **Stars:** per line, 0 to 3: one for reaching the clip's threshold on a guided take, two for beating it, three for reaching it blind.
 - **Starter set:** the bundled, openly licensed lines.
-- **Local pack:** Daniel's untracked `local/` folder and its manifest.
+- **Local pack:** Daniel's untracked `local/` folder and its manifest, `pack.json`, imported from the files chosen as one level kept on the device; its lines may carry text, kana and a **source** link, shown and never fetched.
 - **Fixture:** generated, labelled test audio with its known curve, accent and mora boundaries.
 
 The app says "match", never "accuracy", and never that a take is correct: it claims only what it measured.

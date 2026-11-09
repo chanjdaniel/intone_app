@@ -15,6 +15,7 @@ The cap is the entry chunk's size, measured through Vite's production build in a
 | ------------------------------ | ----------------- | --------- |
 | `1e21a2b5` (ticket 03 of T242) | 100,804 B         | 130,000 B |
 | ticket 12 of T242              | 153,950 B         | 180,000 B |
+| ticket 15 of T242              | 186,520 B         | 210,000 B |
 
 The base it was measured against, `3997c12d`, built the same way, gives 98,217 B: ticket 03 added 2,587 B with its routes, its not-found screen and the bridge to the dev library, whose own modules stay out of the build.
 
@@ -33,6 +34,25 @@ The history and settings screens, which a single Foldkit program cannot load laz
 
 The backup's code and `fflate` stay out of it, in a chunk loaded only when a backup is saved or restored (7.5 kB gzip).
 Loading the history store lazily too was tried and saved nothing: a second lazy chunk made the bundler split Effect out of the entry, and the two chunks the page then loads came to 1.1 kB more.
+
+Ticket 15 raised it again, measured against its base `dd322800` built the same way: 179,015 B to 186,520 B, 7,505 B more, all in the entry chunk (it imports no chunk statically).
+Tickets 13 and 14 had added their screens under the cap ticket 12 set; ticket 15's local pack import took it over.
+By the minified bytes each part adds, from the build's source map:
+
+| What grew                                                                                       | Minified |
+| ----------------------------------------------------------------------------------------------- | -------- |
+| `src/services/local-pack.ts` (the manifest's Schema, finding the files, the plan, the import)   | 10,794 B |
+| `src/app/upload/` (the pack's panel, its update, Subscription and Model)                        | 9,577 B  |
+| `src/app/line/` (the source link, a pack line's title and detail)                               | 1,922 B  |
+| `src/services/history-clips.ts` (`replaceClip`)                                                 | 1,574 B  |
+| `src/app/level/` (a pack line's text, kana and link in its row)                                 | 1,427 B  |
+| `src/services/history-records.ts` (the pack's records and the helpers that read a clip's audio) | 1,416 B  |
+| `src/app/main.ts`, `src/app/message.ts` (the Messages)                                          | 946 B    |
+| Effect                                                                                          | 702 B    |
+| `src/services/clip-analyser.ts` (`tracker`)                                                     | 453 B    |
+
+Loading `src/services/local-pack.ts` lazily was tried, and the page loaded more: its own chunk is 4,002 B gzip, but a second lazy chunk sharing the entry's modules with the backup's made the bundler split 47 kB of Effect and the history's records out of the entry into a chunk it imports statically, and the page then loaded 187,050 B before starting, against 186,689 B with the import in the entry.
+The screens' parts cannot be loaded lazily in a single Foldkit program.
 
 A clean tree, so that nothing local (a git-ignored `.env` inlines `VITE_` values) moves the size:
 

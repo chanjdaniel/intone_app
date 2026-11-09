@@ -1,8 +1,8 @@
 import { Array, Option, Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
-import type { ClipEntry } from '../../services/history-records'
-import { clockText } from '../line/lines'
+import { type ClipEntry, clipHasAudio } from '../../services/history-records'
+import { SourceLink, clockText, sourceLinkOf } from '../line/lines'
 import { LineEditor } from './editor'
 
 // The learner's clips as the Model knows them: the list on the home
@@ -33,6 +33,12 @@ export const LevelLine = Schema.Struct({
   native: Schema.Literals(['Tracked', 'TooQuiet', 'TooNoisy']),
   // A tracked line's quality; none on a line cut before it was measured.
   maybeQuality: Schema.Option(LevelQuality),
+  // A local pack's line: its file, and its text, kana and source when
+  // its manifest gives them.
+  maybeFile: Schema.Option(Schema.String),
+  maybeText: Schema.Option(Schema.String),
+  maybeKana: Schema.Option(Schema.String),
+  maybeSource: Schema.Option(SourceLink),
 })
 export type LevelLine = typeof LevelLine.Type
 
@@ -53,15 +59,20 @@ export const LevelClip = Schema.Struct({
   hasAudio: Schema.Boolean,
   lines: Schema.Array(LevelLine),
   maybeUndo: Schema.Option(LevelChange),
+  // Imported from the local pack, whose manifest alone changes its lines.
+  isPack: Schema.Boolean,
 })
 export type LevelClip = typeof LevelClip.Type
+
+const nonEmpty = (text: string | undefined): Option.Option<string> =>
+  Option.filter(Option.fromNullishOr(text), found => found.trim() !== '')
 
 export const levelClipOf = (clip: ClipEntry): LevelClip => ({
   id: clip.id,
   name: clip.name,
   seconds: clip.seconds,
   addedAt: clip.addedAt,
-  hasAudio: clip.audio !== null,
+  hasAudio: clipHasAudio(clip),
   lines: clip.lines.map((line, k) => ({
     id: line.id,
     number: k + 1,
@@ -69,8 +80,13 @@ export const levelClipOf = (clip: ClipEntry): LevelClip => ({
     to: line.to,
     native: line.native._tag,
     maybeQuality: Option.fromNullishOr(line.quality),
+    maybeFile: Option.fromNullishOr(line.file),
+    maybeText: nonEmpty(line.text),
+    maybeKana: nonEmpty(line.kana),
+    maybeSource: Option.map(Option.fromNullishOr(line.source), sourceLinkOf),
   })),
   maybeUndo: Option.map(Option.fromNullishOr(clip.undo), undo => undo.change),
+  isPack: clip.pack !== undefined,
 })
 
 // A clip on the home screen.
@@ -80,6 +96,7 @@ export const ClipSummary = Schema.Struct({
   seconds: Schema.Finite,
   lines: Schema.Finite,
   hasAudio: Schema.Boolean,
+  isPack: Schema.Boolean,
 })
 export type ClipSummary = typeof ClipSummary.Type
 
@@ -88,7 +105,8 @@ export const clipSummaryOf = (clip: ClipEntry): ClipSummary => ({
   name: clip.name,
   seconds: clip.seconds,
   lines: clip.lines.length,
-  hasAudio: clip.audio !== null,
+  hasAudio: clipHasAudio(clip),
+  isPack: clip.pack !== undefined,
 })
 
 export const ClipsPage = defineTaggedUnion({
@@ -131,9 +149,16 @@ export const levelRowsPerPage = 50
 export const deleteClipDialogId = 'delete-clip'
 
 // A line's text in the list, which the find words are looked for in: its
-// name and where it is in the clip.
+// name, its manifest's text and kana, its file and where it is in it.
 export const levelLineText = (line: LevelLine): string =>
-  `${levelLineTitle(line)} ${clockText(line.from, true)} ${clockText(line.to, true)}`
+  [
+    levelLineTitle(line),
+    ...Option.toArray(line.maybeText),
+    ...Option.toArray(line.maybeKana),
+    ...Option.toArray(line.maybeFile),
+    clockText(line.from, true),
+    clockText(line.to, true),
+  ].join(' ')
 
 export const levelLineTitle = (line: Pick<LevelLine, 'number'>): string =>
   `Line ${line.number}`

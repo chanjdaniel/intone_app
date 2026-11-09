@@ -1,6 +1,7 @@
 import { Clock, Effect, Option, Schema } from 'effect'
 import { Calendar, Command, File } from 'foldkit'
 
+import { clipHasAudio } from '../../services/history-records'
 import { HistoryError, HistoryStore } from '../../services/history-store'
 import { isoDayOf } from '../history/format'
 import { Message } from '../message'
@@ -95,7 +96,7 @@ export const LoadSettings = Command.define('LoadSettings', {
         keepTakeAudio: settings.keepTakeAudio,
         takes: entries.length,
         takesWithAudio: entries.filter(entry => entry.audio !== null).length,
-        clipsWithAudio: clips.filter(clip => clip.audio !== null).length,
+        clipsWithAudio: clips.filter(clipHasAudio).length,
         storage,
       },
     })

@@ -43,6 +43,7 @@ import { DrawCurvePair } from './take/curvePair'
 import { subscriptions as takeSubscriptions } from './take/subscriptions'
 import { Take } from './take/take'
 import * as TakeUpdate from './take/update'
+import * as PackUpdate from './upload/packUpdate'
 import { uploadSubscriptions } from './upload/subscriptions'
 import * as UploadUpdate from './upload/update'
 import { initialUpload } from './upload/upload'
@@ -171,7 +172,7 @@ export const update = (model: Model, message: Message) =>
         )
       const leftUpload =
         model.route._tag === 'Upload' && route._tag !== 'Upload'
-          ? UploadUpdate.leftUpload(routed)
+          ? PackUpdate.leftPackImport(UploadUpdate.leftUpload(routed))
           : routed
       const leftHome =
         route._tag === 'Home'
@@ -235,6 +236,17 @@ export const update = (model: Model, message: Message) =>
     FailedUpload: ({ jobNumber, reason }) =>
       UploadUpdate.failedUpload(model, jobNumber, reason),
     ClickedCancelUpload: () => UploadUpdate.clickedCancelUpload(model),
+    GotPackDropMessage: ({ message }) =>
+      PackUpdate.foldPackDrop(model, message),
+    GotPackFolderMessage: ({ message }) =>
+      PackUpdate.foldPackFolder(model, message),
+    ProgressedPackImport: ({ jobNumber, step }) =>
+      PackUpdate.progressedPackImport(model, jobNumber, step),
+    SucceededPackImport: ({ jobNumber, clipId }) =>
+      PackUpdate.succeededPackImport(model, jobNumber, clipId),
+    FailedPackImport: ({ jobNumber, reason }) =>
+      PackUpdate.failedPackImport(model, jobNumber, reason),
+    ClickedCancelPackImport: () => PackUpdate.clickedCancelPackImport(model),
     CompletedOpenLevel: () => ({ model }),
     CompletedFocusUploadStatus: () => ({ model }),
 
@@ -602,6 +614,9 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
         {
           fileDrop: message => Message.GotUploadDropMessage({ message }),
           cancel: Message.ClickedCancelUpload(),
+          packDrop: message => Message.GotPackDropMessage({ message }),
+          packFolder: message => Message.GotPackFolderMessage({ message }),
+          cancelPack: Message.ClickedCancelPackImport(),
         },
         h,
       ),

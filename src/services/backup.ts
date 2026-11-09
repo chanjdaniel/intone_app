@@ -8,6 +8,7 @@ import {
   type HistoryDump,
   Settings,
   TakeEntry,
+  clipAudioFiles,
   clipNativeIds,
   historyFormat,
   nativeEntryOf,
@@ -214,15 +215,11 @@ export const decodeBackup = (
       )
     }
     const clipAudio = clips.flatMap(clip =>
-      clip.audio === null
-        ? []
-        : [
-            {
-              file: clip.audio.file,
-              bytes: clip.audio.bytes,
-              zipped: files[zipPathOf(clip.audio.file)],
-            },
-          ],
+      clipAudioFiles(clip).map(audio => ({
+        file: audio.file,
+        bytes: audio.bytes,
+        zipped: files[zipPathOf(audio.file)],
+      })),
     )
     const missingClip = clipAudio.find(
       ({ zipped, bytes }) => zipped === undefined || zipped.length !== bytes,

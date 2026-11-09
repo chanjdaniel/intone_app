@@ -16,6 +16,7 @@ import {
 import { type PracticeLine, lineKey, lineOf } from './lines'
 import { type ListenControls, listenControls } from './listenControls'
 import type { NativeCurve } from './native'
+import { sourceLink } from './sourceLink'
 
 // A line's practice screen: the line, its curve with the learner's over
 // it, listening again at a chosen speed, and the take.
@@ -283,7 +284,7 @@ const lineHeader = <ViewMessage>(
           ),
           h.p(
             [
-              ...(line.titleIsText ? [h.Lang('ja')] : []),
+              ...(line.detailIsText ? [h.Lang('ja')] : []),
               h.Class('text-lg text-muted break-words'),
             ],
             [line.detail],
@@ -335,7 +336,16 @@ export const practiceView = <ViewMessage>(
           Option.match(maybeLine, {
             onNone: () => h.empty,
             onSome: line =>
-              h.footer([h.Class('text-sm text-muted')], [line.credit]),
+              h.footer(
+                [h.Class('flex flex-col gap-1 text-sm text-muted')],
+                [
+                  h.p([], [line.credit]),
+                  ...Option.match(line.maybeSource, {
+                    onNone: () => [],
+                    onSome: source => [sourceLink(source, h)],
+                  }),
+                ],
+              ),
           }),
         ],
       ),

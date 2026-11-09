@@ -73,6 +73,7 @@ When a folder's rule changes, change its fixtures with it.
 - **ONNX Runtime:** the build copies `onnxruntime-web`'s single-threaded CPU build (`ort-wasm-simd-threaded.wasm` and `.mjs`) to `dist/ort/<version>/`; code points `wasmPaths` at `onnxRuntimeWasmPaths` from `virtual:intone/onnx-runtime`.
   `vite.config.ts` resolves the package with its `onnxruntime-web-use-extern-wasm` condition, so the bundle loads those files rather than inlining the loader and emitting the 15 MB binary again under `assets/`.
 - **Bundle budget:** `bundle-budget.json` caps the gzip size of the entry chunk and the chunks it imports statically, what the page loads before it starts, and `npm run check:budget` reads a build's `dist/` against it in CI; `docs/bundle-budget.md` says how it was set and how a raise is justified.
+- **The local pack:** `build/local-pack-guard.ts` fails a production build that holds a module or asset from `local/`, or any output file whose bytes are a file of it (`docs/local-pack.md`).
 - **Notices:** `NOTICES.md` names every package a production install keeps, with its version and licence, and every model's licence; `npm run generate` writes it from the lockfile and `models.json`.
 
 ## The dev library
@@ -191,6 +192,15 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
   A line's marks (`src/app/level/lineMarks.ts`) come from its kept quality; a changed line's earlier takes are told from its new ones by the native each was scored against (`lineTakesOf` in `src/app/history/history.ts`).
 - `tests/e2e/uploads.spec.ts` proves it in the built app: a CC0 clip cut, kept across a reload and practised with the fake microphone, a drop, refusals by name, the ten-minute cap before decoding, a stop that ends the Worker, a deletion, every format, and nothing sent; `tests/e2e/line-editor.spec.ts` drags an edge by mouse and touch, steps one by key, undoes, splits a line, reloads, practises the new line and sees its take kept apart once the line changes again.
 
+## The local pack
+
+- Daniel's own clips (JSUT, recordings not openly licensed) live in the git-ignored `local/` with a `pack.json`, and are imported on `/upload` ("Import your local pack") from the files or folder Daniel chooses, as one level, `/level/pack-<id>`; `docs/local-pack.md` gives the manifest's format and what an import keeps.
+- `src/services/local-pack.ts` holds the manifest's Schema (`PackManifest`), finds its files among those chosen, plans the level from the pack as it was (`planPack`: a line whose file, by SHA-256, and span are unchanged keeps its id, curve and takes) and runs the import as one Stream of steps (`importPack`), tracking new lines with one clip Worker (`ClipAnalyser.tracker`); `HistoryStore.replaceClip` writes the level, its curves and files, compare-and-swap, and deletes what it stops naming.
+- A pack is a clip record with a `pack` key (its files, each by path, SHA-256, length and kept audio) and `audio: null`; each line names its `file` and may have `text`, `kana` and `source`.
+  Playback, deletion, the settings and the backup read a clip's audio through `clipAudioFiles`, `lineAudioOf`, `clipHasAudio`, `clipWithoutAudio` and `clipKeepingAudioOf` (`src/services/history-records.ts`), so uploads and packs go the same way; only the line editor, which a pack's level has not, reads an upload's `audio` itself.
+- A source link is rendered by `src/app/line/sourceLink.ts` alone: `target="_blank"`, `rel="noopener noreferrer"`, never fetched; the app downloads nothing from YouTube.
+- `fixtures/local-pack/` (`npm run fixtures:local-pack`) is the tests' example pack; `tests/e2e/local-pack.spec.ts` imports it in the built app.
+
 ## Audio in tests
 
 End-to-end tests drive the real audio path with Chromium's fake microphone playing a known WAV; `docs/fake-microphone.md` says how faithfully it arrives and what a test must allow for (a start 32 ms in or a few 10 ms buffers later, and now and then a 10 ms slip).
@@ -228,7 +238,7 @@ The build and its tests fetch the listed model files once, so they need the netw
 ## Content and privacy
 
 - The repository and the host carry only what their licence allows: no JSUT, OJAD, Suzuki-kun or Kanjium data, and no audio downloaded from YouTube, which appears only as links in Daniel's local pack.
-- `local/` is Daniel's local pack: git-ignored, never committed, never in the build output.
+- `local/` is Daniel's local pack: git-ignored, never committed, never in the build output, which `build/local-pack-guard.ts` checks.
 - No audio, curve or text leaves the device: no request to another origin, no request with a body.
 
 ## Foldkit's DevTools MCP server

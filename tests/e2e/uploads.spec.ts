@@ -75,7 +75,7 @@ const onDevice = (page: Page) =>
   })
 
 const chooseFile = (page: Page, path: string) =>
-  page.locator('input[type="file"]').setInputFiles(path)
+  page.locator('#upload-file').setInputFiles(path)
 
 // Cuts `path` on /upload and waits for its lines.
 const cut = async (page: Page, path: string): Promise<number> => {
@@ -229,7 +229,7 @@ test('a file the app cannot use is named and refused, and one over ten minutes b
     page.on('worker', worker => workers.push(worker.url()))
     await page.goto('/upload')
 
-    await page.locator('input[type="file"]').setInputFiles({
+    await page.locator('#upload-file').setInputFiles({
       name: 'notes.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('not audio'),
@@ -238,7 +238,7 @@ test('a file the app cannot use is named and refused, and one over ten minutes b
       'notes.txt could not be used. It is not an audio file. Choose a recording, such as a WAV, MP3 or M4A file.',
     )
 
-    await page.locator('input[type="file"]').setInputFiles({
+    await page.locator('#upload-file').setInputFiles({
       name: 'broken.mp3',
       mimeType: 'audio/mpeg',
       buffer: Buffer.alloc(4096, 7),
@@ -255,7 +255,7 @@ test('a file the app cannot use is named and refused, and one over ten minutes b
       encoding: 'pcm16',
       channels: [new Float32Array(601 * 8000)],
     })
-    await page.locator('input[type="file"]').setInputFiles({
+    await page.locator('#upload-file').setInputFiles({
       name: 'long.wav',
       mimeType: 'audio/wav',
       buffer: Buffer.from(long),
@@ -291,7 +291,7 @@ test('a cut can be stopped, which ends its Worker and keeps nothing', async ({
       .poll(() => ended.some(url => /clip\.worker/.test(url)))
       .toBe(true)
     expect(await onDevice(page)).toStrictEqual({ files: [], clips: 0 })
-    await expect(page.locator('input[type="file"]')).toBeAttached()
+    await expect(page.locator('#upload-file')).toBeAttached()
   })
 })
 

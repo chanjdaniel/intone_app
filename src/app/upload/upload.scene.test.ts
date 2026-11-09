@@ -26,7 +26,7 @@ import { privacySentence } from './uploadView'
 
 const onUpload = (): Model => initialModel(AppRoute.Upload())
 
-const fileInput = selector('input[type="file"]')
+const fileInput = selector('#upload-file')
 const dropZone = selector('label')
 
 const audioFile = new File([new Uint8Array(64)], 'reading.mp3', {

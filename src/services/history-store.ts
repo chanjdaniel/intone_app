@@ -12,6 +12,10 @@ import {
   TakeEntry,
   type TakeMode,
   TakeRecording,
+  clipAudioFiles,
+  clipHasAudio,
+  clipKeepingAudioOf,
+  clipWithoutAudio,
   defaultSettings,
   historyFormat,
   recordingId,
@@ -428,9 +432,7 @@ export const make = (
               ...filterSome(takes, ({ entry }) =>
                 Option.fromNullishOr(entry.audio),
               ),
-              ...filterSome(read.clips.decoded, clip =>
-                Option.fromNullishOr(clip.audio),
-              ),
+              ...read.clips.decoded.flatMap(clipAudioFiles),
             ]
           : []
         const audio = yield* Effect.forEach(audioFiles, ({ file }) =>
@@ -450,7 +452,7 @@ export const make = (
           // So does a clip.
           clips: withAudio
             ? read.clips.decoded
-            : read.clips.decoded.map(clip => ({ ...clip, audio: null })),
+            : read.clips.decoded.map(clipWithoutAudio),
           audio: new Map(
             filterSome(audio, ([file, bytes]) =>
               Option.map(bytes, found => [file, found] as const),
@@ -489,19 +491,18 @@ export const make = (
               )
               const clipStore = transaction.objectStore(stores.clips)
               backup.clips.forEach(clip => {
-                if (clip.audio !== null) {
+                if (clipHasAudio(clip)) {
                   clipStore.put(clip)
                   return
                 }
                 const here = clipStore.get(clip.id)
                 here.onsuccess = () => {
-                  clipStore.put({
-                    ...clip,
-                    audio: Option.match(decodeClip(here.result), {
-                      onNone: () => null,
-                      onSome: found => found.audio,
-                    }),
-                  })
+                  clipStore.put(
+                    clipKeepingAudioOf(
+                      clip,
+                      Option.getOrUndefined(decodeClip(here.result)),
+                    ),
+                  )
                 }
               })
               backup.takes.forEach(({ entry, recording }) => {

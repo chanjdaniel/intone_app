@@ -3,14 +3,15 @@
 Generated test audio and what is known about it: for the synthetic and VOICEVOX files, the intended curve, the accent and the mora boundaries, so the tracker and the score can be tested against them; for the real clips, their source and licence, for tracking and cutting real speech.
 Nothing here is hand-edited, and nothing here is real accuracy on learners (see "How synthetic speech differs from a learner's" below).
 
-| Folder       | What it holds                                                                                                                                   | Written by                   |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `synthetic/` | Three formant-synthesised voices with an exactly known F0, for the fake microphone (`docs/fake-microphone.md`)                                  | `npm run fixtures:synthetic` |
-| `voices/`    | Three Japanese phrases in eight VOICEVOX voices, right and wrong, slower, faster and uneven, each clean, in room noise and through a phone band | `npm run fixtures:voices`    |
-| `real/`      | Three stretches of LibriVox's CC0 Japanese readings, real speech for tracking and cutting                                                       | `npm run fixtures:voices`    |
-| `noise/`     | The room noise mixed into `voices/`, cut from a CC BY 4.0 recording                                                                             | `npm run fixtures:voices`    |
-| `formats/`   | The first 4 s of `real/gongitsune.wav` in eleven audio formats, for what a browser decodes from an upload (`docs/uploads.md`)                   | `npm run fixtures:formats`   |
-| `tracked/`   | Every WAV above but `formats/` tracked and featured as the app does it: its curve and spectral features, for the score (`docs/score.md`)        | `npm run fixtures:tracked`   |
+| Folder        | What it holds                                                                                                                                       | Written by                    |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `synthetic/`  | Three formant-synthesised voices with an exactly known F0, for the fake microphone (`docs/fake-microphone.md`)                                      | `npm run fixtures:synthetic`  |
+| `voices/`     | Three Japanese phrases in eight VOICEVOX voices, right and wrong, slower, faster and uneven, each clean, in room noise and through a phone band     | `npm run fixtures:voices`     |
+| `real/`       | Three stretches of LibriVox's CC0 Japanese readings, real speech for tracking and cutting                                                           | `npm run fixtures:voices`     |
+| `noise/`      | The room noise mixed into `voices/`, cut from a CC BY 4.0 recording                                                                                 | `npm run fixtures:voices`     |
+| `formats/`    | The first 4 s of `real/gongitsune.wav` in eleven audio formats, for what a browser decodes from an upload (`docs/uploads.md`)                       | `npm run fixtures:formats`    |
+| `local-pack/` | An example local pack for the tests: two phrases of `voices/` and the first 8 s of `real/gongitsune.wav`, with a `pack.json` (`docs/local-pack.md`) | `npm run fixtures:local-pack` |
+| `tracked/`    | Every WAV above but `formats/` and `local-pack/` tracked and featured as the app does it: its curve and spectral features (`docs/score.md`)         | `npm run fixtures:tracked`    |
 
 ## Making them
 
@@ -156,6 +157,12 @@ Every CC0 Japanese recording on LibriVox found on 2026-11-09 has the same reader
 
 `noise/classroom.wav` is cut from ["Geräusche aus einem Chemie-Lehrsaal 20240827 C1003.wav"](https://commons.wikimedia.org/wiki/File:Ger%C3%A4usche_aus_einem_Chemie-Lehrsaal_20240827_C1003.wav) by PantheraLeo1359531, on Wikimedia Commons, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): a chemistry classroom's ceiling light and, probably, its ventilation.
 It was mixed from stereo to mono and resampled from 48 kHz to 24 kHz, and the `.room` fixtures have it mixed under their speech; they are under the same licence and credit.
+
+### The example local pack
+
+`local-pack/` is never Daniel's `local/`: it is made by `npm run fixtures:local-pack` (`scripts/local-pack-fixture.ts`) from the fixtures above, the same bytes every run, and `tests/scripts/local-pack-fixture.test.ts` remakes it.
+`audio/hashi.wav` and `audio/kyou.wav` are `voices/hashi-o-watarimasu/meimei-himari/right.wav` and `voices/kyou-wa-eki-de/meimei-himari/right.wav`, under their terms and credit, VOICEVOX:冥鳴ひまり; `audio/gongitsune.wav` is the first 8 s of `real/gongitsune.wav`, under CC0 1.0.
+Its `pack.json` gives the phrases their text, one its kana and a planted YouTube link the tests watch is never fetched, and gives the reading two lines with no text, one linking its source on the Internet Archive.
 
 ## How synthetic speech differs from a learner's
 

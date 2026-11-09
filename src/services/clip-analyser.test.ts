@@ -13,6 +13,7 @@ import {
   analyseWith,
   clipSampleRate,
   editWith,
+  trackerWith,
 } from './clip-analyser'
 
 // A stand-in for the clip Worker: it records what it is sent, with what
@@ -457,5 +458,45 @@ describe('ClipAnalyser.layerTest', () => {
         ]),
       ),
     ),
+  )
+})
+
+describe('trackerWith', () => {
+  it.effect(
+    'loads the models once, and holds file after file, tracking spans of each',
+    () =>
+      Effect.gen(function* () {
+        const fake = fakeWorker(answering(tracked(1)))
+        const { browser, decoded } = browserWith(fake.worker, {
+          decodedSeconds: 3,
+        })
+        const open = yield* trackerWith(browser)
+        const second = new Blob([new Uint8Array(8)], { type: 'audio/wav' })
+        const first = yield* open(file)
+        expect(first.seconds).toBe(3)
+        yield* first.track([{ from: 0, to: 1 }])
+        yield* (yield* open(second)).track([{ from: 1, to: 2 }])
+        expect(decoded).toStrictEqual([file, second])
+        expect(fake.sent.map(({ message }) => message._tag)).toStrictEqual([
+          'Load',
+          'Hold',
+          'Track',
+          'Hold',
+          'Track',
+        ])
+      }).pipe(Effect.scoped),
+  )
+
+  it.effect('refuses a file over ten minutes, before holding it', () =>
+    Effect.gen(function* () {
+      const fake = fakeWorker(answering(tracked(1)))
+      const { browser } = browserWith(fake.worker, { decodedSeconds: 601 })
+      const open = yield* trackerWith(browser)
+      const failure = yield* open(file).pipe(Effect.flip)
+      expect(failure.failure).toBe('TooLong')
+      expect(fake.sent.map(({ message }) => message._tag)).toStrictEqual([
+        'Load',
+      ])
+    }).pipe(Effect.scoped),
   )
 })

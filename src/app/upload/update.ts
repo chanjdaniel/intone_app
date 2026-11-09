@@ -9,7 +9,7 @@ import { Message } from '../message'
 import type { Model } from '../model'
 import type { AppResourceServices } from '../resources'
 import { FocusUploadStatus, OpenLevel } from './commands'
-import { UploadJob, UploadStep, refusalOf } from './upload'
+import { PackJob, UploadJob, UploadStep, refusalOf } from './upload'
 
 // The upload screen's transitions: a file chosen or dropped starts a cut,
 // each step of it moves the progress on, and its end opens the clip's
@@ -20,9 +20,15 @@ type UploadUpdate = Update.Return<Model, Message, AppResourceServices>
 
 const unchanged = (model: Model): UploadUpdate => ({ model })
 
+// One status is said at a time: the cut's replaces the pack's.
 const withJob = (model: Model, job: UploadJob): Model =>
   modifyFields(model, {
-    upload: upload => modifyFields(upload, { job: () => job }),
+    upload: upload =>
+      modifyFields(upload, {
+        job: () => job,
+        packJob: packJob =>
+          packJob._tag === 'Working' ? packJob : PackJob.Idle(),
+      }),
   })
 
 const isWorking = (model: Model, jobNumber: number): boolean =>
@@ -36,7 +42,10 @@ const nameOfJob = (model: Model): string =>
 
 // Starts cutting `file`, unless it is plainly not audio.
 const started = (model: Model, file: File.File): UploadUpdate => {
-  if (model.upload.job._tag === 'Working') {
+  if (
+    model.upload.job._tag === 'Working' ||
+    model.upload.packJob._tag === 'Working'
+  ) {
     return unchanged(model)
   }
   const refusal = refusalOf(file)
@@ -55,6 +64,7 @@ const started = (model: Model, file: File.File): UploadUpdate => {
       upload: upload =>
         modifyFields(upload, {
           jobsStarted: () => jobNumber,
+          packJob: () => PackJob.Idle(),
           job: () =>
             UploadJob.Working({
               jobNumber,
