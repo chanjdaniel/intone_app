@@ -73,6 +73,14 @@ export const acceptedFiles: ReadonlyArray<string> = [
   '.webm',
 ]
 
+// Media types that hold sound without saying so: Firefox names an Ogg
+// file `application/ogg`, and a browser that cannot tell names a file
+// `application/octet-stream`; the decoder decides those.
+const soundContainers: ReadonlyArray<string> = [
+  'application/ogg',
+  'application/octet-stream',
+]
+
 // Why a file is refused before it is read, if it is: it names itself as
 // something other than sound, or holds nothing.
 export const refusalOf = (file: File.File): string | null => {
@@ -80,7 +88,12 @@ export const refusalOf = (file: File.File): string | null => {
   if (File.size(file) === 0) {
     return 'The file is empty.'
   }
-  if (type !== '' && !type.startsWith('audio/') && !type.startsWith('video/')) {
+  if (
+    type !== '' &&
+    !type.startsWith('audio/') &&
+    !type.startsWith('video/') &&
+    !soundContainers.includes(type)
+  ) {
     return 'It is not an audio file. Choose a recording, such as a WAV, MP3 or M4A file.'
   }
   return null

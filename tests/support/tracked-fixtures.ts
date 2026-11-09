@@ -48,7 +48,9 @@ export type TrackedFixture = Readonly<{
 
 export const trackedDirectory = join(root, 'fixtures', 'tracked')
 
-// Every WAV under fixtures/, by its path from there, in order.
+// Every WAV under fixtures/, by its path from there, in order, but those
+// of fixtures/formats/, the same CC0 stretch in many formats for the
+// upload's decoding alone.
 export const fixtureSources = (
   fixtures = join(root, 'fixtures'),
 ): ReadonlyArray<string> => {
@@ -57,7 +59,12 @@ export const fixtureSources = (
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name)
       if (entry.isDirectory()) {
-        if (path !== join(fixtures, 'tracked')) walk(path)
+        if (
+          path !== join(fixtures, 'tracked') &&
+          path !== join(fixtures, 'formats')
+        ) {
+          walk(path)
+        }
       } else if (entry.name.endsWith('.wav')) {
         found.push(relative(fixtures, path))
       }

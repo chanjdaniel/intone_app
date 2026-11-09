@@ -120,9 +120,11 @@ describe('the production build', () => {
         }
       }
     }
-    expect(files().filter(file => file.endsWith('.onnx'))).toStrictEqual(
-      models.map(modelPath),
-    )
+    expect(
+      files()
+        .filter(file => file.endsWith('.onnx'))
+        .sort(),
+    ).toStrictEqual(models.map(modelPath).sort())
   })
 
   test("ships ONNX Runtime's WebAssembly from its own origin, unchanged", async () => {

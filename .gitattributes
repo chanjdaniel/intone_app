@@ -16,6 +16,10 @@ fixtures/voices/** linguist-generated
 fixtures/real/** linguist-generated
 fixtures/noise/** linguist-generated
 
+# Written by `npm run fixtures:formats`, with the ffmpeg it names; a test
+# remakes them where that ffmpeg is installed.
+fixtures/formats/** linguist-generated binary
+
 # Written by `npm run fixtures:tracked` and `npm run score:study`; tests
 # check they are what each writes.
 fixtures/tracked/** linguist-generated binary

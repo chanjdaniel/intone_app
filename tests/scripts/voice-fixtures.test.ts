@@ -143,6 +143,7 @@ describe('the fixtures in many voices', () => {
           file =>
             !file.startsWith('synthetic/') &&
             !file.startsWith('tracked/') &&
+            !file.startsWith('formats/') &&
             file !== 'README.md',
         ),
       )

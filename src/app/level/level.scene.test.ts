@@ -198,7 +198,7 @@ describe('the home screen’s clips', () => {
       ).toHaveAttr('href', '/level/c2'),
       expect(
         role('link', {
-          name: /^reading\.mp3, 3 lines · 9\.5 s · audio not on this device/,
+          name: /^reading\.mp3, 3 lines · 9\.5 s long · audio not on this device/,
         }),
       ).toExist(),
       expect(role('link', { name: 'Bring your own audio' })).toHaveAttr(
@@ -217,6 +217,18 @@ describe('the home screen’s clips', () => {
       }),
       expect(
         text('Bring a recording of Japanese speech, and copy it line by line.'),
+      ).toExist(),
+    )
+  })
+})
+
+describe('a long clip’s heading', () => {
+  test('says its length as on a clock', () => {
+    scene(
+      { update, view },
+      given(onLevel(sampleClip(200))),
+      expect(
+        text('200 lines from 10:01 of audio, kept on this device.'),
       ).toExist(),
     )
   })

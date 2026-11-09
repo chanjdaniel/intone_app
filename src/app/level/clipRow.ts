@@ -33,7 +33,7 @@ export const clipRow = <ViewMessage>(
           h.span(
             [h.Class('text-sm text-muted')],
             [
-              `${countText(clip.lines, 'line')} · ${lengthText(clip.seconds)}${clip.hasAudio ? '' : ' · audio not on this device'}`,
+              `${countText(clip.lines, 'line')} · ${lengthText(clip.seconds)} long${clip.hasAudio ? '' : ' · audio not on this device'}`,
             ],
           ),
         ],

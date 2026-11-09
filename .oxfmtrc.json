@@ -30,6 +30,7 @@
     "fixtures/voices",
     "fixtures/real",
     "fixtures/noise",
+    "fixtures/formats",
     "fixtures/tracked",
     "docs/score-study.md",
     "docs/cut-study.md",

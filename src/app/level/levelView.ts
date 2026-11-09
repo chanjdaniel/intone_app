@@ -42,8 +42,9 @@ const dangerButton = `${buttonBase} bg-bad text-on-accent disabled:opacity-60`
 
 export const levelFindInputId = 'find-level-lines'
 
+// How long a clip is: in seconds under a minute, else as on a clock.
 export const lengthText = (seconds: number): string =>
-  seconds < 60 ? `${seconds.toFixed(1)} s` : `${clockText(seconds)} long`
+  seconds < 60 ? `${seconds.toFixed(1)} s` : clockText(seconds)
 
 const lineDetail = (line: LevelLine): string =>
   `${clockText(line.from, true)} to ${clockText(line.to, true)} · ${(line.to - line.from).toFixed(1)} s`

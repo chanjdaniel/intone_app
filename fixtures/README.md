@@ -9,7 +9,8 @@ Nothing here is hand-edited, and nothing here is real accuracy on learners (see 
 | `voices/`    | Three Japanese phrases in eight VOICEVOX voices, right and wrong, slower, faster and uneven, each clean, in room noise and through a phone band | `npm run fixtures:voices`    |
 | `real/`      | Three stretches of LibriVox's CC0 Japanese readings, real speech for tracking and cutting                                                       | `npm run fixtures:voices`    |
 | `noise/`     | The room noise mixed into `voices/`, cut from a CC BY 4.0 recording                                                                             | `npm run fixtures:voices`    |
-| `tracked/`   | Every WAV above tracked and featured as the app does it: its curve and spectral features, for the score (`docs/score.md`)                       | `npm run fixtures:tracked`   |
+| `formats/`   | The first 4 s of `real/gongitsune.wav` in eleven audio formats, for what a browser decodes from an upload (`docs/uploads.md`)                   | `npm run fixtures:formats`   |
+| `tracked/`   | Every WAV above but `formats/` tracked and featured as the app does it: its curve and spectral features, for the score (`docs/score.md`)        | `npm run fixtures:tracked`   |
 
 ## Making them
 
@@ -34,6 +35,10 @@ The audio is committed, since every licence below allows it.
 `npm run fixtures:tracked` (`scripts/tracked-fixtures.ts`) writes `tracked/<the WAV's path>.bin` for every WAV here: the WAV's first channel resampled to 16 kHz, tracked by the take's own engine on SwiftF0 (`src/engine/pitch/take.ts`) and featured by `src/engine/features/spectral.ts`, in Node.
 Each file is a line of JSON (the analysis, the frames, the feature options) and then the curve's pitch, confidence and level and the features, as little-endian float32; `tests/support/tracked-fixtures.ts` reads and writes them.
 `tests/scripts/tracked-fixtures.test.ts` remakes them all on the real model and fails on any byte of difference, so rerun the script after changing the tracker, the features or a WAV.
+
+`npm run fixtures:formats` (`scripts/format-fixtures.ts`) writes `formats/`: the first 4 s of `real/gongitsune.wav`, stereo at 44.1 kHz (Opus at 48 kHz, its own rate), in each format `formats/formats.json` lists, encoded by ffmpeg n9.0.2 with no metadata, so a remake is the same bytes.
+The encoders' output can change with ffmpeg's version, so the script refuses any other version, and `tests/scripts/format-fixtures.test.ts` remakes the files only where that version is installed; everywhere it checks that every listed file is there.
+They are the CC0 recording, so the licence below covers them.
 
 ## The VOICEVOX fixtures
 

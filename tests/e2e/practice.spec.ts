@@ -274,6 +274,7 @@ test('the native curve is tracked once, kept on the device, and tracked again if
       // The line's curve, and the history's format; no take yet.
       expect(await storedOnDevice(page)).toStrictEqual({
         stores: {
+          clips: 0,
           meta: 1,
           nativeCurves: 1,
           natives: 0,
@@ -328,6 +329,7 @@ test('the native curve is tracked once, kept on the device, and tracked again if
       ).toBeVisible({ timeout: 30_000 })
       expect(await storedOnDevice(page)).toStrictEqual({
         stores: {
+          clips: 0,
           meta: 1,
           nativeCurves: 1,
           natives: 1,

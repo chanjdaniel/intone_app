@@ -25,8 +25,9 @@ A take's audio is kept only once the learner turns that on in `/settings`, as a 
 
 ## Format and its changes
 
-The database is at version 2.
-Version 1 (ticket 09) held `nativeCurves` alone; opening it at version 2 adds the history's stores and `meta`'s format, and keeps the native curves, which `src/services/history-store.test.ts` and `tests/e2e/history.spec.ts` prove on a planted version 1 database.
+The database is at version 3.
+Version 1 (ticket 09) held `nativeCurves` alone; opening it adds the history's stores and `meta`'s format, and keeps the native curves, which `src/services/history-store.test.ts` and `tests/e2e/history.spec.ts` prove on a planted version 1 database.
+Version 3 (ticket 13) adds `clips`, the learner's own clips and their lines (`docs/uploads.md`); the records of version 2 are unchanged, so the history's format stays 1.
 A later format bumps the version, converts the records it changes in `upgrade` (`src/services/indexed-db.ts`), and writes its number to `meta`; a copy of the app older than the database refuses to open it, and says to reload.
 
 ## Scoring again
@@ -38,11 +39,11 @@ When `SCORE_VERSION` moves, `/history` offers to score the older takes again fro
 
 One zip file, `intone-history-<day>.zip`, saved by the browser where the learner chooses:
 
-- `history.json`: `{ app: "intone", kind: "history backup", format, exportedAt, settings, natives, takes }`, the same records as the stores, each frame array as base64 of its little-endian Float32 bytes, so every value comes back exactly.
-- `audio/<take id>.wav`: the kept audio, only when the learner asks for it; a take whose audio is left out keeps no reference to it.
+- `history.json`: `{ app: "intone", kind: "history backup", format, exportedAt, settings, natives, takes, clips }`, the same records as the stores, each frame array as base64 of its little-endian Float32 bytes, so every value comes back exactly; a backup made before clips has no `clips`, and reads as having none.
+- `audio/<take id>.wav`: the kept audio, and `clips/<clip id>.<extension>`: each clip's own file, only when the learner asks for the recordings; a take or clip whose audio is left out keeps no reference to it, and a clip restored without it keeps the file the device already has, or says its audio is not on the device.
 
 Every entry is dated by the backup, so the same history saved at the same moment is the same file, byte for byte.
-Restoring reads the file whole first, by the same Schemas, and refuses it, restoring nothing, when it is not a zip, has no `history.json`, holds anything that does not decode, names a native it does not hold, or misses or damages an audio file it names.
+Restoring reads the file whole first, by the same Schemas, and refuses it, restoring nothing, when it is not a zip, has no `history.json`, holds anything that does not decode, names a native it does not hold, or misses or damages an audio file or clip file it names.
 A take already on the device (the same id) is replaced, so restoring the same backup twice adds nothing.
 
 ## At scale

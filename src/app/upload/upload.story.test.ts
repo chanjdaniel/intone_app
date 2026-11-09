@@ -78,6 +78,22 @@ describe('choosing a file', () => {
     )
   })
 
+  test('an Ogg file is tried, as Firefox names it application/ogg', () => {
+    story(
+      update,
+      given(onUpload()),
+      message(
+        dropped(
+          new File([new Uint8Array(8)], 'reading.ogg', {
+            type: 'application/ogg',
+          }),
+        ),
+      ),
+      Command.resolve(FocusUploadStatus, Message.CompletedFocusUploadStatus()),
+      model(current => expect(current.upload.job._tag).toBe('Working')),
+    )
+  })
+
   test('an empty file is refused', () => {
     story(
       update,

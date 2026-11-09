@@ -350,4 +350,57 @@ describe('clips in the history', () => {
       expect((yield* run(store => store.clips)).clips).toEqual([])
     }),
   )
+
+  it.effect(
+    'opens a database of version 2, keeping its takes, and adds the clips',
+    () =>
+      Effect.gen(function* () {
+        const before = harness()
+        const kept = yield* before.run(store =>
+          store.keep(takeOf('ame-ga-suki', '1', lineCurve(1))),
+        )
+        const taken = yield* Effect.promise(async () => {
+          const database = await request(() =>
+            before.factory.open(databaseName),
+          )
+          const value = await request(() =>
+            database
+              .transaction(stores.takes, 'readonly')
+              .objectStore(stores.takes)
+              .get(kept.entry.id),
+          )
+          database.close()
+          return value
+        })
+        const { factory, run } = harness()
+        yield* Effect.promise(async () => {
+          const opening = factory.open(databaseName, 2)
+          opening.onupgradeneeded = () => {
+            const database = opening.result
+            database.createObjectStore(stores.nativeCurves)
+            database.createObjectStore(stores.takes, { keyPath: 'id' })
+            database.createObjectStore(stores.takeRecordings, { keyPath: 'id' })
+            database.createObjectStore(stores.natives, { keyPath: 'id' })
+            database.createObjectStore(stores.meta)
+          }
+          const database = await request(() => opening)
+          await request(() =>
+            database
+              .transaction(stores.takes, 'readwrite')
+              .objectStore(stores.takes)
+              .put(taken),
+          )
+          database.close()
+        })
+        expect((yield* run(store => store.entries)).entries).toEqual([
+          kept.entry,
+        ])
+        expect(yield* run(store => store.clips)).toEqual({
+          clips: [],
+          unreadable: 0,
+        })
+        const clip = yield* run(store => store.addClip(newClip()))
+        expect((yield* run(store => store.clips)).clips).toEqual([clip])
+      }),
+  )
 })

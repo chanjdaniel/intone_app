@@ -274,7 +274,7 @@ test.describe('history on the device', () => {
         await page.goto('/settings')
         await page
           .getByRole('checkbox', {
-            name: 'Include the kept recordings (2 takes)',
+            name: 'Include the recordings (2 takes)',
           })
           .check()
         const downloading = page.waitForEvent('download')
@@ -383,10 +383,17 @@ test.describe('history on the device', () => {
           }),
       ),
     ).toStrictEqual({
-      version: 2,
+      version: 3,
       curve: { planted: true },
       format: { format: 1 },
-      stores: ['meta', 'nativeCurves', 'natives', 'takeRecordings', 'takes'],
+      stores: [
+        'clips',
+        'meta',
+        'nativeCurves',
+        'natives',
+        'takeRecordings',
+        'takes',
+      ],
     })
   })
 

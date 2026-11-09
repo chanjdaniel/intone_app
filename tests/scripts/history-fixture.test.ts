@@ -13,7 +13,7 @@ import {
 // pinned. A change to the score or the backup's format moves the hash;
 // check the history still has the counts below, then pin the new hash.
 const pinnedSha256 =
-  'b4b75852ec1c0a9346d275cd5691823801a9edf2909eb38d9621a601348ca08e'
+  'd939eb0e4e1a182d18196e88b54116afa26ede54f9d7fd4800fe92fb293d6b61'
 
 describe('the generated history', () => {
   const history = generateHistory()
