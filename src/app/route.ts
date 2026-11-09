@@ -3,7 +3,8 @@ import { Route } from 'foldkit'
 import { defineRouteUnion, literal, slash, string } from 'foldkit/route'
 
 export const AppRoute = defineRouteUnion({
-  Home: {},
+  // The lines to copy, and the words that find among the lines due back.
+  Home: { maybeFind: Schema.Option(Schema.String) },
   Line: { clipId: Schema.String, lineId: Schema.String },
   // Bringing a clip of the learner's own.
   Upload: {},
@@ -20,7 +21,15 @@ export const AppRoute = defineRouteUnion({
 
 export type AppRoute = typeof AppRoute.Type
 
-export const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))
+export const homeRouter = pipe(
+  Route.root,
+  Route.query(
+    Schema.Struct({
+      maybeFind: Schema.OptionFromOptionalKey(Schema.String),
+    }).pipe(Schema.encodeKeys({ maybeFind: 'find' })),
+  ),
+  Route.mapTo(AppRoute.Home),
+)
 
 export const lineRouter = pipe(
   literal('line'),

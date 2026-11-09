@@ -8,6 +8,7 @@ import { LinePlace, isPlaceFor } from '../line/place'
 import type { Message } from '../message'
 import type { Model } from '../model'
 import type { AppResourceServices } from '../resources'
+import { returnOutcomeOf } from '../returns/lineReturn'
 import { AskToPersistStorage } from '../settings/commands'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
 import {
@@ -16,6 +17,7 @@ import {
   Take,
   type TakeMode,
   type TakeResult,
+  type TakeScore,
   type Voice,
   canStartTake,
   levelMeterFloorDb,
@@ -272,6 +274,27 @@ export const failedRecordTake = (
     ? moveTo(model, Take.AnalysisFailed({ reason }))
     : unchanged(model)
 
+// A kept take's place after it: the line's stars, best and next return
+// moved by it, and what it did for them.
+const movedPlace = (
+  place: Extract<LinePlace, { _tag: 'Ready' }>,
+  mode: TakeMode,
+  score: TakeScore,
+  day: string,
+) => {
+  const returned = returnOutcomeOf(place.maybeReturn, { mode, score, day })
+  const moved = outcomeOf(place.progress, mode, score, returned.note)
+  return {
+    outcome: moved.outcome,
+    place: LinePlace.Ready({
+      ...place,
+      progress: moved.after,
+      today: day,
+      maybeReturn: returned.after,
+    }),
+  }
+}
+
 // A take kept in the history moves its line's stars and best, when the
 // line's are known, and is the moment to ask the browser to keep the
 // history too.
@@ -293,17 +316,11 @@ export const succeededAnalyseTake = (
     place._tag === 'Ready' &&
     native._tag === 'Ready' &&
     isPlaceFor(place, native.clipId, native.lineId)
-      ? Option.some({
-          place,
-          ...outcomeOf(place.progress, take.mode, result.score),
-        })
+      ? Option.some(movedPlace(place, take.mode, result.score, result.kept.day))
       : Option.none()
   const placed = Option.match(maybeMoved, {
     onNone: () => model,
-    onSome: moved =>
-      modifyFields(model, {
-        place: () => LinePlace.Ready({ ...moved.place, progress: moved.after }),
-      }),
+    onSome: moved => modifyFields(model, { place: () => moved.place }),
   })
   const maybeOutcome: Option.Option<TakeOutcome> = Option.map(
     maybeMoved,

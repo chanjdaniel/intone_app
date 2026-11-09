@@ -8,6 +8,7 @@ import { FileDrop } from '@foldkit/ui'
 import { LoadClips } from '../level/commands'
 import { ClipsPage } from '../level/level'
 import { AppRoute, Message, type Model, initialModel, update } from '../main'
+import { LoadDueLines } from '../returns/commands'
 import { FocusUploadStatus, OpenLevel } from './commands'
 import { packJobOf } from './subscriptions'
 import { PackJob, PackStep, UploadJob, packProgressOf } from './upload'
@@ -204,6 +205,14 @@ describe('importing the local pack', () => {
       given(importing()),
       message(Message.ChangedUrl({ url: url('/') })),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
+      Command.resolve(
+        LoadDueLines,
+        Message.SucceededLoadDueLines({
+          today: '2026-11-10',
+          lines: [],
+          maybeNextOn: Option.none(),
+        }),
+      ),
       model(current => {
         expect(current.upload.packJob).toStrictEqual(PackJob.Idle())
       }),

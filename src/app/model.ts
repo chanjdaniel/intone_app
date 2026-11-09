@@ -6,6 +6,7 @@ import { HistoryPage, LineHistoryPage } from './history/history'
 import { ClipsPage, LevelPage } from './level/level'
 import { ListenSpeed, NativeCurve } from './line/native'
 import { LinePlace } from './line/place'
+import { DuePage } from './returns/returns'
 import { AppRoute } from './route'
 import { SettingsPage } from './settings/settings'
 import { Take } from './take/take'
@@ -35,6 +36,8 @@ export const Model = Schema.Struct({
   // Bringing a clip, the clips on the home screen, and a clip's lines.
   upload: UploadPage,
   clips: ClipsPage,
+  // The lines due back for a blind take, read each time home opens.
+  due: DuePage,
   level: LevelPage,
   deleteClipDialog: Dialog.Model,
   // What the home screen says once a clip has been deleted.

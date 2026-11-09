@@ -8,6 +8,7 @@ import { FileDrop } from '@foldkit/ui'
 import { LoadClips } from '../level/commands'
 import { ClipsPage } from '../level/level'
 import { AppRoute, Message, type Model, initialModel, update } from '../main'
+import { LoadDueLines } from '../returns/commands'
 import { FocusUploadStatus, OpenLevel } from './commands'
 import { uploadJobOf } from './subscriptions'
 import { UploadJob, UploadStep, progressOf } from './upload'
@@ -254,6 +255,14 @@ describe('the cut', () => {
       given(working(UploadStep.Decoding())),
       message(Message.ChangedUrl({ url: url('/') })),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
+      Command.resolve(
+        LoadDueLines,
+        Message.SucceededLoadDueLines({
+          today: '2026-11-10',
+          lines: [],
+          maybeNextOn: Option.none(),
+        }),
+      ),
       model(current => {
         expect(current.upload.job).toStrictEqual(UploadJob.Idle())
         expect(uploadJobOf(current)).toStrictEqual(Option.none())

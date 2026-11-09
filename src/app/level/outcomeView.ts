@@ -2,6 +2,8 @@ import { Option } from 'effect'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { starThresholds } from '../../score/stars'
+import { dayText } from '../history/format'
+import { ReturnNote } from '../returns/lineReturn'
 import type { StarCount, TakeOutcome } from './progress'
 import { starRow, starsText } from './starRow'
 
@@ -36,6 +38,18 @@ const nextText = (stars: StarCount): string => {
         : 'This line has all three stars.'
 }
 
+// What a take did to the line's next return, in words.
+export const returnNoteLines = (note: ReturnNote): ReadonlyArray<string> =>
+  ReturnNote.match(note, {
+    Quiet: () => [],
+    ComesBack: ({ on }) => [
+      `This line comes back for a blind take on ${dayText(on)}.`,
+    ],
+    StillDue: () => [
+      'This line is due back: only a blind take counts as its return.',
+    ],
+  })
+
 // The sentences an outcome is said in.
 export const outcomeLines = (
   outcome: TakeOutcome,
@@ -60,6 +74,7 @@ export const outcomeLines = (
     ...bestLine,
     starLine,
     ...(stars === 3 && stars === outcome.starsBefore ? [] : [nextText(stars)]),
+    ...returnNoteLines(outcome.returnNote),
   ]
 }
 

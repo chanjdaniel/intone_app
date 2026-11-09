@@ -43,6 +43,8 @@ export const plannedEntries: ReadonlyArray<
   { name: 'local-pack', title: 'Local pack: importing and its lines' },
   { name: 'practice-calendar', title: 'Practice calendar' },
   { name: 'score-trend', title: 'Score trend' },
+  { name: 'blind-chart', title: 'Blind-take chart' },
+  { name: 'due-list', title: 'Lines due back' },
   { name: 'history-list', title: 'History list: lines practised' },
 ]
 

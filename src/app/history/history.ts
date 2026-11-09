@@ -3,9 +3,11 @@ import { Calendar } from 'foldkit'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 import { SCORE_VERSION } from '../../score/constants'
+import { returnOf } from '../../score/returns'
 import { starThresholds, starsOf } from '../../score/stars'
 import type { TakeEntry } from '../../services/history-records'
 import { type LineProgress, noProgress } from '../level/progress'
+import { LineReturn } from '../returns/lineReturn'
 import { TakeCurve, TakeScore } from '../take/take'
 
 // The history screens' part of the Model: what /history and a line's
@@ -91,6 +93,14 @@ export const TrendPoint = Schema.Struct({
 })
 export type TrendPoint = typeof TrendPoint.Type
 
+// One blind take on a line's chart: its match, when it was made.
+export const BlindPoint = Schema.Struct({
+  takenAt: Schema.Finite,
+  day: Schema.String,
+  maybeMatch: Schema.Option(Schema.Finite),
+})
+export type BlindPoint = typeof BlindPoint.Type
+
 const lineFields = { clipId: Schema.String, lineId: Schema.String }
 
 // Where a line of the learner's clip stands now its lines can change
@@ -112,6 +122,12 @@ export const LineHistoryPage = defineTaggedUnion({
     trend: Schema.Array(TrendPoint),
     // The takes made before its start or end changed, earliest first.
     earlierTrend: Schema.Array(TrendPoint),
+    // The blind takes of the line as it is now, earliest first: whether
+    // practice held. Its next return, once it has one, and the learner's
+    // day it was read.
+    blindTrend: Schema.Array(BlindPoint),
+    maybeReturn: Schema.Option(LineReturn),
+    today: Schema.String,
     // Drawn from the takes of the line as it is, or, with none yet, from
     // the earlier ones.
     drawnFrom: Schema.Literals(['Now', 'Earlier']),
@@ -295,6 +311,35 @@ export const lineProgressOf = (
       }
     },
   })
+
+// A line's next return, from its blind takes of the line as it is now
+// (../../score/returns.ts), none before its first; a line whose span
+// changed starts its returns again, as it starts its stars.
+export const lineReturnOf = (
+  entries: ReadonlyArray<TakeEntry>,
+  clipId: string,
+  lineId: string,
+  asKept: LineAsKept,
+): Option.Option<LineReturn> =>
+  pipe(
+    lineTakesOf(entries, clipId, lineId, asKept),
+    Option.flatMap(({ takes }) =>
+      Option.fromNullishOr(returnOf(takes, starThresholds())),
+    ),
+  )
+
+export const blindTrendOf = (
+  takes: ReadonlyArray<TakeEntry>,
+): ReadonlyArray<BlindPoint> =>
+  pipe(
+    takes,
+    Array.filter(entry => entry.mode === 'Blind'),
+    Array.map(entry => ({
+      takenAt: entry.takenAt,
+      day: entry.day,
+      maybeMatch: matchOf(entry),
+    })),
+  )
 
 export const trendOf = (
   takes: ReadonlyArray<TakeEntry>,

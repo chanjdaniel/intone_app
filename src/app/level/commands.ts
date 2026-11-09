@@ -5,7 +5,12 @@ import { pushUrl, replaceUrl } from 'foldkit/navigation'
 import { type ClipEntry, lineAudioOf } from '../../services/history-records'
 import { type HistoryError, HistoryStore } from '../../services/history-store'
 import { LineAsKept, lineProgressOf } from '../history/history'
-import { bundledClipOf, clipLineTitle } from '../line/lines'
+import {
+  type BundledClip,
+  bundledClipOf,
+  bundledClips,
+  clipLineTitle,
+} from '../line/lines'
 import type { NextLine } from '../line/place'
 import { Message } from '../message'
 import { homeRouter, levelRouter } from '../route'
@@ -42,7 +47,7 @@ export type LevelSource = Readonly<{
   lines: ReadonlyArray<LevelSourceLine>
 }>
 
-const sourceOfClip = (clip: ClipEntry): LevelSource => ({
+export const sourceOfClip = (clip: ClipEntry): LevelSource => ({
   name: clip.name,
   lines: clip.lines.map((line, k) => {
     const text = line.text?.trim() ?? ''
@@ -62,25 +67,43 @@ const sourceOfClip = (clip: ClipEntry): LevelSource => ({
   }),
 })
 
+const sourceOfBundled = (clip: BundledClip): LevelSource => ({
+  name: clip.name,
+  lines: clip.lines.map(line => ({
+    lineId: line.lineId,
+    title: line.text,
+    titleIsText: true,
+    copyable: true,
+    asKept: LineAsKept.Bundled(),
+  })),
+})
+
 export const levelSourceOf = (
   history: HistoryStore['Service'],
   clipId: string,
 ): Effect.Effect<Option.Option<LevelSource>, HistoryError> =>
   Option.match(bundledClipOf(clipId), {
-    onSome: clip =>
-      Effect.succeedSome({
-        name: clip.name,
-        lines: clip.lines.map(line => ({
-          lineId: line.lineId,
-          title: line.text,
-          titleIsText: true,
-          copyable: true,
-          asKept: LineAsKept.Bundled(),
-        })),
-      }),
+    onSome: clip => Effect.succeedSome(sourceOfBundled(clip)),
     onNone: () =>
       history.clip(clipId).pipe(Effect.map(Option.map(sourceOfClip))),
   })
+
+// Every level's lines: the clips the app brings, then the learner's.
+export const levelSourcesOf = (
+  history: HistoryStore['Service'],
+): Effect.Effect<
+  ReadonlyArray<Readonly<{ clipId: string; source: LevelSource }>>,
+  HistoryError
+> =>
+  history.clips.pipe(
+    Effect.map(({ clips }) => [
+      ...bundledClips.map(clip => ({
+        clipId: clip.id,
+        source: sourceOfBundled(clip),
+      })),
+      ...clips.map(clip => ({ clipId: clip.id, source: sourceOfClip(clip) })),
+    ]),
+  )
 
 // The line after `lineId` in its level that can be copied.
 export const nextLineOf = (
@@ -212,5 +235,7 @@ export const DeleteClip = Command.define('DeleteClip', {
 
 export const GoHome = Command.define('GoHome', {
   messages: [Message.CompletedGoHome],
-  execute: pushUrl(homeRouter()).pipe(Effect.as(Message.CompletedGoHome())),
+  execute: pushUrl(homeRouter({ maybeFind: Option.none() })).pipe(
+    Effect.as(Message.CompletedGoHome()),
+  ),
 })

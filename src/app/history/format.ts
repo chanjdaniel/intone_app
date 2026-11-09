@@ -6,6 +6,11 @@ import { Calendar } from 'foldkit'
 // The learner's day, as `YYYY-MM-DD`.
 export const isoDayOf = Schema.encodeSync(Calendar.CalendarDateFromIsoString)
 
+// The learner's day at `millis`, by the device's own clock and zone, so
+// a day does not shift when they travel.
+export const learnerDayOf = (millis: number): string =>
+  isoDayOf(Calendar.fromDateLocal(new Date(millis)))
+
 const monthNames = [
   'January',
   'February',

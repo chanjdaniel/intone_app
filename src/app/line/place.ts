@@ -2,9 +2,11 @@ import { Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 import { LineProgress } from '../level/progress'
+import { LineReturn } from '../returns/lineReturn'
 
 // The open line's place in its level: the level's name, the line's stars
-// and best so far (../level/progress.ts), and the next line to copy,
+// and best so far (../level/progress.ts), its next return
+// (../returns/lineReturn.ts), and the next line to copy,
 // read from the device each time the line opens, and moved on by each
 // take kept while it is open.
 
@@ -29,6 +31,10 @@ export const LinePlace = defineTaggedUnion({
     levelName: Schema.String,
     progress: LineProgress,
     maybeNext: Schema.Option(NextLine),
+    // The learner's day the place was read, or the last take was kept,
+    // and the line's next return, once it has had a blind take.
+    today: Schema.String,
+    maybeReturn: Schema.Option(LineReturn),
   },
   Failed: { clipId, lineId, reason: Schema.String },
 })

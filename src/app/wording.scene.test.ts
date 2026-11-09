@@ -30,6 +30,8 @@ import {
   update,
   view,
 } from './main'
+import { ReturnNote } from './returns/lineReturn'
+import { DuePage } from './returns/returns'
 import { DrawCurvePair } from './take/curvePair'
 import {
   type FinishedTake,
@@ -131,6 +133,10 @@ const everyTake: ReadonlyArray<Take> = [
         starsAfter,
         maybePreviousBest,
         isPersonalBest,
+        returnNote:
+          starsAfter === 3
+            ? ReturnNote.ComesBack({ on: '2026-11-13' })
+            : ReturnNote.StillDue(),
       }),
     }),
   ),
@@ -144,6 +150,7 @@ const everyTake: ReadonlyArray<Take> = [
       starsAfter: 2,
       maybePreviousBest: Option.some(0.9),
       isPersonalBest: false,
+      returnNote: ReturnNote.Quiet(),
     }),
   }),
 ]
@@ -164,11 +171,11 @@ const ready = NativeCurve.Ready({
 })
 
 const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
-  ['home', initialModel(AppRoute.Home()), false],
+  ['home', initialModel(AppRoute.Home({ maybeFind: Option.none() })), false],
   [
     'home with clips',
     {
-      ...initialModel(AppRoute.Home()),
+      ...initialModel(AppRoute.Home({ maybeFind: Option.none() })),
       clips: ClipsPage.Ready({
         clips: [
           {
@@ -184,6 +191,41 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
     },
     false,
   ],
+  ...[
+    DuePage.Ready({
+      today: '2026-11-10',
+      lines: [],
+      maybeNextOn: Option.some('2026-11-14'),
+      shownRows: 50,
+    }),
+    DuePage.Ready({
+      today: '2026-11-10',
+      lines: [
+        {
+          clipId: 'ame-ga-suki',
+          lineId: '1',
+          title: '雨が好き',
+          titleIsText: true,
+          levelName: '雨が好き',
+          number: 1,
+          stars: 3,
+          lineReturn: { streak: 0, setOn: '2026-10-01', dueOn: '2026-10-02' },
+        },
+      ],
+      maybeNextOn: Option.none(),
+      shownRows: 50,
+    }),
+  ].map(
+    (due, k) =>
+      [
+        `home, lines due back ${k}`,
+        {
+          ...initialModel(AppRoute.Home({ maybeFind: Option.none() })),
+          due,
+        },
+        false,
+      ] as const,
+  ),
   ['upload', initialModel(AppRoute.Upload()), false],
   ...[
     UploadJob.Working({
@@ -312,6 +354,8 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
             lineId: '1',
             levelName: '雨が好き',
             progress: { stars: 2, maybeBestMatch: Option.some(0.93) },
+            today: '2026-11-10',
+            maybeReturn: Option.none(),
             maybeNext:
               k % 2 === 0
                 ? Option.none()

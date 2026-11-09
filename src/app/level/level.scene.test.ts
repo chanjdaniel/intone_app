@@ -192,7 +192,7 @@ describe('the home screen’s clips', () => {
     scene(
       { update, view },
       given({
-        ...initialModel(AppRoute.Home()),
+        ...initialModel(AppRoute.Home({ maybeFind: Option.none() })),
         clips: ClipsPage.Ready({
           clips: [
             {
@@ -234,7 +234,7 @@ describe('the home screen’s clips', () => {
     scene(
       { update, view },
       given({
-        ...initialModel(AppRoute.Home()),
+        ...initialModel(AppRoute.Home({ maybeFind: Option.none() })),
         clips: ClipsPage.Ready({ clips: [] }),
       }),
       expect(

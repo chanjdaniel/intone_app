@@ -199,6 +199,7 @@ describe('the take in the history', () => {
         showingKept(
           KeptInHistory.Kept({
             id: 'a',
+            day: '2026-11-10',
             maybeAudioFailure: Option.some('The disk is full.'),
           }),
         ),

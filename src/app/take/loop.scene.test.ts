@@ -24,6 +24,7 @@ import {
   update,
   view,
 } from '../main'
+import { ReturnNote } from '../returns/lineReturn'
 import { AskToPersistStorage } from '../settings/commands'
 import type { StorageFacts } from '../settings/settings'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
@@ -49,7 +50,14 @@ const placed = (
   progress: LineProgress,
   maybeNext: Option.Option<NextLine> = Option.none(),
 ): LinePlace =>
-  LinePlace.Ready({ ...line, levelName: '雨が好き', progress, maybeNext })
+  LinePlace.Ready({
+    ...line,
+    levelName: '雨が好き',
+    progress,
+    maybeNext,
+    today: '2026-11-10',
+    maybeReturn: Option.none(),
+  })
 
 const onLine = (
   take: Take = Take.Idle(),
@@ -231,6 +239,7 @@ describe('the line’s stars on its practice screen', () => {
               starsAfter: 1,
               maybePreviousBest: Option.some(0.61),
               isPersonalBest: true,
+              returnNote: ReturnNote.Quiet(),
             }),
           }),
           placed({ stars: 1, maybeBestMatch: Option.some(0.824) }),
@@ -271,6 +280,7 @@ describe('the line’s stars on its practice screen', () => {
               starsAfter: 2,
               maybePreviousBest: Option.some(0.92),
               isPersonalBest: false,
+              returnNote: ReturnNote.Quiet(),
             }),
           }),
           placed({ stars: 2, maybeBestMatch: Option.some(0.92) }),
@@ -317,6 +327,85 @@ describe('the line’s stars on its practice screen', () => {
       expect(
         role('link', { name: /^See every line and its stars/ }),
       ).toHaveAttr('href', '/level/ame-ga-suki'),
+    )
+  })
+})
+
+describe('a line that comes back', () => {
+  const withReturn = (dueOn: string, today: string): LinePlace =>
+    LinePlace.Ready({
+      ...line,
+      levelName: '雨が好き',
+      progress: { stars: 3, maybeBestMatch: Option.some(0.8) },
+      maybeNext: Option.none(),
+      today,
+      maybeReturn: Option.some({ streak: 1, setOn: '2026-11-10', dueOn }),
+    })
+
+  test('says on its screen when it is due back, and that only a blind take counts', () => {
+    scene(
+      { update, view },
+      given(onLine(Take.Idle(), withReturn('2026-11-11', '2026-11-18'))),
+      drawn,
+      expect(
+        text(
+          'Due back today: record it blind, as only a blind take counts as its return.',
+        ),
+      ).toExist(),
+      expect(text(/\b(overdue|late|missed)\b/i)).toBeAbsent(),
+    )
+    scene(
+      { update, view },
+      given(onLine(Take.Idle(), withReturn('2026-11-14', '2026-11-11'))),
+      drawn,
+      expect(
+        text('Comes back for a blind take on 14 November 2026.'),
+      ).toExist(),
+    )
+    scene(
+      { update, view },
+      given(onLine()),
+      drawn,
+      expect(text(/Comes back|Due back/)).toBeAbsent(),
+    )
+  })
+
+  test('says after a blind take when the line comes back, and after a guided one that it was no return', () => {
+    const result = (mode: 'Guided' | 'Blind', returnNote: ReturnNote) =>
+      onLine(
+        Take.ShowingResult({
+          takeNumber: 1,
+          mode,
+          result: TakeResult.Tracked({
+            curve: sampleCurve,
+            score: sampleScore,
+            kept: sampleKept,
+          }),
+          maybeOutcome: Option.some({
+            starsBefore: 3,
+            starsAfter: 3,
+            maybePreviousBest: Option.some(0.9),
+            isPersonalBest: false,
+            returnNote,
+          }),
+        }),
+        withReturn('2026-11-21', '2026-11-14'),
+      )
+    scene(
+      { update, view },
+      given(result('Blind', ReturnNote.ComesBack({ on: '2026-11-21' }))),
+      drawn,
+      expect(role('status')).toContainText(
+        'This line comes back for a blind take on 21 November 2026.',
+      ),
+    )
+    scene(
+      { update, view },
+      given(result('Guided', ReturnNote.StillDue())),
+      drawn,
+      expect(role('status')).toContainText(
+        'This line is due back: only a blind take counts as its return.',
+      ),
     )
   })
 })

@@ -1,6 +1,7 @@
 import { Array, Option } from 'effect'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
+import { listFrame } from '../listFrame'
 import { lineHistoryRouter } from '../route'
 import { lineRowAttribute } from './commands'
 import { countText, dayText, percentText } from './format'
@@ -104,58 +105,21 @@ export const lineList = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
   const found = linesFound(list.lines, list.words)
-  const shown = Array.take(found, list.shownRows)
-  const more = Math.min(rowsPerPage, found.length - shown.length)
-  return h.div(
-    [h.Class('flex flex-col gap-3')],
-    [
-      ...(list.lines.length > findFieldFromRows
-        ? [
-            h.div(
-              [h.Class('flex flex-col gap-1')],
-              [
-                h.label(
-                  [h.For(findInputId), h.Class('text-base font-semibold')],
-                  ['Find a line'],
-                ),
-                h.input([
-                  h.Id(findInputId),
-                  h.Type('search'),
-                  h.Value(list.words),
-                  h.Lang('ja'),
-                  h.Autocomplete('off'),
-                  h.Spellcheck(false),
-                  h.OnInput(list.changedWords),
-                  h.Class(
-                    `min-h-11 w-full rounded-md border border-line bg-surface px-3 text-base text-ink ${focusRing}`,
-                  ),
-                ]),
-              ],
-            ),
-          ]
-        : []),
-      h.p(
-        [h.Role('status'), h.Class('text-sm text-muted')],
-        [countLine(found.length, list.lines.length, list.words)],
-      ),
-      h.ul(
-        [h.Class('flex flex-col gap-2')],
-        shown.map((line, index) => lineRow(line, index, h)),
-      ),
-      ...(more > 0
-        ? [
-            h.button(
-              [
-                h.Type('button'),
-                h.OnClick(list.showMore),
-                h.Class(
-                  `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink ${focusRing}`,
-                ),
-              ],
-              [`Show ${more} more`],
-            ),
-          ]
-        : []),
-    ],
+  return listFrame(
+    {
+      rows: list.lines,
+      found,
+      words: list.words,
+      shownRows: list.shownRows,
+      findFromRows: findFieldFromRows,
+      rowsPerPage,
+      find: { inputId: findInputId, label: 'Find a line', isJapanese: true },
+      countLine: countLine(found.length, list.lines.length, list.words),
+      changedWords: list.changedWords,
+      showMore: list.showMore,
+      moreButtonClass: `inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink ${focusRing}`,
+      row: (line, index) => lineRow(line, index, h),
+    },
+    h,
   )
 }

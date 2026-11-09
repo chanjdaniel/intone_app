@@ -109,3 +109,12 @@ export const timingDeviationZero = 0.66
 export const provisionalClipTop = 1
 export const starReachShare = 0.75
 export const starBeatShare = 0.9
+
+// Returns (report section 5, "Come back"): a line comes back for a blind
+// take this many days after each blind take of a return that reaches its
+// threshold, the next step each time and the last from then on, and
+// this many days after one that does not, starting the steps again. The
+// steps are the familiar widening intervals of spaced practice, as
+// ticket 19 gives them; no data of the app's own has tuned them yet.
+export const returnStepDays = [1, 3, 7, 14, 30] as const
+export const returnAfterMissDays = 1

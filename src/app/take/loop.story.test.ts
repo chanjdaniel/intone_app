@@ -7,6 +7,7 @@ import { type LineProgress, noProgress } from '../level/progress'
 import { NativeCurve } from '../line/native'
 import { LinePlace } from '../line/place'
 import { AppRoute, Message, type Model, initialModel, update } from '../main'
+import { ReturnNote } from '../returns/lineReturn'
 import { AskToPersistStorage } from '../settings/commands'
 import type { StorageFacts } from '../settings/settings'
 import { AnalyseTake, FocusTakeControl, WaitForMicAnswer } from './commands'
@@ -38,6 +39,8 @@ const placed = (progress: LineProgress): LinePlace =>
     levelName: '雨が好き',
     progress,
     maybeNext: Option.none(),
+    today: '2026-11-10',
+    maybeReturn: Option.none(),
   })
 
 const onLine = (place: LinePlace = placed(noProgress)): Model => ({
@@ -241,6 +244,7 @@ describe('stars', () => {
             starsAfter: 0,
             maybePreviousBest: Option.none(),
             isPersonalBest: false,
+            returnNote: ReturnNote.Quiet(),
           }),
         )
       }),
@@ -296,6 +300,7 @@ describe('stars', () => {
             starsAfter: 2,
             maybePreviousBest: Option.some(0.92),
             isPersonalBest: false,
+            returnNote: ReturnNote.Quiet(),
           }),
         )
       }),
@@ -365,6 +370,7 @@ describe('a personal best', () => {
         expect(outcomeOf(state)).toMatchObject(
           Option.some({
             isPersonalBest: true,
+            returnNote: ReturnNote.Quiet(),
             maybePreviousBest: Option.some(0.6),
           }),
         )
@@ -399,6 +405,100 @@ describe('a personal best', () => {
           Option.some({ isPersonalBest: true, starsAfter: 1 }),
         ),
       ),
+    )
+  })
+})
+
+describe('a line that comes back', () => {
+  const dueSince = (dueOn: string, today: string) =>
+    LinePlace.Ready({
+      ...line,
+      levelName: '雨が好き',
+      progress: { stars: 3, maybeBestMatch: Option.some(0.8) },
+      maybeNext: Option.none(),
+      today,
+      maybeReturn: Option.some({ streak: 2, setOn: '2026-11-11', dueOn }),
+    })
+
+  const keptOn = (score: TakeScore, day: string) =>
+    TakeResult.Tracked({
+      curve: sampleCurve,
+      score,
+      kept: KeptInHistory.Kept({ ...sampleKept, day }),
+    })
+
+  const returnOf = (state: Model) =>
+    state.place._tag === 'Ready' ? state.place.maybeReturn : Option.none()
+
+  const noteOf = (state: Model) =>
+    Option.map(outcomeOf(state), outcome => outcome.returnNote)
+
+  test('a due line, after a blind take that reaches its threshold, comes back after the next step', () => {
+    story(
+      update,
+      given(onLine(dueSince('2026-11-14', '2026-11-14'))),
+      ...takeTo('Blind', 1, keptOn(scoredAt(reach), '2026-11-14')),
+      model(state => {
+        expect(returnOf(state)).toStrictEqual(
+          Option.some({ streak: 3, setOn: '2026-11-14', dueOn: '2026-11-21' }),
+        )
+        expect(noteOf(state)).toStrictEqual(
+          Option.some(ReturnNote.ComesBack({ on: '2026-11-21' })),
+        )
+      }),
+    )
+  })
+
+  test('a line due a week ago, after a blind take that misses, comes back the next day', () => {
+    story(
+      update,
+      given(onLine(dueSince('2026-11-14', '2026-11-21'))),
+      ...takeTo('Blind', 1, keptOn(scoredAt(reach - 0.1), '2026-11-21')),
+      model(state => {
+        expect(returnOf(state)).toStrictEqual(
+          Option.some({ streak: 0, setOn: '2026-11-21', dueOn: '2026-11-22' }),
+        )
+        expect(progressOf(state).stars).toBe(3)
+      }),
+    )
+  })
+
+  test('a guided take on a due line is not its return, and says so', () => {
+    story(
+      update,
+      given(onLine(dueSince('2026-11-14', '2026-11-14'))),
+      ...takeTo('Guided', 1, keptOn(scoredAt(beat), '2026-11-14')),
+      model(state => {
+        expect(returnOf(state)).toStrictEqual(
+          Option.some({ streak: 2, setOn: '2026-11-11', dueOn: '2026-11-14' }),
+        )
+        expect(noteOf(state)).toStrictEqual(Option.some(ReturnNote.StillDue()))
+      }),
+    )
+  })
+
+  test('a first blind take starts the line’s returns, and one not compared moves nothing', () => {
+    story(
+      update,
+      given(onLine()),
+      ...takeTo(
+        'Blind',
+        1,
+        keptOn(
+          TakeScore.CouldNotCompare({ version: 1, reason: 'TooQuiet' }),
+          '2026-11-10',
+        ),
+      ),
+      model(state => {
+        expect(returnOf(state)).toStrictEqual(Option.none())
+        expect(noteOf(state)).toStrictEqual(Option.some(ReturnNote.Quiet()))
+      }),
+      ...takeTo('Blind', 2, keptOn(scoredAt(reach), '2026-11-10')),
+      model(state => {
+        expect(returnOf(state)).toStrictEqual(
+          Option.some({ streak: 1, setOn: '2026-11-10', dueOn: '2026-11-11' }),
+        )
+      }),
     )
   })
 })

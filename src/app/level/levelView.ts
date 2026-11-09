@@ -1,4 +1,4 @@
-import { Array, Option } from 'effect'
+import { Option } from 'effect'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Dialog } from '@foldkit/ui'
@@ -7,6 +7,7 @@ import { countText } from '../history/format'
 import { pageFrame } from '../history/historyView'
 import { clockText } from '../line/lines'
 import { sourceLink } from '../line/sourceLink'
+import { listFrame } from '../listFrame'
 import { homeRouter, lineRouter } from '../route'
 import { levelRowAttribute } from './commands'
 import {
@@ -247,69 +248,37 @@ export const levelLineList = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
   const found = levelLinesFound(clip.lines, words)
-  const shown = Array.take(found, shownRows)
-  const more = Math.min(levelRowsPerPage, found.length - shown.length)
-  return h.div(
-    [h.Class('flex flex-col gap-3')],
-    [
-      ...(clip.lines.length > levelFindFromRows
-        ? [
-            h.div(
-              [h.Class('flex flex-col gap-1')],
-              [
-                h.label(
-                  [h.For(levelFindInputId), h.Class('text-base font-semibold')],
-                  ['Find a line'],
-                ),
-                h.input([
-                  h.Id(levelFindInputId),
-                  h.Type('search'),
-                  h.Value(words),
-                  h.Placeholder('A line’s number or time, such as 12 or 1:05'),
-                  h.Autocomplete('off'),
-                  h.Spellcheck(false),
-                  h.OnInput(events.changedWords),
-                  h.Class(
-                    `min-h-11 w-full rounded-md border border-line bg-surface px-3 text-base text-ink placeholder:text-muted ${focusRing}`,
-                  ),
-                ]),
-              ],
-            ),
-          ]
-        : []),
-      h.p(
-        [h.Role('status'), h.Class('text-sm text-muted')],
-        [countLine(found.length, clip.lines.length, words)],
-      ),
-      h.ul(
-        [h.Class('flex flex-col gap-2')],
-        shown.map((line, index) =>
-          levelRow(
-            clip.id,
-            clip.hasAudio,
-            line,
-            starsOfLine(stars, line.id),
-            index,
-            clip.hasAudio && clip.origin === 'Upload'
-              ? (events.editLine ?? null)
-              : null,
-            h,
-          ),
+  return listFrame(
+    {
+      rows: clip.lines,
+      found,
+      words,
+      shownRows,
+      findFromRows: levelFindFromRows,
+      rowsPerPage: levelRowsPerPage,
+      find: {
+        inputId: levelFindInputId,
+        label: 'Find a line',
+        placeholder: 'A line’s number or time, such as 12 or 1:05',
+      },
+      countLine: countLine(found.length, clip.lines.length, words),
+      changedWords: events.changedWords,
+      showMore: events.showMore,
+      moreButtonClass: secondaryButton,
+      row: (line, index) =>
+        levelRow(
+          clip.id,
+          clip.hasAudio,
+          line,
+          starsOfLine(stars, line.id),
+          index,
+          clip.hasAudio && clip.origin === 'Upload'
+            ? (events.editLine ?? null)
+            : null,
+          h,
         ),
-      ),
-      ...(more > 0
-        ? [
-            h.button(
-              [
-                h.Type('button'),
-                h.OnClick(events.showMore),
-                h.Class(`${secondaryButton} self-start`),
-              ],
-              [`Show ${more} more`],
-            ),
-          ]
-        : []),
-    ],
+    },
+    h,
   )
 }
 
@@ -436,7 +405,7 @@ const backLink = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
     [
       h.a(
         [
-          h.Href(homeRouter()),
+          h.Href(homeRouter({ maybeFind: Option.none() })),
           h.Class(
             `inline-flex min-h-11 items-center gap-1.5 self-start rounded-md text-accent ${focusRing}`,
           ),

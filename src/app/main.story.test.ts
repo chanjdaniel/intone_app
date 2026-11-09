@@ -18,6 +18,8 @@ import {
   initialModel,
   update,
 } from './main'
+import { LoadDueLines } from './returns/commands'
+import { DuePage } from './returns/returns'
 import { ForgetTakeAudio } from './take/commands'
 import { Take, TakeResult } from './take/take'
 import {
@@ -33,16 +35,27 @@ const url = (path: string) =>
 
 const on = (route: AppRoute): Model => initialModel(route)
 
+const noneDue = Command.resolve(
+  LoadDueLines,
+  Message.SucceededLoadDueLines({
+    today: '2026-11-10',
+    lines: [],
+    maybeNextOn: Option.none(),
+  }),
+)
+
 describe('init', () => {
   test('the app starts on the home screen and reads the learner’s clips', () => {
     const start = init(url('/'))
 
     expect((start.commands ?? []).map(({ name }) => name)).toStrictEqual([
       LoadClips.name,
+      LoadDueLines.name,
     ])
     expect(start.model).toStrictEqual({
-      ...on(AppRoute.Home()),
+      ...on(AppRoute.Home({ maybeFind: Option.none() })),
       clips: ClipsPage.Loading(),
+      due: DuePage.Loading(),
     })
   })
 
@@ -97,10 +110,17 @@ describe('update', () => {
       }),
       message(Message.ChangedUrl({ url: url('/') })),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
+      noneDue,
       model(current => {
         expect(current).toStrictEqual({
-          ...on(AppRoute.Home()),
+          ...on(AppRoute.Home({ maybeFind: Option.none() })),
           clips: ClipsPage.Ready({ clips: [] }),
+          due: DuePage.Ready({
+            today: '2026-11-10',
+            lines: [],
+            maybeNextOn: Option.none(),
+            shownRows: 50,
+          }),
         })
       }),
     )
@@ -115,6 +135,8 @@ describe('opening a line', () => {
     levelName: '雨が好き',
     progress: noProgress,
     maybeNext: Option.none(),
+    today: '2026-11-10',
+    maybeReturn: Option.none(),
   })
 
   test('starting on a line asks for its native curve and its place in its level', () => {
@@ -143,7 +165,7 @@ describe('opening a line', () => {
   test('a line the app does not bring is looked for on the device, and may be missing', () => {
     story(
       update,
-      given(on(AppRoute.Home())),
+      given(on(AppRoute.Home({ maybeFind: Option.none() }))),
       message(Message.ChangedUrl({ url: url('/line/ame-ga-suki/9') })),
       Command.expectExact(
         LoadNativeCurve({ clipId: 'ame-ga-suki', lineId: '9' }),
@@ -182,7 +204,7 @@ describe('opening a line', () => {
   test('the native curve is asked for once, and again only after a failure', () => {
     story(
       update,
-      given(on(AppRoute.Home())),
+      given(on(AppRoute.Home({ maybeFind: Option.none() }))),
       message(Message.ChangedUrl({ url: url('/line/ame-ga-suki/1') })),
       Command.resolve(
         LoadNativeCurve,
@@ -219,6 +241,7 @@ describe('opening a line', () => {
       message(Message.ChangedUrl({ url: url('/') })),
       Command.resolve(ForgetTakeAudio, Message.CompletedForgetTakeAudio()),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
+      noneDue,
       message(Message.ChangedUrl({ url: url('/line/ame-ga-suki/1') })),
       Command.expectExact(
         LoadLinePlace({ clipId: 'ame-ga-suki', lineId: '1' }),
@@ -248,9 +271,10 @@ describe('opening a line', () => {
         }),
       }),
       message(Message.ChangedUrl({ url: url('/') })),
-      Command.expectExact(LoadClips(), ForgetTakeAudio()),
+      Command.expectExact(LoadClips(), LoadDueLines(), ForgetTakeAudio()),
       Command.resolve(ForgetTakeAudio, Message.CompletedForgetTakeAudio()),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
+      noneDue,
       model(current => expect(current.take).toStrictEqual(Take.Idle())),
     )
   })

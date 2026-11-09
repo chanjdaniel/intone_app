@@ -20,7 +20,7 @@ describe('home screen', () => {
   test('names the app in its one top-level heading and says what it is for', () => {
     scene(
       { update, view },
-      given(on(AppRoute.Home())),
+      given(on(AppRoute.Home({ maybeFind: Option.none() }))),
       expect(role('heading', { name: 'Intone', level: 1 })).toExist(),
       expect(text(tagline)).toExist(),
     )
@@ -31,7 +31,7 @@ describe('home screen lines', () => {
   test('lists the bundled line, linked to its practice screen', () => {
     scene(
       { update, view },
-      given(on(AppRoute.Home())),
+      given(on(AppRoute.Home({ maybeFind: Option.none() }))),
       expect(role('heading', { name: 'Lines to copy', level: 2 })).toExist(),
       expect(role('link', { name: 'Copy 雨が好き, あめがすき' })).toHaveAttr(
         'href',

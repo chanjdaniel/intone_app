@@ -3,7 +3,9 @@ import type { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { swiftF0FrameHz } from '../../engine/pitch/swift-f0'
+import { dayText } from '../history/format'
 import { starRow, starRules } from '../level/starRow'
+import { isReturnDue } from '../returns/lineReturn'
 import { levelRouter, lineHistoryRouter, lineRouter } from '../route'
 import { PairLearner, curvePairView, describeCurve } from '../take/curvePair'
 import { type TakePanelEvents, takePanel } from '../take/panel'
@@ -291,6 +293,16 @@ const blindCover = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
 
 // Under the heading: the line's stars, its best, and how stars are
 // earned, once its place in its level is read.
+// When the line comes back for a blind take, once it has had one.
+export const returnText = (
+  place: Extract<LinePlace, { _tag: 'Ready' }>,
+): Option.Option<string> =>
+  Option.map(place.maybeReturn, ({ dueOn }) =>
+    isReturnDue(place.maybeReturn, place.today)
+      ? 'Due back today: record it blind, as only a blind take counts as its return.'
+      : `Comes back for a blind take on ${dayText(dueOn)}.`,
+  )
+
 const linePlaceView = <ViewMessage>(
   place: LinePlace,
   h: HtmlBuilder<ViewMessage>,
@@ -301,29 +313,56 @@ const linePlaceView = <ViewMessage>(
           h.AriaLabel('This line’s stars'),
           h.DataAttribute('line-stars', ''),
           h.Class(
-            'flex flex-col gap-2 rounded-lg border border-line bg-raised p-4 sm:flex-row sm:items-center sm:gap-5',
+            'flex flex-col gap-3 rounded-lg border border-line bg-raised p-4',
           ),
         ],
         [
           h.div(
-            [h.Class('flex items-center gap-3')],
             [
-              starRow(place.progress.stars, h, { size: 'large' }),
-              ...Option.match(place.progress.maybeBestMatch, {
-                onNone: () => [],
-                onSome: best => [
-                  h.p(
-                    [h.Class('text-base font-semibold tabular-nums text-ink')],
-                    [`Best ${Math.round(100 * best)}%`],
-                  ),
+              h.Class(
+                'flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5',
+              ),
+            ],
+            [
+              h.div(
+                [h.Class('flex items-center gap-3')],
+                [
+                  starRow(place.progress.stars, h, { size: 'large' }),
+                  ...Option.match(place.progress.maybeBestMatch, {
+                    onNone: () => [],
+                    onSome: best => [
+                      h.p(
+                        [
+                          h.Class(
+                            'text-base font-semibold tabular-nums text-ink',
+                          ),
+                        ],
+                        [`Best ${Math.round(100 * best)}%`],
+                      ),
+                    ],
+                  }),
                 ],
-              }),
+              ),
+              h.ul(
+                [h.Class('flex flex-col text-sm text-muted')],
+                starRules().map(rule => h.li([], [rule])),
+              ),
             ],
           ),
-          h.ul(
-            [h.Class('flex flex-col text-sm text-muted')],
-            starRules().map(rule => h.li([], [rule])),
-          ),
+          ...Option.match(returnText(place), {
+            onNone: () => [],
+            onSome: text => [
+              h.p(
+                [
+                  h.DataAttribute('line-return', ''),
+                  h.Class(
+                    'border-t border-line pt-3 text-base text-ink break-words',
+                  ),
+                ],
+                [text],
+              ),
+            ],
+          }),
         ],
       )
     : h.empty

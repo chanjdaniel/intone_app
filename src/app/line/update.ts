@@ -1,8 +1,6 @@
-import type { Option } from 'effect'
 import type { Update } from 'foldkit'
 import { modifyFields } from 'foldkit/struct'
 
-import type { LineProgress } from '../level/progress'
 import type { Message } from '../message'
 import type { Model } from '../model'
 import type { AppResourceServices } from '../resources'
@@ -10,7 +8,7 @@ import type { TakeCurve, TakeFeatures } from '../take/take'
 import { LoadLinePlace, LoadNativeCurve } from './commands'
 import type { PracticeLine } from './lines'
 import { NativeCurve, type NativeFailure, isNativeFor } from './native'
-import { LinePlace, type NextLine, isPlaceFor } from './place'
+import { LinePlace, isPlaceFor } from './place'
 
 // The open line's native curve: asked for when the line opens, unless it
 // is already in the Model, and again on request after a failure; and its
@@ -57,17 +55,12 @@ export const openedLine = (
 
 export const succeededLoadLinePlace = (
   model: Model,
-  clipId: string,
-  lineId: string,
-  levelName: string,
-  progress: LineProgress,
-  maybeNext: Option.Option<NextLine>,
+  found: Omit<Extract<LinePlace, { _tag: 'Ready' }>, '_tag'>,
 ): LineUpdate =>
-  isPlaceFor(model.place, clipId, lineId)
+  isPlaceFor(model.place, found.clipId, found.lineId)
     ? {
         model: modifyFields(model, {
-          place: () =>
-            LinePlace.Ready({ clipId, lineId, levelName, progress, maybeNext }),
+          place: () => LinePlace.Ready(found),
         }),
       }
     : { model }

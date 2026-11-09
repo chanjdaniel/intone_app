@@ -43,6 +43,7 @@ export const sampleScore = TakeScore.Scored({
 // A take kept in the history.
 export const sampleKept = KeptInHistory.Kept({
   id: 'sample-take',
+  day: '2026-11-10',
   maybeAudioFailure: Option.none(),
 })
 

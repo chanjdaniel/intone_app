@@ -8,6 +8,7 @@ import { Dialog, FileDrop } from '@foldkit/ui'
 
 import { MicrophoneFailure } from '../services/microphone'
 import {
+  BlindPoint,
   DayCount,
   LineNow,
   LineSummary,
@@ -20,6 +21,8 @@ import { LineProgress } from './level/progress'
 import { PracticeLine } from './line/lines'
 import { ListenSpeed, NativeFailure } from './line/native'
 import { NextLine } from './line/place'
+import { LineReturn } from './returns/lineReturn'
+import { DueLine } from './returns/returns'
 import { SettingsFacts, StorageFacts } from './settings/settings'
 import { Extent, TakeCurve, TakeFeatures, TakeResult, Voice } from './take/take'
 import { PackStep, UploadStep } from './upload/upload'
@@ -55,6 +58,8 @@ export const Message = defineMessageUnion({
     levelName: Schema.String,
     progress: LineProgress,
     maybeNext: Schema.Option(NextLine),
+    today: Schema.String,
+    maybeReturn: Schema.Option(LineReturn),
   },
   FailedLoadLinePlace: {
     clipId: Schema.String,
@@ -84,6 +89,18 @@ export const Message = defineMessageUnion({
   CompletedFocusUploadStatus: {},
 
   // The clips and a clip's lines.
+  // The lines due back, on the home screen.
+  SucceededLoadDueLines: {
+    today: Schema.String,
+    lines: Schema.Array(DueLine),
+    maybeNextOn: Schema.Option(Schema.String),
+  },
+  FailedLoadDueLines: { reason: Schema.String },
+  ChangedFindDueLines: { words: Schema.String },
+  CompletedReplaceDueFind: {},
+  ClickedShowMoreDueLines: {},
+  CompletedFocusDueRow: {},
+
   SucceededLoadClips: { clips: Schema.Array(ClipSummary) },
   FailedLoadClips: { reason: Schema.String },
   SucceededLoadLevel: {
@@ -201,6 +218,9 @@ export const Message = defineMessageUnion({
         lineNow: LineNow,
         trend: Schema.Array(TrendPoint),
         earlierTrend: Schema.Array(TrendPoint),
+        blindTrend: Schema.Array(BlindPoint),
+        maybeReturn: Schema.Option(LineReturn),
+        today: Schema.String,
         drawnFrom: Schema.Literals(['Now', 'Earlier']),
         first: ShownTake,
         maybeBest: Schema.Option(ShownTake),

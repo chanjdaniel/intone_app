@@ -5,12 +5,19 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { SCORE_VERSION } from '../../score/constants'
 import { lineOf } from '../line/lines'
 import { scoredLearnerOf } from '../line/practiceView'
+import { type LineReturn, isReturnDue } from '../returns/lineReturn'
 import { historyRouter, lineRouter } from '../route'
 import { type PairLearner, curvePairView } from '../take/curvePair'
 import { couldNotCompareText, matchText } from '../take/scoreCard'
 import type { TakeCurve } from '../take/take'
+import { blindChart } from './blindChart'
 import { countText, dayText } from './format'
-import { LineHistoryPage, type ShownTake } from './history'
+import {
+  type BlindPoint,
+  LineHistoryPage,
+  type LineNow,
+  type ShownTake,
+} from './history'
 import { scoreTrend } from './trend'
 
 // A line's history: its match over every take, and its first, best and
@@ -147,6 +154,53 @@ const practiseLink = <ViewMessage>(
   ),
 ]
 
+// Whether practice held: the line's blind takes over time, and when it
+// comes back for the next.
+const blindSection = <ViewMessage>(
+  blindTrend: ReadonlyArray<BlindPoint>,
+  maybeReturn: Option.Option<LineReturn>,
+  today: string,
+  lineNow: LineNow,
+  h: HtmlBuilder<ViewMessage>,
+): Html =>
+  h.section(
+    [h.AriaLabelledBy('blind-heading'), h.Class('flex flex-col gap-3')],
+    [
+      h.h2(
+        [h.Id('blind-heading'), h.Class('text-xl font-bold')],
+        ['Your blind takes over time'],
+      ),
+      ...Array.match(blindTrend, {
+        onEmpty: () => [
+          h.p(
+            [h.Class('text-base text-muted')],
+            [
+              lineNow === 'Changed'
+                ? 'No blind takes yet of the line as it is now. A blind take hides the curves until it ends, and shows here whether the line has held.'
+                : 'No blind takes of this line yet. A blind take hides the curves until it ends, and shows here whether the line has held.',
+            ],
+          ),
+        ],
+        onNonEmpty: points => [blindChart(points, h)],
+      }),
+      ...(lineNow === 'Gone'
+        ? []
+        : Option.match(maybeReturn, {
+            onNone: () => [],
+            onSome: ({ dueOn }) => [
+              h.p(
+                [h.Class('text-base text-ink')],
+                [
+                  isReturnDue(maybeReturn, today)
+                    ? 'Due back today for a blind take.'
+                    : `Comes back for a blind take on ${dayText(dueOn)}.`,
+                ],
+              ),
+            ],
+          })),
+    ],
+  )
+
 export const lineHistoryView = <ViewMessage>(
   page: LineHistoryPage,
   events: LineHistoryEvents<ViewMessage>,
@@ -205,6 +259,9 @@ export const lineHistoryView = <ViewMessage>(
       lineNow,
       trend,
       earlierTrend,
+      blindTrend,
+      maybeReturn,
+      today,
       drawnFrom,
       first,
       maybeBest,
@@ -242,6 +299,9 @@ export const lineHistoryView = <ViewMessage>(
             ),
           ]
         : []),
+      ...(lineNow === 'Gone' && !Array.isReadonlyArrayNonEmpty(blindTrend)
+        ? []
+        : [blindSection(blindTrend, maybeReturn, today, lineNow, h)]),
       ...(Array.isReadonlyArrayNonEmpty(earlierTrend)
         ? [
             h.section(

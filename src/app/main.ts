@@ -33,6 +33,9 @@ import * as LineUpdate from './line/update'
 import { Message } from './message'
 import { type Model } from './model'
 import type { AppResourceServices } from './resources'
+import { dueSection } from './returns/dueList'
+import { DuePage } from './returns/returns'
+import * as ReturnsUpdate from './returns/update'
 import { AppRoute, homeRouter, uploadRouter, urlToAppRoute } from './route'
 import { AskToPersistStorage } from './settings/commands'
 import { SettingsPage, clearDialogId } from './settings/settings'
@@ -79,6 +82,7 @@ export const initialModel = (route: AppRoute): Model => ({
   clearDialog: Dialog.init({ id: clearDialogId }),
   upload: initialUpload,
   clips: ClipsPage.NotLoaded(),
+  due: DuePage.NotLoaded(),
   level: LevelPage.NotLoaded(),
   deleteClipDialog: Dialog.init({ id: deleteClipDialogId }),
   maybeHomeNotice: Option.none(),
@@ -96,7 +100,11 @@ const opened = (model: Model, route: AppRoute): UpdateReturn =>
     LineHistory: ({ clipId, lineId }) =>
       HistoryUpdate.openedLineHistory(model, clipId, lineId),
     Settings: () => SettingsUpdate.openedSettings(model),
-    Home: () => LevelUpdate.openedHome(model),
+    Home: () =>
+      Update.combine(model, [
+        LevelUpdate.openedHome,
+        ReturnsUpdate.openedDueLines,
+      ]),
     Upload: () => ({ model }),
     Level: ({ clipId }) => LevelUpdate.openedLevel(model, clipId),
     DevLibrary: () => ({ model }),
@@ -137,11 +145,12 @@ export const LoadExternal = Command.define('LoadExternal', {
 // The find words of /history or of a clip's lines changed in the
 // address, the list's screen staying open.
 const staysOnList = (from: AppRoute, to: AppRoute): boolean =>
+  (from._tag === 'Home' && to._tag === 'Home') ||
   (from._tag === 'History' && to._tag === 'History') ||
   (from._tag === 'Level' && to._tag === 'Level' && from.clipId === to.clipId)
 
 const findOf = (route: AppRoute): string =>
-  route._tag === 'History' || route._tag === 'Level'
+  route._tag === 'Home' || route._tag === 'History' || route._tag === 'Level'
     ? Option.getOrElse(route.maybeFind, () => '')
     : ''
 
@@ -186,7 +195,9 @@ export const update = (model: Model, message: Message) =>
           ? { model: left }
           : route._tag === 'Level'
             ? LevelUpdate.changedLevelFind(left)
-            : HistoryUpdate.changedFind(left)
+            : route._tag === 'Home'
+              ? ReturnsUpdate.changedDueFind(left)
+              : HistoryUpdate.changedFind(left)
         : opened(left, route)
       return leftLine
         ? {
@@ -218,21 +229,8 @@ export const update = (model: Model, message: Message) =>
     FailedLoadNativeCurve: ({ clipId, lineId, failure, reason }) =>
       LineUpdate.failedLoadNativeCurve(model, clipId, lineId, failure, reason),
     ClickedRetryNativeCurve: () => LineUpdate.clickedRetryNativeCurve(model),
-    SucceededLoadLinePlace: ({
-      clipId,
-      lineId,
-      levelName,
-      progress,
-      maybeNext,
-    }) =>
-      LineUpdate.succeededLoadLinePlace(
-        model,
-        clipId,
-        lineId,
-        levelName,
-        progress,
-        maybeNext,
-      ),
+    SucceededLoadLinePlace: ({ _tag, ...found }) =>
+      LineUpdate.succeededLoadLinePlace(model, found),
     FailedLoadLinePlace: ({ clipId, lineId, reason }) =>
       LineUpdate.failedLoadLinePlace(model, clipId, lineId, reason),
     ClickedListen: ({ voice, extent }) =>
@@ -268,6 +266,16 @@ export const update = (model: Model, message: Message) =>
     ClickedCancelPackImport: () => PackUpdate.clickedCancelPackImport(model),
     CompletedOpenLevel: () => ({ model }),
     CompletedFocusUploadStatus: () => ({ model }),
+
+    SucceededLoadDueLines: ({ today, lines, maybeNextOn }) =>
+      ReturnsUpdate.succeededLoadDueLines(model, today, lines, maybeNextOn),
+    FailedLoadDueLines: ({ reason }) =>
+      ReturnsUpdate.failedLoadDueLines(model, reason),
+    ChangedFindDueLines: ({ words }) =>
+      ReturnsUpdate.changedFindDueLines(model, words),
+    CompletedReplaceDueFind: () => ({ model }),
+    ClickedShowMoreDueLines: () => ReturnsUpdate.clickedShowMoreDueLines(model),
+    CompletedFocusDueRow: () => ({ model }),
 
     SucceededLoadClips: ({ clips }) =>
       LevelUpdate.succeededLoadClips(model, clips),
@@ -481,9 +489,13 @@ const clipsSection = (clips: ClipsPage, h: HtmlBuilder<Message>): Html =>
     ],
   )
 
+const secondaryButton = `inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-surface px-5 text-base font-semibold text-accent hover:border-accent ${focusRing}`
+
 const homeView = (
   lines: ReadonlyArray<BundledLine>,
   clips: ClipsPage,
+  due: DuePage,
+  words: string,
   maybeNotice: Option.Option<string>,
   h: HtmlBuilder<Message>,
 ): Html =>
@@ -509,6 +521,16 @@ const homeView = (
               ),
             ],
             [Option.getOrElse(maybeNotice, () => '')],
+          ),
+          dueSection(
+            due,
+            words,
+            {
+              changedWords: words => Message.ChangedFindDueLines({ words }),
+              showMore: Message.ClickedShowMoreDueLines(),
+            },
+            secondaryButton,
+            h,
           ),
           h.section(
             [h.AriaLabelledBy('lines-heading'), h.Class('flex flex-col gap-4')],
@@ -587,7 +609,7 @@ const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
       ),
       h.a(
         [
-          h.Href(homeRouter()),
+          h.Href(homeRouter({ maybeFind: Option.none() })),
           h.Class(
             'inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
           ),
@@ -626,7 +648,15 @@ const devLibraryView = (
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
   title: 'Intone',
   body: AppRoute.match(model.route, {
-    Home: () => homeView(bundledLines, model.clips, model.maybeHomeNotice, h),
+    Home: ({ maybeFind }) =>
+      homeView(
+        bundledLines,
+        model.clips,
+        model.due,
+        Option.getOrElse(maybeFind, () => ''),
+        model.maybeHomeNotice,
+        h,
+      ),
     Line: ({ clipId, lineId }) =>
       model.native._tag === 'Failed' &&
       model.native.failure === 'NoSuchLine' &&

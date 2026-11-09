@@ -1,10 +1,11 @@
 import { Effect, Option, Schema } from 'effect'
-import { Command } from 'foldkit'
+import { Calendar, Command } from 'foldkit'
 
 import { lineAudioOf } from '../../services/history-records'
 import { HistoryStore } from '../../services/history-store'
 import { NativeCurves } from '../../services/native-curves'
-import { lineProgressOf } from '../history/history'
+import { isoDayOf } from '../history/format'
+import { lineProgressOf, lineReturnOf } from '../history/history'
 import { levelSourceOf, nextLineOf } from '../level/commands'
 import { Message } from '../message'
 import { takeCurveOf, takeFeaturesOf } from '../take/take'
@@ -133,17 +134,15 @@ export const LoadLinePlace = Command.define('LoadLinePlace', {
         })
       }
       const { entries } = yield* history.entries
+      const { asKept } = maybeLine.value
       return Message.SucceededLoadLinePlace({
         clipId,
         lineId,
         levelName: maybeSource.value.name,
-        progress: lineProgressOf(
-          entries,
-          clipId,
-          lineId,
-          maybeLine.value.asKept,
-        ),
+        progress: lineProgressOf(entries, clipId, lineId, asKept),
         maybeNext: nextLineOf(maybeSource.value, lineId),
+        today: isoDayOf(yield* Calendar.today.local),
+        maybeReturn: lineReturnOf(entries, clipId, lineId, asKept),
       })
     }).pipe(
       Effect.provide(HistoryStore.layer),

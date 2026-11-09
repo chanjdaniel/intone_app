@@ -13,9 +13,12 @@ import { clipLineTitle, lineOf } from '../line/lines'
 import { Message } from '../message'
 import { historyRouter } from '../route'
 import { takeCurveOf, takeScoreOf } from '../take/take'
+import { isoDayOf } from './format'
 import {
   LineAsKept,
   type ShownTake,
+  blindTrendOf,
+  lineReturnOf,
   lineTakesOf,
   summarise,
   trendOf,
@@ -147,6 +150,9 @@ export const LoadLineHistory = Command.define('LoadLineHistory', {
           lineNow,
           trend: trendOf(takes),
           earlierTrend: trendOf(earlier),
+          blindTrend: blindTrendOf(takes),
+          maybeReturn: lineReturnOf(entries, clipId, lineId, asKept),
+          today: isoDayOf(yield* Calendar.today.local),
           drawnFrom,
           ...shown,
         }),

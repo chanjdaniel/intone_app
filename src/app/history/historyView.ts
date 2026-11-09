@@ -119,7 +119,7 @@ const emptyHistory = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
       ),
       h.a(
         [
-          h.Href(homeRouter()),
+          h.Href(homeRouter({ maybeFind: Option.none() })),
           h.Class(
             `inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 ${focusRing}`,
           ),

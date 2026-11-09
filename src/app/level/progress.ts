@@ -2,6 +2,7 @@ import { Option, Schema } from 'effect'
 
 import { starThresholds, starsOfTake } from '../../score/stars'
 import type { TakeMode } from '../../services/history-records'
+import { ReturnNote } from '../returns/lineReturn'
 import type { TakeScore } from '../take/take'
 
 // A line's stars and personal best, as the Model knows them: worked out
@@ -35,6 +36,8 @@ export const TakeOutcome = Schema.Struct({
   starsAfter: StarCount,
   maybePreviousBest: Schema.Option(Schema.Finite),
   isPersonalBest: Schema.Boolean,
+  // What it did to the line's next return (../returns/lineReturn.ts).
+  returnNote: ReturnNote,
 })
 export type TakeOutcome = typeof TakeOutcome.Type
 
@@ -49,6 +52,7 @@ export const outcomeOf = (
   before: LineProgress,
   mode: TakeMode,
   score: TakeScore,
+  returnNote: ReturnNote = ReturnNote.Quiet(),
 ): Readonly<{ outcome: TakeOutcome; after: LineProgress }> => {
   const earned = starsOfTake({ mode, score }, starThresholds())
   const stars = earned > before.stars ? earned : before.stars
@@ -70,6 +74,7 @@ export const outcomeOf = (
       starsAfter: stars,
       maybePreviousBest: before.maybeBestMatch,
       isPersonalBest,
+      returnNote,
     },
     after: {
       stars,

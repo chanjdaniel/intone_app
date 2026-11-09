@@ -59,6 +59,7 @@ export const sampleNative: NativeRecording = {
 
 const kept = KeptInHistory.Kept({
   id: 'sample-take',
+  day: '2026-11-10',
   maybeAudioFailure: Option.none(),
 })
 

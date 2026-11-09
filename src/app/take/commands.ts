@@ -1,12 +1,12 @@
 import { Clock, Duration, Effect, Schema } from 'effect'
-import { Calendar, Command, Dom } from 'foldkit'
+import { Command, Dom } from 'foldkit'
 
 import type { Recording } from '../../score/score'
 import { TakeMode } from '../../services/history-records'
 import { HistoryStore } from '../../services/history-store'
 import { type Comparison, Scorer } from '../../services/scorer'
 import { recordingOfTracked } from '../../services/tracker'
-import { isoDayOf } from '../history/format'
+import { learnerDayOf } from '../history/format'
 import { Message } from '../message'
 import { TrackerResource } from './resources'
 import {
@@ -60,7 +60,7 @@ const keepTake = (
       ...line,
       mode,
       takenAt,
-      day: isoDayOf(Calendar.fromDateLocal(new Date(takenAt))),
+      day: learnerDayOf(takenAt),
       native,
       take,
       comparison,
@@ -68,6 +68,7 @@ const keepTake = (
     })
     return KeptInHistory.Kept({
       id: kept.entry.id,
+      day: kept.entry.day,
       maybeAudioFailure: kept.maybeAudioFailure,
     })
   }).pipe(

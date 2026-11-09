@@ -23,6 +23,7 @@ import {
   update,
   view,
 } from '../main'
+import { type LineReturn } from '../returns/lineReturn'
 import { DrawCurvePair } from '../take/curvePair'
 import { TakeScore } from '../take/take'
 import { sampleCurve, sampleScore } from '../take/testCurves'
@@ -33,8 +34,10 @@ import {
   RescoreTakes,
 } from './commands'
 import {
+  type BlindPoint,
   HistoryPage,
   LineHistoryPage,
+  type LineNow,
   Rescoring,
   type ShownTake,
   rowsPerPage,
@@ -200,6 +203,88 @@ const shown = (id: string, day: string, score: TakeScore): ShownTake => ({
 describe('a line’s history', () => {
   const drawn = Mount.resolve(DrawCurvePair, Message.CompletedDrawCurvePair())
 
+  const withBlind = (
+    blindTrend: ReadonlyArray<BlindPoint>,
+    maybeReturn: Option.Option<LineReturn>,
+    lineNow: LineNow = 'AsTaken',
+  ): Model => {
+    const latest = shown('latest', '2026-11-09', sampleScore)
+    return {
+      ...initialModel(
+        AppRoute.LineHistory({ clipId: 'ame-ga-suki', lineId: '1' }),
+      ),
+      lineHistory: LineHistoryPage.Ready({
+        clipId: 'ame-ga-suki',
+        lineId: '1',
+        lineText: '雨が好き',
+        lineNow,
+        trend: [{ takenAt: 2, maybeMatch: Option.some(0.824), version: 1 }],
+        earlierTrend: [],
+        blindTrend,
+        maybeReturn,
+        today: '2026-11-12',
+        drawnFrom: 'Now',
+        first: latest,
+        maybeBest: Option.some(latest),
+        latest,
+      }),
+    }
+  }
+
+  test('charts the line’s blind takes over time with the threshold, summed up for a screen reader, and says when it comes back', () => {
+    scene(
+      { update, view },
+      given(
+        withBlind(
+          [
+            { takenAt: 1, day: '2026-11-03', maybeMatch: Option.some(0.7) },
+            { takenAt: 2, day: '2026-11-04', maybeMatch: Option.some(0.8) },
+            { takenAt: 3, day: '2026-11-07', maybeMatch: Option.some(0.77) },
+          ],
+          Option.some({ streak: 2, setOn: '2026-11-07', dueOn: '2026-11-14' }),
+        ),
+      ),
+      drawn,
+      expect(
+        role('heading', { name: 'Your blind takes over time', level: 2 }),
+      ).toExist(),
+      expect(
+        role('img', {
+          name: 'Your blind takes of this line: 3 takes from 3 November 2026 to 7 November 2026: first 70%, latest 77%, best 80%. 2 of 3 reached the threshold of 75%.',
+        }),
+      ).toExist(),
+      expect(
+        text('Comes back for a blind take on 14 November 2026.'),
+      ).toExist(),
+    )
+    scene(
+      { update, view },
+      given(
+        withBlind(
+          [{ takenAt: 1, day: '2026-11-03', maybeMatch: Option.some(0.5) }],
+          Option.some({ streak: 0, setOn: '2026-11-03', dueOn: '2026-11-04' }),
+        ),
+      ),
+      drawn,
+      expect(text('Due back today for a blind take.')).toExist(),
+      expect(text(/\b(overdue|late|missed)\b/i)).toBeAbsent(),
+    )
+  })
+
+  test('says a line with no blind take yet has none to chart', () => {
+    scene(
+      { update, view },
+      given(withBlind([], Option.none())),
+      drawn,
+      expect(
+        text(
+          'No blind takes of this line yet. A blind take hides the curves until it ends, and shows here whether the line has held.',
+        ),
+      ).toExist(),
+      expect(role('img', { name: /^Your blind takes/ })).toBeAbsent(),
+    )
+  })
+
   test('draws the first, best and latest takes over the line, each with its score’s version, and the trend', () => {
     const first = shown(
       'first',
@@ -223,6 +308,9 @@ describe('a line’s history', () => {
             { takenAt: 2, maybeMatch: Option.some(0.824), version: 1 },
           ],
           earlierTrend: [],
+          blindTrend: [],
+          maybeReturn: Option.none(),
+          today: '2026-11-10',
           drawnFrom: 'Now',
           first,
           maybeBest: Option.some(latest),
@@ -278,6 +366,9 @@ describe('a line’s history', () => {
             { takenAt: 1, maybeMatch: Option.some(0.5), version: 1 },
             { takenAt: 2, maybeMatch: Option.some(0.6), version: 1 },
           ],
+          blindTrend: [],
+          maybeReturn: Option.none(),
+          today: '2026-11-10',
           drawnFrom: 'Now',
           first: latest,
           maybeBest: Option.some(latest),
@@ -326,6 +417,9 @@ describe('a line’s history', () => {
           lineNow === 'Gone'
             ? []
             : [{ takenAt: 3, maybeMatch: Option.some(0.824), version: 1 }],
+        blindTrend: [],
+        maybeReturn: Option.none(),
+        today: '2026-11-10',
         drawnFrom: lineNow === 'Gone' ? 'Now' : 'Earlier',
         first: latest,
         maybeBest: Option.some(latest),

@@ -15,6 +15,7 @@ import {
   initialModel,
   update,
 } from '../main'
+import { LoadDueLines } from '../returns/commands'
 import {
   DeleteClip,
   FocusLevelRow,
@@ -224,6 +225,14 @@ describe('deleting a clip', () => {
       }),
       message(Message.ChangedUrl({ url: url('/') })),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
+      Command.resolve(
+        LoadDueLines,
+        Message.SucceededLoadDueLines({
+          today: '2026-11-10',
+          lines: [],
+          maybeNextOn: Option.none(),
+        }),
+      ),
       model(current =>
         expect(Option.isSome(current.maybeHomeNotice)).toBe(true),
       ),

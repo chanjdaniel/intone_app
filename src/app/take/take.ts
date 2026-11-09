@@ -89,7 +89,13 @@ export type TakeScore = typeof TakeScore.Type
 // (../../services/history-store.ts), and why its audio was not, when the
 // learner had asked for it and it could not be.
 export const KeptInHistory = defineTaggedUnion({
-  Kept: { id: Schema.String, maybeAudioFailure: Schema.Option(Schema.String) },
+  Kept: {
+    id: Schema.String,
+    // The learner's day the take was kept on, which its line's next
+    // return is reckoned from.
+    day: Schema.String,
+    maybeAudioFailure: Schema.Option(Schema.String),
+  },
   NotKept: { reason: Schema.String },
 })
 export type KeptInHistory = typeof KeptInHistory.Type

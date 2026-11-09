@@ -5,6 +5,7 @@ import { modifyFields } from 'foldkit/struct'
 import type { Message } from '../message'
 import type { Model } from '../model'
 import type { AppResourceServices } from '../resources'
+import type { LineReturn } from '../returns/lineReturn'
 import {
   FocusLineRow,
   LoadHistory,
@@ -14,6 +15,7 @@ import {
   rescoreBatch,
 } from './commands'
 import {
+  type BlindPoint,
   type DayCount,
   HistoryPage,
   LineHistoryPage,
@@ -244,6 +246,9 @@ export const succeededLoadLineHistory = (
       lineNow: LineNow
       trend: ReadonlyArray<TrendPoint>
       earlierTrend: ReadonlyArray<TrendPoint>
+      blindTrend: ReadonlyArray<BlindPoint>
+      maybeReturn: Option.Option<LineReturn>
+      today: string
       drawnFrom: 'Now' | 'Earlier'
       first: ShownTake
       maybeBest: Option.Option<ShownTake>

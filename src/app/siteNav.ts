@@ -12,7 +12,7 @@ const focusRing =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 const places: ReadonlyArray<Readonly<{ place: Place; href: string }>> = [
-  { place: 'Lines', href: homeRouter() },
+  { place: 'Lines', href: homeRouter({ maybeFind: Option.none() }) },
   { place: 'History', href: historyRouter({ maybeFind: Option.none() }) },
   { place: 'Settings', href: settingsRouter() },
 ]
