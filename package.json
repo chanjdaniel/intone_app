@@ -11,7 +11,7 @@
     "check:effect": "effect-tsgo tsc -p tsconfig.json && effect-tsgo tsc -p tsconfig.node.json",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "lint": "oxlint src tests && effect-tsgo patch --no-typescript --oxlint && oxlint --config .oxlintrc.effect.json --deny-warnings src tests",
+    "lint": "oxlint --ignore-pattern tests/lint/fixtures/ src tests && effect-tsgo patch --no-typescript --oxlint && oxlint --config .oxlintrc.effect.json --deny-warnings --ignore-pattern tests/lint/fixtures/ src tests",
     "test": "vitest run",
     "test:e2e": "vite build && playwright test"
   },

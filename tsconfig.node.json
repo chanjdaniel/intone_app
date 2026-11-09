@@ -4,5 +4,13 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "tests/lint/**/*.test.ts",
+    "tests/build/**/*.test.ts",
+    "tests/scripts/**/*.test.ts"
+  ],
+  "exclude": []
 }

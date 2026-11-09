@@ -25,6 +25,87 @@
       { "ignoreDeclarationSort": true, "ignoreCase": false }
     ]
   },
+  // The folder line (AGENTS.md). Later overrides replace a rule's options,
+  // so each one lists every pattern its folder refuses. The globs start with
+  // `**/` so that the fixtures under tests/lint/fixtures/src/ match too.
+  "overrides": [
+    {
+      // Only src/app imports Foldkit, and nothing below it imports src/app.
+      "files": ["**/src/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["foldkit", "foldkit/*", "@foldkit/*"],
+                "message": "Only src/app imports Foldkit (AGENTS.md, the folder line)."
+              },
+              {
+                "group": ["**/app", "**/app/**"],
+                "message": "Nothing below src/app imports it (AGENTS.md, the folder line)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/src/app/**"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      // The engine and the score run per audio block, per frame or in Node,
+      // so they import neither Effect nor Foldkit.
+      "files": ["**/src/engine/**", "**/src/score/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "effect",
+                  "effect/*",
+                  "@effect/*",
+                  "foldkit",
+                  "foldkit/*",
+                  "@foldkit/*"
+                ],
+                "message": "src/engine and src/score import nothing from Effect or Foldkit (AGENTS.md, the folder line)."
+              },
+              {
+                "group": ["**/app", "**/app/**"],
+                "message": "Nothing below src/app imports it (AGENTS.md, the folder line)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // The score runs anywhere, Node included: only the language's own
+      // built-ins are defined there, so any browser or host global (window,
+      // document, navigator, AudioContext, fetch, console, process, ...) is
+      // refused, and globalThis with them.
+      "files": ["**/src/score/**"],
+      "env": {
+        "builtin": true
+      },
+      "rules": {
+        "no-undef": "error",
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "globalThis",
+            "message": "src/score touches no host global (AGENTS.md, the folder line)."
+          }
+        ]
+      }
+    }
+  ],
   "ignorePatterns": [
     "dist/",
     "node_modules/",

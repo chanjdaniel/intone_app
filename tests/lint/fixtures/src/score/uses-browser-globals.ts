@@ -1,0 +1,18 @@
+// Refused: src/score runs anywhere, Node included, so it touches no browser
+// or host global.
+export const width = window.innerWidth // lint: eslint(no-undef)
+export const title = document.title // lint: eslint(no-undef)
+export const agent = navigator.userAgent // lint: eslint(no-undef)
+export const context = new AudioContext() // lint: eslint(no-undef)
+export const offline = new OfflineAudioContext(1, 1, 16_000) // lint: eslint(no-undef)
+export const worker = new Worker('worker.js') // lint: eslint(no-undef)
+export const frame = requestAnimationFrame // lint: eslint(no-undef)
+export const scope = self // lint: eslint(no-undef)
+export const store = localStorage // lint: eslint(no-undef)
+export const database = indexedDB // lint: eslint(no-undef)
+export const request = fetch // lint: eslint(no-undef)
+export const clock = performance // lint: eslint(no-undef)
+export const timer = setTimeout // lint: eslint(no-undef)
+export const log = console.log // lint: eslint(no-undef)
+export const host = process.env // lint: eslint(no-undef)
+export const global = globalThis.document // lint: eslint(no-restricted-globals)

@@ -6,6 +6,6 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [tailwindcss(), foldkit()],
   optimizeDeps: {
-    entries: ['src/entry.ts'],
+    entries: ['src/app/entry.ts'],
   },
 })
