@@ -30,7 +30,7 @@ The database is at version 3.
 Version 1 (ticket 09) held `nativeCurves` alone; opening it adds the history's stores and `meta`'s format, and keeps the native curves, which `src/services/history-store.test.ts` and `tests/e2e/history.spec.ts` prove on a planted version 1 database.
 Version 3 (ticket 13) adds `clips`, the learner's own clips and their lines (`docs/uploads.md`); the records of version 2 are unchanged, so the history's format stays 1.
 Ticket 14 adds three keys a clip record may lack, so a record written before them still decodes and the format stays 1: each tracked line's `quality`, the clip's `nextLineId` and its `undo` (the lines before the last change).
-A change to a clip's lines keeps the curves its undo names, and deletes each curve no clip's lines, no undo and no take names any more.
+A change to a clip's lines keeps the curves its undo names, and deletes each curve the clip stops naming that no other clip, undo or take names.
 A later format bumps the version, converts the records it changes in `upgrade` (`src/services/indexed-db.ts`), and writes its number to `meta`; a copy of the app older than the database refuses to open it, and says to reload.
 
 ## Scoring again
