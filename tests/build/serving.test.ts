@@ -169,18 +169,27 @@ describe.each(['dev', 'preview'] as const)('the %s server', server => {
     expect(past.headers.get('content-range')).toBe(`bytes */${decoder.bytes}`)
   })
 
-  test('passes a path models.json does not list on, serving no model', async () => {
+  test('answers a path under a kept-for-good directory that nothing serves with a 404 asked for again, never the page', async () => {
     const [first] = models
     if (first === undefined) {
       throw new Error('models.json lists no model')
     }
-    const response = await fetch(
-      `${origins[server]}/models/${first.id}/0000000000000000/${first.files[0].path}`,
-    )
-
-    expect(response.headers.get('content-type')).not.toBe(
-      'application/octet-stream',
-    )
+    const ort = await onnxRuntimeVersion()
+    for (const path of [
+      `/models/${first.id}/0000000000000000/${first.files[0].path}`,
+      '/assets/missing-0000.js',
+      `/ort/${ort}/missing.wasm`,
+    ]) {
+      for (const accept of ['*/*', 'text/html', 'application/octet-stream']) {
+        const response = await fetch(`${origins[server]}${path}`, {
+          headers: { Accept: accept },
+        })
+        expect(response.status, `${path} ${accept}`).toBe(404)
+        expect(response.headers.get('cache-control'), `${path} ${accept}`).toBe(
+          'no-cache',
+        )
+      }
+    }
   })
 
   test('sends nosniff and no cross-origin isolation header', async () => {

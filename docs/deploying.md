@@ -32,6 +32,7 @@ The two local servers serve the app exactly as a later host must, so the deploy 
   The dev server sends no policy, since its client and Foldkit's development tools need more than it allows.
 - Neither server sends a cross-origin isolation header (`Cross-Origin-Opener-Policy`, `Cross-Origin-Embedder-Policy`), and nothing needs one: ONNX Runtime runs on one thread.
 - `vite preview` answers any route of the app with `index.html`, the single-page fallback.
+  A path under `models/`, `ort/<version>/` or `assets/` that no file answers gets a `404` with `no-cache` instead, on both servers, so a missing file is never the page kept for a year.
 
 `tests/build/serving.test.ts` reads these headers from both servers by HTTP, and `tests/e2e/model-serving.spec.ts` checks in Chromium that a second visit fetches SwiftF0 and Silero VAD from the browser's cache.
 
@@ -96,7 +97,7 @@ Nothing in this repository contacts Vercel today.
 
 - Daniel imports `chanjdaniel/intone_app` into Vercel, with `dev` as the production branch.
   Every push and pull request then gets a build through the GitHub integration, previews behind Vercel's Standard Protection (Daniel's Vercel login), and production public at its `.vercel.app` address.
-- A `vercel.json` sets the build command, `dist` as the output, the single-page fallback to `index.html`, and the headers and caching of "What both servers send": the Content Security Policy with `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, and immutable `/models/`, `/ort/` and `/assets/`.
+- A `vercel.json` sets the build command, `dist` as the output, the single-page fallback to `index.html` (never under `/models/`, `/ort/` or `/assets/`), and the headers and caching of "What both servers send": the Content Security Policy with `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, and immutable `/models/`, `/ort/` and `/assets/`.
   It is written from the table in `build/headers.ts` and checked against it by a test.
   Vercel's Node version matches `.nvmrc`.
 - A preview proves `whisper-small`'s 149.5 MiB decoder is served whole, as "The largest file" says the local servers do.

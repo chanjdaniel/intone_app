@@ -74,6 +74,25 @@ const setHeaders =
     next()
   }
 
+// After every file handler and the single-page fallback, before the page
+// is served: a path under a kept-for-good directory that nothing served is
+// a file that is not there, so it gets a 404 asked for again, never the
+// page kept for a year. Connect keeps the path as asked in `originalUrl`
+// after the fallback rewrites `url`.
+const refuseMissing =
+  (base: string): Middleware =>
+  (request, response, next) => {
+    const asked = request as typeof request & { originalUrl?: string }
+    const path = (asked.originalUrl ?? request.url ?? '').split('?')[0] ?? ''
+    if (cacheControlOf(path, base) === revalidated) {
+      next()
+      return
+    }
+    response.statusCode = 404
+    response.setHeader('Cache-Control', revalidated)
+    response.end()
+  }
+
 // First of every plugin's handlers, so the model handler, Vite's own and
 // `vite preview`'s static files (which keep a header already set) all send
 // these. Vite's dev server sets its own Cache-Control on the modules it
@@ -88,9 +107,11 @@ export const servingHeaders = (): Plugin => {
     },
     configureServer(server) {
       server.middlewares.use(setHeaders('dev', base))
+      return () => server.middlewares.use(refuseMissing(base))
     },
     configurePreviewServer(server) {
       server.middlewares.use(setHeaders('preview', base))
+      return () => server.middlewares.use(refuseMissing(base))
     },
   }
 }
