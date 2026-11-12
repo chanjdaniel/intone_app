@@ -1,4 +1,4 @@
-import { Effect, Layer, Stream } from 'effect'
+import { Deferred, Effect, Fiber, Layer, Queue, Stream } from 'effect'
 import { IDBFactory } from 'fake-indexeddb'
 
 import { describe, expect, it } from '@effect/vitest'
@@ -126,6 +126,76 @@ describe('the upload stream', () => {
         expect([...files.values()].map(bytes => [...bytes])).toStrictEqual([
           [1, 2, 3, 4],
         ])
+      }),
+  )
+
+  const isKeeping = (message: Message) =>
+    message._tag === 'ProgressedUpload' && message.step._tag === 'Keeping'
+
+  it.live(
+    'says it is keeping the clip before the clip is written, so Stop is refused while it is',
+    () =>
+      Effect.gen(function* () {
+        const factory = new IDBFactory()
+        const history = HistoryStore.layerTest(factory, new Map())
+        const gate = yield* Deferred.make<void>()
+        // The store's write waits for the gate, as a slow disk would.
+        const gated = Layer.effect(
+          HistoryStore,
+          Effect.gen(function* () {
+            const store = yield* HistoryStore
+            return HistoryStore.of({
+              ...store,
+              addClip: clip =>
+                Deferred.await(gate).pipe(Effect.andThen(store.addClip(clip))),
+            })
+          }),
+        ).pipe(Layer.provide(history))
+        const said = yield* Queue.unbounded<Message>()
+        const fiber = yield* uploadEvents(1, file).pipe(
+          Stream.runForEach(message => Queue.offer(said, message)),
+          Effect.provide(
+            Layer.merge(
+              ClipAnalyser.layerTest(() => [analysed]),
+              gated,
+            ),
+          ),
+          Effect.forkChild,
+        )
+        const first = yield* Queue.take(said).pipe(Effect.timeout('2 seconds'))
+        expect(isKeeping(first)).toBe(true)
+        const { clips } = yield* HistoryStore.use(store => store.clips).pipe(
+          Effect.provide(history),
+        )
+        expect(clips).toHaveLength(0)
+        yield* Deferred.succeed(gate, undefined)
+        yield* Fiber.join(fiber)
+        expect((yield* Queue.take(said))._tag).toBe('SucceededUpload')
+      }),
+  )
+
+  it.effect(
+    'keeps the clip whole when the stream ends once it has said it is keeping it',
+    () =>
+      Effect.gen(function* () {
+        const factory = new IDBFactory()
+        const files = new Map<string, Uint8Array>()
+        const history = HistoryStore.layerTest(factory, files)
+        yield* uploadEvents(1, file).pipe(
+          Stream.takeUntil(isKeeping),
+          Stream.runDrain,
+          Effect.provide(
+            Layer.merge(
+              ClipAnalyser.layerTest(() => [analysed]),
+              history,
+            ),
+          ),
+        )
+        const { clips } = yield* HistoryStore.use(store => store.clips).pipe(
+          Effect.provide(history),
+        )
+        expect(clips).toHaveLength(1)
+        expect(files.size).toBe(1)
       }),
   )
 

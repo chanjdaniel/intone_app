@@ -1,4 +1,4 @@
-import { Clock, Effect, Layer, Option, Schema, Stream } from 'effect'
+import { Clock, Effect, Fiber, Layer, Option, Schema, Stream } from 'effect'
 import { File, Subscription } from 'foldkit'
 
 import { ClipAnalyser, type ClipEvent } from '../../services/clip-analyser'
@@ -56,6 +56,32 @@ const keep = (
     return Message.SucceededUpload({ jobNumber, clipId: clip.id })
   }).pipe(Effect.uninterruptible)
 
+// The write starts first, then the Model hears Keeping, which refuses a
+// Stop, then the clip's id. Started, the write runs to its end, and the
+// Stream does not end before it does, even when it is ended early.
+const keeping = (
+  jobNumber: number,
+  file: File.File,
+  analysed: Extract<ClipEvent, { _tag: 'Analysed' }>,
+) =>
+  Stream.unwrap(
+    Effect.acquireRelease(
+      Effect.forkDetach(keep(jobNumber, file, analysed), {
+        uninterruptible: true,
+      }),
+      Fiber.await,
+    ).pipe(
+      Effect.map(fiber =>
+        Stream.concat(
+          Stream.make(
+            Message.ProgressedUpload({ jobNumber, step: UploadStep.Keeping() }),
+          ),
+          Stream.fromEffect(Fiber.join(fiber)),
+        ),
+      ),
+    ),
+  )
+
 export const uploadEvents = (
   jobNumber: number,
   file: File.File,
@@ -64,22 +90,13 @@ export const uploadEvents = (
     Effect.gen(function* () {
       const analyser = yield* ClipAnalyser
       return analyser.analyse(file).pipe(
-        Stream.mapEffect(event =>
+        Stream.flatMap(event =>
           event._tag === 'Analysed'
-            ? Effect.succeed([
-                Message.ProgressedUpload({
-                  jobNumber,
-                  step: UploadStep.Keeping(),
-                }),
-              ] as const).pipe(
-                Effect.zip(keep(jobNumber, file, event)),
-                Effect.map(([progress, kept]) => [...progress, kept]),
-              )
-            : Effect.succeed([
+            ? keeping(jobNumber, file, event)
+            : Stream.make(
                 Message.ProgressedUpload({ jobNumber, step: stepOf(event) }),
-              ]),
+              ),
         ),
-        Stream.flatMap(messages => Stream.fromIterable(messages)),
         Stream.catch(error =>
           Stream.succeed(
             Message.FailedUpload({ jobNumber, reason: error.reason }),
