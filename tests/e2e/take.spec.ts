@@ -300,7 +300,8 @@ test('a microphone that stops on its own mid-take ends the take and says why', a
       ).toBeVisible({ timeout: 30_000 })
       // As Chromium tells a page its microphone was unplugged.
       await page.evaluate(() => {
-        const [track]: unknown = Reflect.get(window, 'intoneTracks')
+        const tracks: unknown = Reflect.get(window, 'intoneTracks')
+        const track: unknown = Array.isArray(tracks) ? tracks[0] : undefined
         if (!(track instanceof MediaStreamTrack)) {
           throw new Error('no microphone track')
         }

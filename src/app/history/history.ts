@@ -161,11 +161,21 @@ export const isOutdated = (entry: TakeEntry): boolean =>
   entry.score.version < SCORE_VERSION
 
 // One line's summary, from its takes, earliest first.
+// A line's row: its takes, and its best and latest match from the takes
+// of the line as it is now. A line whose span changed is tracked again,
+// and every take of it since is scored against that new native curve, so
+// the latest take's curve names the line as it is now, as its own page
+// and its level count it.
 const summaryOf = (
   takes: Array.NonEmptyReadonlyArray<TakeEntry>,
 ): LineSummary => {
   const latest = Array.lastNonEmpty(takes)
-  const matches = Array.getSomes(Array.map(takes, matchOf))
+  const matches = pipe(
+    takes,
+    Array.filter(take => take.nativeId === latest.nativeId),
+    Array.map(matchOf),
+    Array.getSomes,
+  )
   return {
     clipId: latest.clipId,
     lineId: latest.lineId,

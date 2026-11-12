@@ -23,6 +23,44 @@ describe('the history’s sums', () => {
     }),
   ]
 
+  test('take a changed line’s best from its takes as it is now, as its own page does', () => {
+    const changed = [
+      entryOf({ id: 'a', takenAt: nov9, score: scoredAt(0.9) }),
+      entryOf({
+        id: 'b',
+        takenAt: nov9 + dayMs,
+        score: scoredAt(0.6),
+        nativeId: 'native-2',
+      }),
+      entryOf({
+        id: 'c',
+        takenAt: nov9 + 2 * dayMs,
+        score: couldNotCompare(),
+        nativeId: 'native-2',
+      }),
+    ]
+    const [line] = summarise(changed).lines
+    expect(line?.takes).toBe(3)
+    expect(line?.maybeBestMatch).toStrictEqual(Option.some(0.6))
+    expect(line?.maybeBestMatch).toStrictEqual(
+      Option.flatMap(
+        Option.flatMap(
+          lineTakesOf(
+            changed,
+            'ame-ga-suki',
+            '1',
+            LineAsKept.Current({ maybeNativeId: Option.some('native-2') }),
+          ),
+          shown => shown.maybeBest,
+        ),
+        best =>
+          best.score._tag === 'Scored'
+            ? Option.some(best.score.match)
+            : Option.none(),
+      ),
+    )
+  })
+
   test('list each line once, the most recently practised first, with its best and latest match', () => {
     const { lines } = summarise(entries)
     expect(lines.map(line => line.lineText)).toEqual(['雨が好き', '風が吹く'])
