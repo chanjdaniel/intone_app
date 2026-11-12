@@ -10,7 +10,11 @@ import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
-import { entryChunkSize, readBudget } from '../../build/bundle-budget.ts'
+import {
+  entryChunkSize,
+  lazyChunkSizes,
+  readBudget,
+} from '../../build/bundle-budget.ts'
 import { productionBuild } from '../support/build'
 import { root, run } from '../support/run'
 
@@ -89,7 +93,7 @@ describe('the bundle budget', () => {
     }
   })
 
-  test("the project's entry chunk is within its budget", async () => {
+  test("the project's entry chunk and every other chunk are within their budget", async () => {
     const result = budgetScript(join(root, 'bundle-budget.json'))
     const budget = await readBudget(join(root, 'bundle-budget.json'))
     const size = await entryChunkSize(dist)
@@ -98,9 +102,65 @@ describe('the bundle budget', () => {
     expect(size.gzipBytes).toBeLessThanOrEqual(budget.entry.gzipBytes)
   })
 
+  test('measures every other chunk on its own: the Workers, the worklet, the lazy chunks and ONNX Runtime', async () => {
+    const chunks = await lazyChunkSizes(dist)
+    expect(chunks.map(chunk => chunk.name).sort()).toStrictEqual([
+      'backup',
+      'capture-processor',
+      'clip-store.worker',
+      'clip.worker',
+      'compare-take',
+      'ort-wasm-simd-threaded.mjs',
+      'ort-wasm-simd-threaded.wasm',
+      'tracker.worker',
+    ])
+    for (const chunk of chunks) {
+      expect(chunk.gzipBytes, chunk.file).toBe(
+        gzipSync(readFileSync(join(dist, chunk.file)), { level: 9 }).length,
+      )
+    }
+  })
+
+  test('fails a chunk over its line, a chunk with no line, and a line with no chunk', async () => {
+    const budget = await readBudget(join(root, 'bundle-budget.json'))
+    const { 'clip.worker': _dropped, ...rest } = budget.chunks
+    const lines = join(dist, 'lines-budget.json')
+    writeFileSync(
+      lines,
+      JSON.stringify({
+        entry: budget.entry,
+        chunks: {
+          ...rest,
+          'tracker.worker': { gzipBytes: 1000 },
+          'gone.worker': { gzipBytes: 1000 },
+        },
+      }),
+    )
+    const tracker = (await lazyChunkSizes(dist)).find(
+      chunk => chunk.name === 'tracker.worker',
+    )
+
+    const result = budgetScript(lines)
+
+    expect(result.status).toBe(1)
+    expect(result.output).toContain(
+      `Chunk tracker.worker (${tracker?.file}): ${tracker?.gzipBytes} B gzip, budget 1000 B: over by ${(tracker?.gzipBytes ?? 0) - 1000} B`,
+    )
+    expect(result.output).toMatch(
+      /Chunk clip\.worker \(.*\) has no budget line/,
+    )
+    expect(result.output).toContain(
+      'Budget line gone.worker names no chunk the build makes',
+    )
+  })
+
   test('fails above the budget, naming the chunk and by how much', async () => {
     const tight = join(dist, 'tight-budget.json')
-    writeFileSync(tight, JSON.stringify({ entry: { gzipBytes: 1000 } }))
+    const budget = await readBudget(join(root, 'bundle-budget.json'))
+    writeFileSync(
+      tight,
+      JSON.stringify({ ...budget, entry: { gzipBytes: 1000 } }),
+    )
     const size = await entryChunkSize(dist)
 
     const result = budgetScript(tight)

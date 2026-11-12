@@ -7,6 +7,27 @@ The script, `build/bundle-budget.ts`, gzips each chunk on its own at level 9, as
 The bundler moves modules the entry shares with lazily loaded chunks into a chunk of their own when two or more lazy chunks share them, and the entry imports that chunk statically: measuring the entry chunk alone would then count less than the page loads.
 Ticket 12 of T242 met this (a second lazy chunk moved 47 kB of Effect out of the entry), and the reader has counted the static imports since.
 
+## Every other chunk
+
+Every chunk the page does not load at start has a line of its own in `bundle-budget.json`, by its name without Vite's content hash: each Worker, the capture worklet, each chunk the app loads lazily, and ONNX Runtime's WebAssembly and its loader under `ort/<version>/`.
+The check fails on a chunk over its line, on a chunk the build makes that has no line, and on a line naming a chunk the build no longer makes, so a new Worker or lazy chunk comes with its line.
+No model file is in any of them: models are served whole from `/models/` (`docs/deploying.md`).
+
+Each line is the chunk's gzip size, measured through Vite's production build, plus 10%, rounded up to the next 1,000 B:
+
+| Chunk                                                    | Gzip        | Line        |
+| -------------------------------------------------------- | ----------- | ----------- |
+| `tracker.worker` (SwiftF0 and ONNX Runtime's JavaScript) | 50,823 B    | 56,000 B    |
+| `clip.worker` (Silero VAD, SwiftF0, the cut)             | 52,657 B    | 58,000 B    |
+| `clip-store.worker` (the origin private file system)     | 25,449 B    | 28,000 B    |
+| `capture-processor` (the worklet)                        | 336 B       | 1,000 B     |
+| `backup` (the backup's code and `fflate`)                | 7,694 B     | 9,000 B     |
+| `compare-take` (the score's maths)                       | 3,223 B     | 4,000 B     |
+| `ort-wasm-simd-threaded.mjs`                             | 9,216 B     | 11,000 B    |
+| `ort-wasm-simd-threaded.wasm`                            | 3,827,372 B | 4,180,000 B |
+
+ONNX Runtime's two files are its release's own and change only when it is upgraded (`docs/upgrading.md`).
+
 ## How the cap was set
 
 The cap is the entry chunk's size, measured through Vite's production build in a clean tree, rounded up to the next 10 kB (10,000 bytes), plus 20 kB.
