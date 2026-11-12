@@ -444,12 +444,12 @@ export const update = (model: Model, message: Message) =>
 export const tagline =
   'Practise Japanese pitch accent by copying native speakers, line by line, on your own device.'
 
-// The learner's own clips on the home screen, newest first, and the way to
-// bring another.
 // The home page's secondary buttons, in the accent's colour.
 const secondaryButton =
   'button border border-line bg-surface text-accent hover:border-accent'
 
+// The learner's own clips on the home screen, newest first, and the way to
+// bring another.
 const clipsSection = (clips: ClipsPage, h: HtmlBuilder<Message>): Html =>
   h.section(
     [h.AriaLabelledBy('clips-heading'), h.Class('flex flex-col gap-4')],
