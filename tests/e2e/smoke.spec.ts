@@ -9,7 +9,9 @@ test('the production build opens on the home screen', async ({ page }) => {
   await expect(page).toHaveTitle('Intone')
 })
 
-test('the page names its icon, which draws, and asks for no /favicon.ico', async ({
+// Headless Chromium fetches no favicon, so this proves the page names an
+// icon that decodes, not that a browser asks for no /favicon.ico.
+test('the page names an icon that decodes, and nothing it loads answers 400 or more', async ({
   page,
 }) => {
   const missing: Array<string> = []

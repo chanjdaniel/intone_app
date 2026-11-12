@@ -8,10 +8,11 @@ import { launch, openLine, report, withPage } from './take-session.ts'
 
 // The live curve's frame rate: a 20 s take in the built app, drawn over
 // the line's curve, with the CPU slowed six times, as a phone's might be,
-// must keep the page at 60 frames a second. It is the check every Foldkit upgrade
-// runs (docs/upgrading.md), and runs in a Playwright project of its own,
-// after every other end-to-end test has finished, so that no other test's
-// browser shares the machine while it measures.
+// must keep the page at 60 frames a second, judged on a desktop run
+// (below). It is the check every Foldkit upgrade runs (docs/upgrading.md),
+// and runs in a Playwright project of its own, after every other
+// end-to-end test has finished, so that no other test's browser shares the
+// machine while it measures.
 
 const fixtures = join(import.meta.dirname, '..', '..', 'fixtures', 'synthetic')
 
