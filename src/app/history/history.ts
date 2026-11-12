@@ -157,7 +157,7 @@ const byTakenAt = Order.mapInput(
 export const lineKeyOf = (line: Readonly<{ clipId: string; lineId: string }>) =>
   `${line.clipId}/${line.lineId}`
 
-export const isOutdated = (entry: TakeEntry): boolean =>
+const isOutdated = (entry: TakeEntry): boolean =>
   entry.score.version < SCORE_VERSION
 
 // One line's summary, from its takes, earliest first.

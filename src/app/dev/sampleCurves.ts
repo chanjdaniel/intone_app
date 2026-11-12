@@ -14,7 +14,7 @@ const Labels = Schema.Struct({
   f0Hz: Schema.Array(Schema.NullOr(Schema.Finite)),
 })
 
-export const sampleVoices = ['low', 'middle', 'high'] as const
+const sampleVoices = ['low', 'middle', 'high'] as const
 export type SampleVoice = (typeof sampleVoices)[number]
 
 const labelText: Readonly<Record<SampleVoice, string>> = { low, middle, high }

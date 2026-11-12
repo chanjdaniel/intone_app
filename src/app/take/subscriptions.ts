@@ -42,7 +42,7 @@ import { keepTakeAudio, takeAudioOf } from './takeAudio'
 // Model leaves that state: so a voice plays only in PlayingNative and
 // Listening, never while the microphone is open.
 
-export const meterInterval = Duration.millis(100)
+const meterInterval = Duration.millis(100)
 
 // The take's events for the Model, from its microphone and tracker; each
 // batch is given to `keep` before the tracker takes it.

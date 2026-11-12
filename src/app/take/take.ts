@@ -216,7 +216,7 @@ export const worstStretchOf = (
     : Option.none()
 
 // The mode of the take under way, if one is.
-export const runningMode = (take: Take): Option.Option<TakeMode> =>
+const runningMode = (take: Take): Option.Option<TakeMode> =>
   'mode' in take && take._tag !== 'ShowingResult'
     ? Option.some(take.mode)
     : Option.none()

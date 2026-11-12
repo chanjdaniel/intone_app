@@ -35,7 +35,7 @@ const reasonOf = (error: unknown): string =>
 
 // The clip a level needs held: the level's, when it is an upload open
 // with its audio on this device.
-export const clipNeedingEditor = (model: Model): Option.Option<string> =>
+const clipNeedingEditor = (model: Model): Option.Option<string> =>
   model.route._tag === 'Level' &&
   model.level._tag === 'Ready' &&
   model.level.clip.id === model.route.clipId &&

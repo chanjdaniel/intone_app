@@ -4,7 +4,7 @@ import * as dev from './dev' // lint: eslint(no-restricted-imports)
 import { entry } from './dev/entries/tokens' // lint: eslint(no-restricted-imports)
 // Refused: an import of the dev library, by any path.
 import { open } from './dev/library' // lint: eslint(no-restricted-imports)
-export { plannedEntries } from './dev/library' // lint: eslint(no-restricted-imports)
+export { libraryEntries } from './dev/library' // lint: eslint(no-restricted-imports)
 import { jsxDEV } from 'react/jsx-dev-runtime'
 
 import { DevTools } from '@foldkit/devtools'

@@ -146,7 +146,7 @@ const packStepOf = (
 // A local pack's import (../../services/local-pack.ts): each step comes
 // to the Model, the pack's lines and curves go to the device, and the
 // Model hears the level's id.
-export const packEvents = (
+const packEvents = (
   jobNumber: number,
   files: ReadonlyArray<File.File>,
 ): Stream.Stream<Message, never, ClipAnalyser | HistoryStore> =>

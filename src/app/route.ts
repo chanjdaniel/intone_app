@@ -69,12 +69,12 @@ export const settingsRouter = pipe(
   Route.mapTo(AppRoute.Settings),
 )
 
-export const devLibraryRouter = pipe(
+const devLibraryRouter = pipe(
   literal('dev'),
   Route.mapTo(AppRoute.DevLibrary),
 )
 
-export const devEntryRouter = pipe(
+const devEntryRouter = pipe(
   literal('dev'),
   slash(string('entry')),
   Route.mapTo(AppRoute.DevEntry),

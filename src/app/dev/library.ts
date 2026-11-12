@@ -22,10 +22,10 @@ import {
 // The /dev component library, development builds only. The app opens it
 // through `../devLibrary.ts`; nothing imports this folder statically.
 
-// The whole list of entries, written once. An entry is built when a file
-// `./entries/<name>.ts` exists; until then the index lists it as coming, so
-// each later piece of work adds only its own file.
-export const plannedEntries: ReadonlyArray<
+// Every entry, in the index's order, with its title. Each is a file
+// `./entries/<name>.ts`, and every such file is listed here
+// (./library.scene.test.ts checks both ways).
+export const libraryEntries: ReadonlyArray<
   Readonly<{ name: string; title: string }>
 > = [
   { name: 'tokens', title: 'Tokens' },
@@ -60,9 +60,6 @@ export const builtEntryNames: ReadonlyArray<string> = Array.map(
   Record.keys(entryModules),
   entryNameFromPath,
 )
-
-export const isBuilt = (name: string): boolean =>
-  Array.contains(builtEntryNames, name)
 
 export class DevEntryLoadError extends Schema.TaggedError<
   DevEntryLoadError,
@@ -105,38 +102,16 @@ export const indexView = <Message>(h: HtmlBuilder<Message>): Html =>
                 'flex flex-col divide-y divide-line border-y border-line',
               ),
             ],
-            Array.map(plannedEntries, ({ name, title }) =>
+            Array.map(libraryEntries, ({ name, title }) =>
               h.keyed('li')(
                 name,
-                [h.Class('flex items-center justify-between gap-4 py-1')],
-                isBuilt(name)
-                  ? [
-                      h.a(
-                        [
-                          h.Href(entryPath(name)),
-                          h.Class(`text-lg ${linkClass}`),
-                        ],
-                        [title],
-                      ),
-                    ]
-                  : [
-                      h.span(
-                        [
-                          h.Class(
-                            'inline-flex min-h-11 items-center text-lg text-muted',
-                          ),
-                        ],
-                        [title],
-                      ),
-                      h.span(
-                        [
-                          h.Class(
-                            'rounded-full border border-line px-3 text-sm text-muted',
-                          ),
-                        ],
-                        ['coming'],
-                      ),
-                    ],
+                [h.Class('flex items-center py-1')],
+                [
+                  h.a(
+                    [h.Href(entryPath(name)), h.Class(`text-lg ${linkClass}`)],
+                    [title],
+                  ),
+                ],
               ),
             ),
           ),
@@ -145,15 +120,12 @@ export const indexView = <Message>(h: HtmlBuilder<Message>): Html =>
     ],
   )
 
-export const notBuiltView = <Message>(
+// A /dev address that names no entry.
+export const noEntryView = <Message>(
   name: string,
   h: HtmlBuilder<Message>,
-): Html => {
-  const maybePlanned = Array.findFirst(
-    plannedEntries,
-    entry => entry.name === name,
-  )
-  return h.main(
+): Html =>
+  h.main(
     [h.Class(pageClass)],
     [
       h.div(
@@ -163,30 +135,15 @@ export const notBuiltView = <Message>(
             [h.AriaLabel('Component library')],
             [h.a([h.Href(libraryPath), h.Class(linkClass)], ['All entries'])],
           ),
-          h.h1(
-            [h.Class('text-3xl font-bold')],
-            [
-              Option.match(maybePlanned, {
-                onSome: ({ title }) => title,
-                onNone: () => 'No such entry',
-              }),
-            ],
-          ),
+          h.h1([h.Class('text-3xl font-bold')], ['No such entry']),
           h.p(
             [h.Class('text-base text-muted')],
-            [
-              Option.match(maybePlanned, {
-                onSome: ({ title }) =>
-                  `${title} is coming: its entry is not built yet.`,
-                onNone: () => `The library has no entry named "${name}".`,
-              }),
-            ],
+            [`The library has no entry named "${name}".`],
           ),
         ],
       ),
     ],
   )
-}
 
 const staticProgram =
   (pageView: <Message>(h: HtmlBuilder<Message>) => Html) =>
@@ -211,7 +168,7 @@ const programFor = (
     onNone: () => Effect.succeed(staticProgram(indexView)),
     onSome: name =>
       Option.match(Record.get(entryModules, `./entries/${name}.ts`), {
-        onNone: () => Effect.succeed(staticProgram(h => notBuiltView(name, h))),
+        onNone: () => Effect.succeed(staticProgram(h => noEntryView(name, h))),
         onSome: load =>
           Effect.tryPromise({
             try: load,

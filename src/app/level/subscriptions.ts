@@ -21,7 +21,7 @@ export const LevelPlayback = Schema.Struct({
 })
 export type LevelPlayback = typeof LevelPlayback.Type
 
-export const levelPlaybackOf = (model: Model): Option.Option<LevelPlayback> =>
+const levelPlaybackOf = (model: Model): Option.Option<LevelPlayback> =>
   model.route._tag === 'Level' &&
   model.level._tag === 'Ready' &&
   model.level.clip.hasAudio &&

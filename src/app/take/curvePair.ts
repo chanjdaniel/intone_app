@@ -55,14 +55,14 @@ const liveCapacity = Math.ceil((longestTakeSeconds + 1) * swiftF0FrameHz)
 // The learner's canvas says how far the drawing has got, for the
 // end-to-end tests that read and time it: frames painted, the newest
 // voiced frame painted, and the seconds the width shows from the onset.
-export const drawnFramesAttribute = 'drawn-frames'
+const drawnFramesAttribute = 'drawn-frames'
 export const drawnVoicedAttribute = 'drawn-last-voiced'
 export const spanSecondsAttribute = 'span-seconds'
 
 const colourOf = (style: CSSStyleDeclaration, token: string): string =>
   style.getPropertyValue(`--color-${token}`).trim()
 
-export const pairColoursFrom = (element: Element): PairColours => {
+const pairColoursFrom = (element: Element): PairColours => {
   const style = getComputedStyle(element)
   return {
     native: colourOf(style, 'native'),

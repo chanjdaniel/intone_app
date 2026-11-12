@@ -133,7 +133,7 @@ export const NavigateInternal = Command.define('NavigateInternal', {
     pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
-export const LoadExternal = Command.define('LoadExternal', {
+const LoadExternal = Command.define('LoadExternal', {
   args: { href: Schema.String },
   messages: [Message.CompletedLoadExternal],
   execute: ({ href }) =>

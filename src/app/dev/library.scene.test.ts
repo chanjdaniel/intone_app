@@ -1,14 +1,13 @@
-import { Array } from 'effect'
+import { Array, Order } from 'effect'
 import { type HtmlBuilder } from 'foldkit/html'
 import { expect, given, role, scene, text } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, expect as expect_, test } from 'vitest'
 
 import {
   builtEntryNames,
   indexView,
-  isBuilt,
-  notBuiltView,
-  plannedEntries,
+  libraryEntries,
+  noEntryView,
 } from './library'
 
 const page = (
@@ -19,55 +18,38 @@ const page = (
 })
 
 describe('the library index', () => {
-  test('lists every planned entry: a link when built, "coming" when not', () => {
+  test('links every entry by its title', () => {
     scene(
       page(indexView),
       given({}),
       expect(
         role('heading', { name: 'Component library', level: 1 }),
       ).toExist(),
-      ...Array.map(plannedEntries, ({ name, title }) =>
-        isBuilt(name)
-          ? expect(role('link', { name: title })).toHaveAttr(
-              'href',
-              `/dev/${name}`,
-            )
-          : expect(role('link', { name: title })).toBeAbsent(),
+      ...Array.map(libraryEntries, ({ name, title }) =>
+        expect(role('link', { name: title })).toHaveAttr(
+          'href',
+          `/dev/${name}`,
+        ),
       ),
-      expect(role('link', { name: 'Tokens' })).toExist(),
-      Array.every(plannedEntries, ({ name }) => isBuilt(name))
-        ? expect(text('coming')).toBeAbsent()
-        : expect(text('coming')).toExist(),
     )
   })
 
-  test('every entry file is on the planned list', () => {
-    const planned = Array.map(plannedEntries, ({ name }) => name)
-    for (const name of builtEntryNames) {
-      if (!Array.contains(planned, name)) {
-        throw new Error(`./entries/${name}.ts is not in plannedEntries`)
-      }
-    }
+  test('lists every entry file, and has a file for every entry it lists', () => {
+    const listed = Array.map(libraryEntries, ({ name }) => name)
+    expect_(Array.sort(builtEntryNames, Order.String)).toStrictEqual(
+      Array.sort(listed, Order.String),
+    )
   })
 })
 
-describe('an entry that is not built', () => {
-  test('a planned one says it is coming', () => {
+describe('an address with no entry', () => {
+  test('says the library has no such entry', () => {
     scene(
-      page(h => notBuiltView('star-row', h)),
-      given({}),
-      expect(role('heading', { name: 'Star row', level: 1 })).toExist(),
-      expect(text('Star row is coming: its entry is not built yet.')).toExist(),
-      expect(role('link', { name: 'All entries' })).toHaveAttr('href', '/dev'),
-    )
-  })
-
-  test('an unknown one says the library has no such entry', () => {
-    scene(
-      page(h => notBuiltView('nope', h)),
+      page(h => noEntryView('nope', h)),
       given({}),
       expect(role('heading', { name: 'No such entry', level: 1 })).toExist(),
       expect(text('The library has no entry named "nope".')).toExist(),
+      expect(role('link', { name: 'All entries' })).toHaveAttr('href', '/dev'),
     )
   })
 })

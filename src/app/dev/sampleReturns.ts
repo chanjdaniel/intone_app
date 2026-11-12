@@ -64,7 +64,7 @@ const trackedLines = cutStudyEntry.lines
   .filter(line => line.native._tag === 'Tracked')
   .slice(0, sampleReturnCounts.lines)
 
-export const sampleReturnEntries: ReadonlyArray<TakeEntry> = (() => {
+const sampleReturnEntries: ReadonlyArray<TakeEntry> = (() => {
   const next = random(19)
   return trackedLines.flatMap((line, k) => {
     const nativeId = line.native._tag === 'Tracked' ? line.native.nativeId : ''

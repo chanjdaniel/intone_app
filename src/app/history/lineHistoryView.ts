@@ -38,7 +38,7 @@ export type LineHistoryEvents<ViewMessage> = Readonly<{
 const linkClass = `inline-flex min-h-11 items-center gap-1.5 rounded-md text-accent focus-ring`
 
 // The takes the page draws, each once, named by what it is.
-export const shownTakesOf = (
+const shownTakesOf = (
   first: ShownTake,
   maybeBest: Option.Option<ShownTake>,
   latest: ShownTake,
@@ -72,7 +72,7 @@ export const shownTakesOf = (
   })
 }
 
-export const versionText = (version: number): string =>
+const versionText = (version: number): string =>
   version < SCORE_VERSION
     ? `Scored by version ${version} of the score, an earlier one than today’s ${SCORE_VERSION}.`
     : `Scored by version ${version} of the score.`

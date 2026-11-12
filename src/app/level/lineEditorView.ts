@@ -59,7 +59,7 @@ const percentText = (value: number): string => `${value.toFixed(3)}%`
 
 // The waveform's bars in the window, one per 10 ms, in a box of the
 // window's bars wide and 100 high.
-export const waveformPath = (peaks: Uint8Array, shown: Span): string => {
+const waveformPath = (peaks: Uint8Array, shown: Span): string => {
   const first = Math.max(0, Math.floor(shown.from * peaksPerSecond))
   const last = Math.min(peaks.length, Math.ceil(shown.to * peaksPerSecond))
   return Array.makeBy(Math.max(0, last - first), k => {

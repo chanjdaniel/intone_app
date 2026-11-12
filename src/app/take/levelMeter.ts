@@ -6,7 +6,7 @@ import { levelMeterFloorDb } from './take'
 // sound in each tenth of a second.
 
 // The meter's fill, 0 to 1, for a level in dBFS.
-export const meterFill = (levelDb: number): number =>
+const meterFill = (levelDb: number): number =>
   Math.min(1, Math.max(0, 1 - levelDb / levelMeterFloorDb))
 
 // How the meter reads in words, for screen readers that ask; it is never

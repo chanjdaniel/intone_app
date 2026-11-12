@@ -86,7 +86,7 @@ When a folder's rule changes, change its fixtures with it.
 
 `/dev` is a component library inside the app, in development builds only: `src/app/route.ts` registers its routes inside an `import.meta.env.DEV` branch, and a production build answers `/dev` with the not-found screen.
 `src/app/devLibrary.ts` is the one way in: a Mount that dynamically imports `src/app/dev/library.ts` and embeds the page it opens in a container of its own.
-The index lists `plannedEntries`, the whole list written once; an entry is built when `src/app/dev/entries/<name>.ts` exists, found by `import.meta.glob` and imported only when opened, and listed as "coming" until then.
+The index lists `libraryEntries`, every entry with its title; each is a file `src/app/dev/entries/<name>.ts`, found by `import.meta.glob` and imported only when opened, and a new entry adds its file and its line in that list (`library.scene.test.ts` checks the two agree).
 Each entry exports `entry`, whose `makeProgram` builds its own small Foldkit program; its page uses `entryFrame` from `src/app/dev/entry.ts`, with a read-out line under the demo and a "Choices for you" note at the end.
 A screen ticket adds an entry for each reusable component it builds, and a Scene test beside it.
 
