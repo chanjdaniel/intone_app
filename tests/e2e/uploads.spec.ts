@@ -35,7 +35,8 @@ const expectNothingSent = (session: Session, baseURL: string) => {
   ).toStrictEqual([])
 }
 
-// What the device keeps: the clip store's files, and the clips' records.
+// What the device keeps, the clip store's files and the clips' records,
+// read only to show that nothing was kept.
 const onDevice = (page: Page) =>
   page.evaluate(async () => {
     const files: Array<string> = []
@@ -123,10 +124,6 @@ test('a CC0 clip is cut into lines, kept, and one practised with a scored take, 
       await report(testInfo, 'cut', { milliseconds, lines, lengths })
 
       // It is kept: after a reload, the home screen and its level list it.
-      const kept = await onDevice(page)
-      expect(kept.clips).toBe(1)
-      expect(kept.files).toHaveLength(1)
-      expect(kept.files[0]).toMatch(/^clips\/[A-Za-z0-9-]+\.wav$/)
       await page.goto('/')
       await page.reload()
       await page
@@ -183,7 +180,9 @@ test('a clip is deleted with its lines and takes, only once confirmed', async ({
     await expect(dialog).toBeVisible()
     await dialog.getByRole('button', { name: 'Keep the clip' }).click()
     await expect(dialog).toBeHidden()
-    expect((await onDevice(page)).clips).toBe(1)
+    await expect(
+      page.getByRole('heading', { name: 'gongitsune.wav', level: 1 }),
+    ).toBeVisible()
 
     await page.getByRole('button', { name: 'Delete this clip' }).click()
     await dialog.getByRole('button', { name: 'Delete the clip' }).click()

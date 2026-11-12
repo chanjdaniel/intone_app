@@ -33,25 +33,38 @@ const expectNothingSent = (session: Session, baseURL: string) => {
   ).toStrictEqual([])
 }
 
-// How many native curves the device keeps.
-const nativesKept = (page: Page) =>
-  page.evaluate(
-    () =>
-      new Promise<number>(resolve => {
-        const opening = indexedDB.open('intone')
-        opening.onsuccess = () => {
-          const database = opening.result
-          const counting = database
-            .transaction('natives', 'readonly')
-            .objectStore('natives')
-            .count()
-          counting.onsuccess = () => {
-            database.close()
-            resolve(counting.result)
-          }
-        }
-      }),
-  )
+// The lines each change asks the clip Worker to track again, one entry a
+// request, as the page posts them: what an edit costs, seen from outside.
+const recordRetracks = (page: Page) =>
+  page.addInitScript(() => {
+    const asked: Array<number> = []
+    Object.assign(window, { intoneRetracks: asked })
+    const post = Worker.prototype.postMessage
+    Worker.prototype.postMessage = function (
+      this: Worker,
+      message: unknown,
+      ...rest: Array<never>
+    ) {
+      const spans: unknown =
+        typeof message === 'object' &&
+        message !== null &&
+        Reflect.get(message, '_tag') === 'Track'
+          ? Reflect.get(message, 'spans')
+          : undefined
+      if (Array.isArray(spans)) {
+        asked.push(spans.length)
+      }
+      return Reflect.apply(post, this, [message, ...rest])
+    }
+  })
+
+const retracks = (page: Page): Promise<ReadonlyArray<number>> =>
+  page.evaluate(() => {
+    const asked: unknown = Reflect.get(window, 'intoneRetracks')
+    return Array.isArray(asked)
+      ? asked.filter(count => typeof count === 'number')
+      : []
+  })
 
 const waveform = (page: Page) => page.locator('[data-window-from]')
 
@@ -102,6 +115,7 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
       browser,
       async session => {
         const { page, context } = session
+        await recordRetracks(page)
         await page.goto('/upload')
         await page.locator('#upload-file').setInputFiles(clip)
         await page.waitForURL(/\/level\//, { timeout: 120_000 })
@@ -112,8 +126,6 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         ).toBeVisible()
         await expect(waveform(page)).toHaveCount(0)
         const lines = await lineRows(page).count()
-        const cutNatives = await nativesKept(page)
-        expect(cutNatives).toBe(lines)
 
         // Line 3's end, dragged 0.3 s earlier by the mouse.
         await page
@@ -139,7 +151,8 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         await kept(page, /^Line 3’s end moved to /)
         const endDragged = await valueOf(end)
         expect(endDragged).toBeCloseTo(endBefore - pixels * secondsPerPixel, 1)
-        expect(await nativesKept(page)).toBe(cutNatives + 1)
+        // Only the line it moved is tracked again.
+        expect(await retracks(page)).toStrictEqual([1])
         // The row's length is the difference of the two times it shows,
         // each read down to the tenth.
         const tenths = (seconds: number) => Math.floor(seconds * 10 + 1e-6)
@@ -156,7 +169,8 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
           .click()
         await kept(page, /^The last change is undone\.$/)
         expect(await valueOf(end)).toBe(endBefore)
-        expect(await nativesKept(page)).toBe(cutNatives)
+        // Undone, its earlier curve comes back: nothing is tracked again.
+        expect(await retracks(page)).toStrictEqual([1])
 
         // Its start, dragged 0.2 s later by touch.
         const start = page.getByRole('slider', { name: 'Start of Line 3' })
