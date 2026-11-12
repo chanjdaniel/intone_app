@@ -554,7 +554,7 @@ describe('undoing', () => {
       Command.expectExact(UndoClipLineChange({ clipId: 'c1' })),
       Command.resolve(
         UndoClipLineChange,
-        Message.SucceededEditClipLines({
+        Message.SucceededUndoClipLineChange({
           clipId: 'c1',
           clip: levelClipOf(undone),
         }),

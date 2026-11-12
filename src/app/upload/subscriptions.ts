@@ -1,4 +1,13 @@
-import { Clock, Effect, Fiber, Layer, Option, Schema, Stream } from 'effect'
+import {
+  Clock,
+  Effect,
+  Fiber,
+  Layer,
+  Match,
+  Option,
+  Schema,
+  Stream,
+} from 'effect'
 import { File, Subscription } from 'foldkit'
 
 import { reasonOf } from '../../engine/reason'
@@ -18,13 +27,19 @@ import { PackStep, UploadStep } from './upload'
 // already being kept is kept whole first.
 
 const stepOf = (event: Exclude<ClipEvent, { _tag: 'Analysed' }>): UploadStep =>
-  event._tag === 'Checking'
-    ? UploadStep.Checking()
-    : event._tag === 'Decoding'
-      ? UploadStep.Decoding()
-      : event._tag === 'FindingLines'
-        ? UploadStep.FindingLines({ done: event.done, total: event.total })
-        : UploadStep.TrackingLines({ done: event.done, total: event.total })
+  Match.valueTags(event, {
+    Checking: () => UploadStep.Checking(),
+    Decoding: () => UploadStep.Decoding(),
+    FindingLines: ({ done, total }) => UploadStep.FindingLines({ done, total }),
+    TrackingLines: ({ done, total }) =>
+      UploadStep.TrackingLines({ done, total }),
+  })
+
+// The file of a cut clip could not be read again to keep it.
+class KeepClipError extends Schema.TaggedError<
+  KeepClipError,
+  { readonly brand: unique symbol }
+>()('KeepClipError', { reason: Schema.String }) {}
 
 // Keeps the cut clip on the device: its file, read once more, and its
 // lines. It runs to its end once begun, so a cancel never leaves a file
@@ -38,9 +53,10 @@ const keep = (
     const history = yield* HistoryStore
     const bytes = yield* Effect.tryPromise({
       try: async () => new Uint8Array(await file.arrayBuffer()),
-      catch: error => ({
-        reason: `The file could not be read again: ${reasonOf(error)}`,
-      }),
+      catch: error =>
+        new KeepClipError({
+          reason: `The file could not be read again: ${reasonOf(error)}`,
+        }),
     })
     const addedAt = yield* Clock.currentTimeMillis
     const clip = yield* history.addClip({
@@ -120,13 +136,12 @@ export const uploadJobOf = (model: Model) =>
 const packStepOf = (
   event: Exclude<PackEvent, { _tag: 'Imported' }>,
 ): PackStep =>
-  event._tag === 'Reading'
-    ? PackStep.Reading()
-    : event._tag === 'Keeping'
-      ? PackStep.Keeping()
-      : event._tag === 'CheckingFiles'
-        ? PackStep.CheckingFiles({ done: event.done, total: event.total })
-        : PackStep.TrackingLines({ done: event.done, total: event.total })
+  Match.valueTags(event, {
+    Reading: () => PackStep.Reading(),
+    Keeping: () => PackStep.Keeping(),
+    CheckingFiles: ({ done, total }) => PackStep.CheckingFiles({ done, total }),
+    TrackingLines: ({ done, total }) => PackStep.TrackingLines({ done, total }),
+  })
 
 // A local pack's import (../../services/local-pack.ts): each step comes
 // to the Model, the pack's lines and curves go to the device, and the

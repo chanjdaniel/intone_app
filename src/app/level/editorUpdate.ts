@@ -3,6 +3,7 @@ import { Update } from 'foldkit'
 import { modifyFields } from 'foldkit/struct'
 
 import { type Edge, onSampleGrid } from '../../engine/cut/edit'
+import { LineEdit } from '../../services/clip-edits'
 import { HistoryPage, LineHistoryPage } from '../history/history'
 import { preciseClockText } from '../line/lines'
 import { NativeCurve } from '../line/native'
@@ -333,12 +334,11 @@ const keepDraft = (
         commands: [
           EditClipLines({
             clipId: clip.id,
-            edit: {
-              _tag: 'Move',
+            edit: LineEdit.cases.Move.make({
               lineId: draft.lineId,
               edge: draft.edge,
               seconds: draft.seconds,
-            },
+            }),
           }),
         ],
       }
@@ -389,7 +389,10 @@ export const clickedSplitLine = (model: Model): EditorUpdate =>
       commands: [
         EditClipLines({
           clipId: clip.id,
-          edit: { _tag: 'Split', lineId: line.id, seconds: editor.playhead },
+          edit: LineEdit.cases.Split.make({
+            lineId: line.id,
+            seconds: editor.playhead,
+          }),
         }),
       ],
     }
@@ -414,7 +417,10 @@ export const clickedMergeLines = (model: Model, lineId: string): EditorUpdate =>
         Option.some(line.id),
       ),
       commands: [
-        EditClipLines({ clipId: clip.id, edit: { _tag: 'Merge', lineId } }),
+        EditClipLines({
+          clipId: clip.id,
+          edit: LineEdit.cases.Merge.make({ lineId }),
+        }),
       ],
     }
   })
@@ -437,7 +443,7 @@ export const clickedDeleteLine = (model: Model): EditorUpdate =>
       commands: [
         EditClipLines({
           clipId: clip.id,
-          edit: { _tag: 'Delete', lineId: line.id },
+          edit: LineEdit.cases.Delete.make({ lineId: line.id }),
         }),
       ],
     }

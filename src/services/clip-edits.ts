@@ -20,22 +20,19 @@ import type {
 // next split will give, and what undoing it gives back. The spans'
 // rules are ../engine/cut/edit.ts's.
 
-export const LineEdit = Schema.Union([
+export const LineEdit = Schema.TaggedUnion({
   // Line `lineId`'s edge moved to `seconds` from the clip's start, as
   // near as its neighbours and the shortest line let it.
-  Schema.TaggedStruct('Move', {
+  Move: {
     lineId: Schema.String,
     edge: Schema.Literals(['from', 'to']),
     seconds: Schema.Finite,
-  }),
-  Schema.TaggedStruct('Split', {
-    lineId: Schema.String,
-    seconds: Schema.Finite,
-  }),
+  },
+  Split: { lineId: Schema.String, seconds: Schema.Finite },
   // Line `lineId` and the line after it, as one.
-  Schema.TaggedStruct('Merge', { lineId: Schema.String }),
-  Schema.TaggedStruct('Delete', { lineId: Schema.String }),
-])
+  Merge: { lineId: Schema.String },
+  Delete: { lineId: Schema.String },
+})
 export type LineEdit = typeof LineEdit.Type
 
 // A line after the change: as it was, or at a new span to be tracked

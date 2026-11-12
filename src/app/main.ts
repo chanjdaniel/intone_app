@@ -342,6 +342,11 @@ export const update = (model: Model, message: Message) =>
       EditorUpdate.succeededEditClipLines(model, clipId, clip),
     FailedEditClipLines: ({ clipId, reason }) =>
       EditorUpdate.failedEditClipLines(model, clipId, reason),
+    // An undo lands as a change does.
+    SucceededUndoClipLineChange: ({ clipId, clip }) =>
+      EditorUpdate.succeededEditClipLines(model, clipId, clip),
+    FailedUndoClipLineChange: ({ clipId, reason }) =>
+      EditorUpdate.failedEditClipLines(model, clipId, reason),
     CompletedFocusLineEditor: () => ({ model }),
     CompletedFollowLineEditorPointer: () => ({ model }),
 
@@ -420,7 +425,7 @@ export const update = (model: Model, message: Message) =>
     ClickedRestoreBackup: () => SettingsUpdate.clickedRestoreBackup(model),
     SucceededRestoreBackup: ({ takes }) =>
       SettingsUpdate.succeededRestoreBackup(model, takes),
-    CancelledRestoreBackup: () => SettingsUpdate.cancelledRestoreBackup(model),
+    CompletedRestoreBackup: () => SettingsUpdate.completedRestoreBackup(model),
     FailedRestoreBackup: ({ reason }) =>
       SettingsUpdate.failedRestoreBackup(model, reason),
     ClickedClearAll: () => SettingsUpdate.clickedClearAll(model),

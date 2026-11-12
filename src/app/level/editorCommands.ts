@@ -49,22 +49,28 @@ export const EditClipLines = Command.define('EditClipLines', {
 // Undoes the last change to clip `clipId`'s lines.
 export const UndoClipLineChange = Command.define('UndoClipLineChange', {
   args: { clipId: Schema.String },
-  messages: [Message.SucceededEditClipLines, Message.FailedEditClipLines],
+  messages: [
+    Message.SucceededUndoClipLineChange,
+    Message.FailedUndoClipLineChange,
+  ],
   execute: ({ clipId }) =>
     Effect.gen(function* () {
       const history = yield* HistoryStore
       const maybeClip = yield* history.undoClipEdit(clipId)
       return Option.match(maybeClip, {
         onNone: () =>
-          Message.FailedEditClipLines({ clipId, reason: noSuchClip }),
+          Message.FailedUndoClipLineChange({ clipId, reason: noSuchClip }),
         onSome: clip =>
-          Message.SucceededEditClipLines({ clipId, clip: levelClipOf(clip) }),
+          Message.SucceededUndoClipLineChange({
+            clipId,
+            clip: levelClipOf(clip),
+          }),
       })
     }).pipe(
       Effect.provide(HistoryStore.layer),
       Effect.catch(error =>
         Effect.succeed(
-          Message.FailedEditClipLines({ clipId, reason: error.reason }),
+          Message.FailedUndoClipLineChange({ clipId, reason: error.reason }),
         ),
       ),
     ),

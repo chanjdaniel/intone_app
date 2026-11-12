@@ -10,6 +10,7 @@ import {
   Stream,
 } from 'effect'
 import { Subscription } from 'foldkit'
+import { defineTaggedUnion } from 'foldkit/schema'
 
 import { peakOf, toDb } from '../../engine/audio/level'
 import { createOnsetFinder } from '../../engine/pitch/onset'
@@ -142,28 +143,18 @@ const Stretch = Schema.Struct({ from: Schema.Finite, to: Schema.Finite })
 type Stretch = typeof Stretch.Type
 
 // What the Model is playing now.
-export const Play = Schema.Union([
+export const Play = defineTaggedUnion({
   // The line, at its own speed, before take `takeNumber`.
-  Schema.TaggedStruct('LineBeforeTake', {
-    takeNumber: Schema.Finite,
-    audio: LineAudio,
-  }),
+  LineBeforeTake: { takeNumber: Schema.Finite, audio: LineAudio },
   // The line again, `rate` times its speed.
-  Schema.TaggedStruct('Line', { audio: LineAudio, rate: Schema.Finite }),
+  Line: { audio: LineAudio, rate: Schema.Finite },
   // The learner's take `takeNumber`, from memory.
-  Schema.TaggedStruct('Take', { takeNumber: Schema.Finite }),
+  Take: { takeNumber: Schema.Finite },
   // A scored take's worst stretch of the line, `rate` times its speed.
-  Schema.TaggedStruct('LineStretch', {
-    audio: LineAudio,
-    rate: Schema.Finite,
-    stretch: Stretch,
-  }),
+  LineStretch: { audio: LineAudio, rate: Schema.Finite, stretch: Stretch },
   // The part of take `takeNumber` paired with that stretch, from memory.
-  Schema.TaggedStruct('TakeStretch', {
-    takeNumber: Schema.Finite,
-    stretch: Stretch,
-  }),
-])
+  TakeStretch: { takeNumber: Schema.Finite, stretch: Stretch },
+})
 export type Play = typeof Play.Type
 
 export const playOf = (model: Model): Option.Option<Play> => {
@@ -173,7 +164,7 @@ export const playOf = (model: Model): Option.Option<Play> => {
   const audio = model.native.line.audio
   return Match.value(model.take).pipe(
     Match.tag('PlayingNative', ({ takeNumber }) =>
-      Option.some<Play>({ _tag: 'LineBeforeTake', takeNumber, audio }),
+      Option.some(Play.LineBeforeTake({ takeNumber, audio })),
     ),
     Match.tag(
       'Listening',
@@ -182,30 +173,21 @@ export const playOf = (model: Model): Option.Option<Play> => {
           return Option.flatMap(maybeTake, ({ takeNumber, result }) =>
             Option.map(worstStretchOf(result), (worst): Play =>
               voice === 'Line'
-                ? {
-                    _tag: 'LineStretch',
+                ? Play.LineStretch({
                     audio,
                     rate: model.listenSpeed,
                     stretch: { from: worst.nativeFrom, to: worst.nativeTo },
-                  }
-                : {
-                    _tag: 'TakeStretch',
+                  })
+                : Play.TakeStretch({
                     takeNumber,
                     stretch: { from: worst.takeFrom, to: worst.takeTo },
-                  },
+                  }),
             ),
           )
         }
         return voice === 'Line'
-          ? Option.some<Play>({
-              _tag: 'Line',
-              audio,
-              rate: model.listenSpeed,
-            })
-          : Option.map(maybeTake, ({ takeNumber }) => ({
-              _tag: 'Take' as const,
-              takeNumber,
-            }))
+          ? Option.some(Play.Line({ audio, rate: model.listenSpeed }))
+          : Option.map(maybeTake, ({ takeNumber }) => Play.Take({ takeNumber }))
       },
     ),
     Match.orElse(() => Option.none()),

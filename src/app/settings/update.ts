@@ -204,7 +204,7 @@ export const succeededRestoreBackup = (
   }
 }
 
-export const cancelledRestoreBackup = (model: Model): SettingsUpdate =>
+export const completedRestoreBackup = (model: Model): SettingsUpdate =>
   whenReady(model, page =>
     modifyFields(page, { restore: () => RestoreState.Idle() }),
   )

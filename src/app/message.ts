@@ -159,6 +159,8 @@ export const Message = defineMessageUnion({
   ClickedUndoLineChange: {},
   SucceededEditClipLines: { clipId: Schema.String, clip: LevelClip },
   FailedEditClipLines: { clipId: Schema.String, reason: Schema.String },
+  SucceededUndoClipLineChange: { clipId: Schema.String, clip: LevelClip },
+  FailedUndoClipLineChange: { clipId: Schema.String, reason: Schema.String },
   CompletedFocusLineEditor: {},
   CompletedFollowLineEditorPointer: {},
 
@@ -247,7 +249,8 @@ export const Message = defineMessageUnion({
   FailedSaveBackup: { reason: Schema.String },
   ClickedRestoreBackup: {},
   SucceededRestoreBackup: { takes: Schema.Finite },
-  CancelledRestoreBackup: {},
+  // RestoreBackup ended with no file chosen.
+  CompletedRestoreBackup: {},
   FailedRestoreBackup: { reason: Schema.String },
   ClickedClearAll: {},
   GotClearDialogMessage: { message: Dialog.Message },

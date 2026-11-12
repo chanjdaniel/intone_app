@@ -196,13 +196,13 @@ export const SaveBackup = Command.define('SaveBackup', {
 export const RestoreBackup = Command.define('RestoreBackup', {
   messages: [
     Message.SucceededRestoreBackup,
-    Message.CancelledRestoreBackup,
+    Message.CompletedRestoreBackup,
     Message.FailedRestoreBackup,
   ],
   execute: Effect.gen(function* () {
     const maybeFile = yield* File.select(['.zip', 'application/zip'])
     if (Option.isNone(maybeFile)) {
-      return Message.CancelledRestoreBackup()
+      return Message.CompletedRestoreBackup()
     }
     const buffer = yield* File.readAsArrayBuffer(maybeFile.value).pipe(
       Effect.mapError(
