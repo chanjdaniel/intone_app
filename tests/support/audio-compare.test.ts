@@ -90,6 +90,34 @@ describe('compareWithSource', () => {
     expect(result?.snrDb).toBeGreaterThan(100)
   })
 
+  test('fits around a slip whose segment still places at the old lag, through a change of sample rate', () => {
+    // As in CI's run 43223000556 (snrDb 50): 44.1 kHz, one 10 ms buffer
+    // added mid-voice. Spliced 470 samples into its 882-sample segment,
+    // that segment still places at the old lag, so the fit must leave out
+    // the segments around a slip, not only those that did not place.
+    const captureRate = 44100
+    const clean = Float32Array.from(
+      sourceAsCaptured(source, rate, captureRate, 0.0300589, 3 * captureRate),
+    )
+    const base = Math.round(0.58 * captureRate)
+    for (const offset of [464, 470, 476]) {
+      const capture = slipped(clean, base + offset, 441)
+      const result = compareWithSource(capture, captureRate, source, rate)
+      expect(result?.slips).toHaveLength(1)
+      expect(result?.slips[0]?.bySeconds).toBeCloseTo(0.01, 4)
+      expect(result?.snrDb).toBeGreaterThan(70)
+    }
+  })
+
+  test('follows a slip of two 10 ms buffers, wider than a segment searches', () => {
+    const at = Math.round(1.0113 * rate)
+    const capture = slipped(delayed(source, 960, captureLength), at, 960)
+    const result = compareWithSource(capture, rate, source, rate)
+    expect(result?.slips).toHaveLength(1)
+    expect(result?.slips[0]?.bySeconds).toBeCloseTo(0.02, 6)
+    expect(result?.snrDb).toBeGreaterThan(100)
+  })
+
   test('reports 10 ms lost as a slip back', () => {
     const at = Math.round(0.8137 * rate)
     const capture = slipped(delayed(source, 960, captureLength), at, -480)

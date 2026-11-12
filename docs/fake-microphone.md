@@ -15,7 +15,7 @@ A test that needs the exact samples drives the capture worklet with the buffer s
 What a test on the fake microphone must allow for:
 
 - the voice starts 32 ms into the capture, or a whole number of 10 ms device buffers later, up to 53 ms in the runs seen;
-- each slip adds 10 ms, to within 0.05 ms, and most takes have none;
+- each slip adds a whole number of 10 ms device buffers, to within 0.05 ms (one in every slip seen), and most takes have none;
 - up to two frames near a slip read no pitch, and the curve after it is 10 ms late;
 - 16-bit quantisation and the resampler, about 89 dB below the voice.
 
@@ -30,7 +30,7 @@ What a test on the fake microphone must allow for:
   It makes the `AudioContext` at 48 kHz and the capture node, waits for the first batch, then opens the microphone with echo cancellation, noise suppression and auto gain off and connects it, as the app should.
 - **The browser.** Playwright's Chromium, one launch per take, with `--use-fake-device-for-media-stream`, `--use-fake-ui-for-media-stream`, `--use-file-for-fake-audio-capture=<wav>%noloop` and `--autoplay-policy=no-user-gesture-required`.
 - **The comparison.** `tests/support/audio-compare.ts` places the source in the capture by its onset, then follows it in 20 ms segments, so a slip shows as a slip rather than as noise over everything after it, then finds each stretch's fractional delay and fits one gain over them all.
-  The SNR is the signal against everything else over the stretches between slips.
+  The SNR is the signal against everything else over the stretches between slips, each stretch giving up the 20 ms segment next to a slip and 2 ms more, since a segment the splice falls in can still place at the lag on one side (CI's run 43223000556 measured 50 dB with that splice counted, where the rest of the take was at 89).
   `tests/support/pitch.ts` is a plain YIN estimate, never the app's tracker; it reads a steady pitch within a cent, and up to about 16 cents on the voices' fastest glides.
 
 ## Results
@@ -72,14 +72,14 @@ The file starts playing at `getUserMedia`, not when a source is connected, so th
 
 The middle voice twenty times, each in a fresh browser, at a load average of 13 to 14 on a shared machine:
 
-| Measure                  | Lowest   | Highest  | Spread | Spread allowed       |
-| ------------------------ | -------- | -------- | ------ | -------------------- |
-| Start, ms                | 32.06    | 32.73    | 0.67   | 35                   |
-| Slips                    | 0        | 1        | 1      | any, each 10 ms      |
-| Gain                     | 1.000019 | 1.000019 | 8e-9   | 1e-4                 |
-| Signal over the rest, dB | 89.43    | 89.46    | 0.03   | 3, and each above 70 |
-| Pitch median, cents      | 1.51     | 1.67     | 0.16   | 0.5                  |
-| Pitch largest, cents     | 16.22    | 16.22    | 0      | 2                    |
+| Measure                  | Lowest   | Highest  | Spread | Spread allowed                            |
+| ------------------------ | -------- | -------- | ------ | ----------------------------------------- |
+| Start, ms                | 32.06    | 32.73    | 0.67   | 35                                        |
+| Slips                    | 0        | 1        | 1      | any, each a whole number of 10 ms buffers |
+| Gain                     | 1.000019 | 1.000019 | 8e-9   | 1e-4                                      |
+| Signal over the rest, dB | 89.43    | 89.46    | 0.03   | 3, and each above 70                      |
+| Pitch median, cents      | 1.51     | 1.67     | 0.16   | 0.5                                       |
+| Pitch largest, cents     | 16.22    | 16.22    | 0      | 2                                         |
 
 One run of the twenty slipped; a second run of the twenty, at the same load, had no slip and stayed within the spreads above.
 Over the whole spec, 6 of its 34 microphone takes slipped in the first run and 3 in the second, and 2 takes in 10 slipped at a load average of 17.

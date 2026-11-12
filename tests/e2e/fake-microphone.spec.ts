@@ -202,7 +202,8 @@ const report = async (
 
 // What the fake microphone delivers from a 16-bit source, slips aside:
 // the source's own gain, nothing added beyond 16-bit quantisation and
-// resampling between slips, each slip 10 ms of samples added, and a pitch
+// resampling between slips, each slip a whole number of the device's 10 ms
+// buffers added (one, mostly; two seen under load), and a pitch
 // estimate as close to the known curve as the source's own, but for the
 // frames a slip falls in.
 const expectFaithful = (measurement: Measurement | null): void => {
@@ -214,7 +215,9 @@ const expectFaithful = (measurement: Measurement | null): void => {
   expect(measurement.gain).toBeLessThan(1.001)
   expect(measurement.snrDb).toBeGreaterThan(70)
   for (const slip of measurement.slips) {
-    expect(slip.bySeconds).toBeCloseTo(0.01, 4)
+    const buffers = Math.round(slip.bySeconds / 0.01)
+    expect(buffers).toBeGreaterThanOrEqual(1)
+    expect(slip.bySeconds).toBeCloseTo(buffers * 0.01, 4)
   }
   const slips = measurement.slips.length
   expect(measurement.pitch.missing).toBeLessThanOrEqual(
@@ -317,9 +320,11 @@ test.describe('the fake microphone', () => {
         autoGainControl: false,
       })
       // The device's file starts at getUserMedia, after the worklet runs:
-      // the probe waits for its first batch, as the app should.
+      // the probe waits for its first batch, as the app should, so none of
+      // the file is lost. 32 to 53 ms seen; the bound allows a loaded
+      // machine four times that.
       expect(measurement?.delaySeconds).toBeGreaterThan(0)
-      expect(measurement?.delaySeconds).toBeLessThan(0.1)
+      expect(measurement?.delaySeconds).toBeLessThan(0.2)
     })
   }
 

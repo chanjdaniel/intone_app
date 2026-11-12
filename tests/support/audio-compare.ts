@@ -302,6 +302,25 @@ const followSource = (
   return { stretches, bestLags, placed: placed.length }
 }
 
+// A segment that straddles a slip can still place at the lag on one side,
+// so the slip itself lies anywhere in the last segment before the new lag
+// or the first segment at it. Each stretch gives up that segment at a
+// slip, and the resampler's reach either side of the splice, so the delay
+// and the fit read only audio clear of it.
+const slipGuardSeconds = 0.002
+
+const clearOfSlips = (
+  stretches: ReadonlyArray<Stretch>,
+  captureRate: number,
+): ReadonlyArray<Stretch> => {
+  const cut = Math.round((segmentSeconds + slipGuardSeconds) * captureRate)
+  return stretches.map((stretch, index) => {
+    const from = index > 0 ? stretch.from + cut : stretch.from
+    const to = index < stretches.length - 1 ? stretch.to - cut : stretch.to
+    return { ...stretch, from, to: Math.max(from, to) }
+  })
+}
+
 // Finds the source in the capture: by onset to the nearest few samples,
 // then segment by segment for any slip, then by golden-section search for
 // each stretch's fractional delay. Null when nothing arrived.
@@ -345,18 +364,19 @@ export const compareWithSource = (
             to: Math.min(capture.length, wholeLag + expectedLength),
           },
         ]
-  const delays = stretches.map(stretch =>
+  const fitted = clearOfSlips(stretches, captureRate)
+  const delays = fitted.map(range =>
     fractionalDelay(
       capture,
       captureRate,
       source,
       sourceRate,
-      stretch.lag / captureRate,
-      stretch,
+      range.lag / captureRate,
+      range,
     ),
   )
   const expected = new Float64Array(capture.length)
-  stretches.forEach((stretch, index) => {
+  fitted.forEach((range, index) => {
     expected.set(
       sourceAsCaptured(
         source,
@@ -364,13 +384,13 @@ export const compareWithSource = (
         captureRate,
         delays[index] ?? 0,
         capture.length,
-        stretch.from,
-        stretch.to,
-      ).subarray(stretch.from, stretch.to),
-      stretch.from,
+        range.from,
+        range.to,
+      ).subarray(range.from, range.to),
+      range.from,
     )
   })
-  const best = fit(capture, expected, stretches)
+  const best = fit(capture, expected, fitted)
   const delaySeconds = delays[0] ?? 0
   const slips = stretches.slice(1).map((stretch, index) => ({
     atSeconds: stretch.from / captureRate,
