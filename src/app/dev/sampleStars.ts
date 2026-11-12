@@ -1,5 +1,6 @@
 import { Option, Schema } from 'effect'
 
+import { random } from '../../score/random'
 import { TakeEntry } from '../../services/history-records'
 import { LineAsKept, lineProgressOf } from '../history/history'
 import type { LineStars } from '../level/level'
@@ -17,18 +18,6 @@ export const sampleStarCounts = {
   blindShare: 1 / 4,
   notComparedShare: 1 / 20,
 } as const
-
-// mulberry32.
-const random = (seed: number): (() => number) => {
-  let state = seed >>> 0
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0
-    let t = state
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
 
 const decodeEntry = Schema.decodeUnknownSync(TakeEntry)
 

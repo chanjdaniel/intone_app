@@ -1,5 +1,6 @@
 import { Schema } from 'effect'
 
+import { random } from '../../score/random'
 import { TakeEntry } from '../../services/history-records'
 import { summarise, trendOf } from '../history/history'
 
@@ -10,18 +11,6 @@ import { summarise, trendOf } from '../history/history'
 // over 300 days.
 
 export const sampleCounts = { takes: 2000, lines: 200, days: 300 } as const
-
-// mulberry32.
-const random = (seed: number): (() => number) => {
-  let state = seed >>> 0
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0
-    let t = state
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
 
 const words = ['雨', '風', '空', '花', '山', '川', '海', '星'] as const
 const ends = ['が好き', 'が降る', 'が青い', 'が咲く', 'を見る'] as const
