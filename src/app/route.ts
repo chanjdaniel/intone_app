@@ -21,13 +21,14 @@ export const AppRoute = defineRouteUnion({
 
 export type AppRoute = typeof AppRoute.Type
 
+// The words a list is found by, kept in the address as `?find=`.
+const findQuery = Schema.Struct({
+  maybeFind: Schema.OptionFromOptionalKey(Schema.String),
+}).pipe(Schema.encodeKeys({ maybeFind: 'find' }))
+
 export const homeRouter = pipe(
   Route.root,
-  Route.query(
-    Schema.Struct({
-      maybeFind: Schema.OptionFromOptionalKey(Schema.String),
-    }).pipe(Schema.encodeKeys({ maybeFind: 'find' })),
-  ),
+  Route.query(findQuery),
   Route.mapTo(AppRoute.Home),
 )
 
@@ -46,21 +47,13 @@ export const uploadRouter = pipe(
 export const levelRouter = pipe(
   literal('level'),
   slash(string('clipId')),
-  Route.query(
-    Schema.Struct({
-      maybeFind: Schema.OptionFromOptionalKey(Schema.String),
-    }).pipe(Schema.encodeKeys({ maybeFind: 'find' })),
-  ),
+  Route.query(findQuery),
   Route.mapTo(AppRoute.Level),
 )
 
 export const historyRouter = pipe(
   literal('history'),
-  Route.query(
-    Schema.Struct({
-      maybeFind: Schema.OptionFromOptionalKey(Schema.String),
-    }).pipe(Schema.encodeKeys({ maybeFind: 'find' })),
-  ),
+  Route.query(findQuery),
   Route.mapTo(AppRoute.History),
 )
 

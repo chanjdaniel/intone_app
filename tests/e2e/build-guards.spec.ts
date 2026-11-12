@@ -5,6 +5,7 @@ import {
   onnxRuntimeFiles,
   onnxRuntimeVersion,
 } from '../../build/onnx-runtime.ts'
+import { withPage } from './take-session'
 
 // The production build in Chromium: the policy holds and nothing breaks
 // it, the dev library is absent, and ONNX Runtime's WebAssembly is served
@@ -12,43 +13,28 @@ import {
 // tests/build/serving.test.ts read the model files.
 
 test('the home screen loads under the Content Security Policy with no violation or request elsewhere', async ({
-  page,
+  browser,
   baseURL,
 }) => {
-  const problems: Array<string> = []
-  const elsewhere: Array<string> = []
-  page.on('console', message => {
-    if (message.type() === 'error' || message.type() === 'warning') {
-      problems.push(message.text())
-    }
-  })
-  page.on('pageerror', error => problems.push(error.message))
-  page.on('request', request => {
-    if (!request.url().startsWith(`${baseURL}/`)) {
-      elsewhere.push(request.url())
-    }
-  })
-  await page.addInitScript(() => {
-    document.addEventListener('securitypolicyviolation', event => {
-      console.error(
-        `CSP violation: ${event.violatedDirective} ${event.blockedURI}`,
-      )
-    })
-  })
+  await withPage(browser, async ({ page, problems, requests }) => {
+    await page.goto('/')
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Intone' }),
+    ).toBeVisible()
 
-  await page.goto('/')
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Intone' }),
-  ).toBeVisible()
-
-  expect(problems).toStrictEqual([])
-  expect(elsewhere).toStrictEqual([])
-  await expect(
-    page.locator('meta[http-equiv="Content-Security-Policy"]'),
-  ).toHaveAttribute(
-    'content',
-    /^default-src 'self'; script-src 'self' 'wasm-unsafe-eval';/,
-  )
+    expect(problems).toStrictEqual([])
+    expect(
+      requests
+        .map(request => request.url)
+        .filter(url => !url.startsWith(`${baseURL}/`)),
+    ).toStrictEqual([])
+    await expect(
+      page.locator('meta[http-equiv="Content-Security-Policy"]'),
+    ).toHaveAttribute(
+      'content',
+      /^default-src 'self'; script-src 'self' 'wasm-unsafe-eval';/,
+    )
+  })
 })
 
 test('a production build has no component library at /dev', async ({
