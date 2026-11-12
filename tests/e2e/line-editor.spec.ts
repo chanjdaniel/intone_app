@@ -105,9 +105,12 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         await page.goto('/upload')
         await page.locator('#upload-file').setInputFiles(clip)
         await page.waitForURL(/\/level\//, { timeout: 120_000 })
-        await expect(waveform(page).locator('svg path')).toBeVisible({
-          timeout: 30_000,
-        })
+        // The level opens with its editor shut: nothing decodes the clip
+        // until the learner asks to fix a line.
+        await expect(
+          page.getByRole('button', { name: 'Open the line editor' }),
+        ).toBeVisible()
+        await expect(waveform(page)).toHaveCount(0)
         const lines = await lineRows(page).count()
         const cutNatives = await nativesKept(page)
         expect(cutNatives).toBe(lines)
@@ -116,6 +119,9 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         await page
           .getByRole('button', { name: 'Fix line 3', exact: true })
           .click()
+        await expect(waveform(page).locator('svg path')).toBeVisible({
+          timeout: 30_000,
+        })
         await expect(
           page.getByText('Line 3 of', { exact: false }),
         ).toBeVisible()
@@ -247,6 +253,7 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         // All kept across a reload.
         await page.reload()
         await expect(lineRows(page)).toHaveCount(lines + 1)
+        await page.getByRole('button', { name: 'Open the line editor' }).click()
         await expect(waveform(page).locator('svg path')).toBeVisible({
           timeout: 30_000,
         })
@@ -290,12 +297,12 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         // trend.
         const linePath = new URL(page.url()).pathname
         await page.goBack()
-        await expect(waveform(page).locator('svg path')).toBeVisible({
-          timeout: 30_000,
-        })
         await page
           .getByRole('button', { name: 'Fix line 1', exact: true })
           .click()
+        await expect(waveform(page).locator('svg path')).toBeVisible({
+          timeout: 30_000,
+        })
         await page.getByRole('button', { name: 'Stop' }).click()
         const endOfLine1 = page.getByRole('slider', { name: 'End of Line 1' })
         await endOfLine1.focus()

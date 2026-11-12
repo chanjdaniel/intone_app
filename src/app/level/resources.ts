@@ -12,8 +12,8 @@ import { Message } from '../message'
 import type { Model } from '../model'
 
 // The line editor's resource: the clip Worker holding the level's clip,
-// decoded once from its kept file, from when the level is open with its
-// audio on the device until it is left. Foldkit releases it the moment
+// decoded once from its kept file, from when the learner opens the editor
+// on a level with its audio on the device until the level is left. Foldkit releases it the moment
 // the Model leaves that state, and the Worker closes with the clip's
 // audio. While held, it gives the waveform and tracks the lines a change
 // moves (../../services/clip-analyser.ts, `edit`).
@@ -34,13 +34,14 @@ const reasonOf = (error: unknown): string =>
       : String(error)
 
 // The clip a level needs held: the level's, when it is an upload open
-// with its audio on this device.
+// with its audio on this device and the learner has opened its editor.
 const clipNeedingEditor = (model: Model): Option.Option<string> =>
   model.route._tag === 'Level' &&
   model.level._tag === 'Ready' &&
   model.level.clip.id === model.route.clipId &&
   model.level.clip.hasAudio &&
-  model.level.clip.origin === 'Upload'
+  model.level.clip.origin === 'Upload' &&
+  model.level.editor.waveform._tag !== 'Closed'
     ? Option.some(model.level.clip.id)
     : Option.none()
 

@@ -53,9 +53,9 @@ A clip's level shows its waveform around the line selected, with every line's sp
 A playhead, placed by a tap or the keys and moved by a play, is where a line is split; a line can be merged with either neighbour or deleted, and the last change undone once, after a reload too.
 An edge two lines share, as a split leaves it, moves both.
 
-While the level is open with its audio on the device, a ManagedResource holds the clip Worker with the clip decoded once and kept in it (`ClipAnalyser.edit`); it sends back the waveform (a byte per 10 ms) and tracks the lines a change moves, with Silero VAD over half a second before each for its quality, exactly as the cut tracked them: a cut line's own span tracked again gives the same curve and features, byte for byte (`tests/tracker/cut.test.ts`).
+A level opens with its line editor shut, so a level opened only to practise decodes nothing. Once the learner opens the editor, and while the level stays open with its audio on the device, a ManagedResource holds the clip Worker with the clip decoded once and kept in it (`ClipAnalyser.edit`); it sends back the waveform (a byte per 10 ms) and tracks the lines a change moves, with Silero VAD over half a second before each for its quality, exactly as the cut tracked them: a cut line's own span tracked again gives the same curve and features, byte for byte (`tests/tracker/cut.test.ts`).
 Only the lines a change moves are tracked again; the change is written only if no other tab changed the clip meanwhile.
-Holding the clip costs what decoding it costs at upload, each time the level opens (about 600 MB at its peak for ten minutes, above), and then the 16 kHz clip (38 MB at ten minutes) and the two models while the level is open.
+Holding the clip costs what decoding it costs at upload, each time the editor is opened (about 600 MB at its peak for ten minutes, above), and then the 16 kHz clip (38 MB at ten minutes) and the two models while the level is open.
 
 A line's takes stay with it: a take keeps the curve it was scored against, so a line whose span changed keeps its earlier takes apart on its history page, and a line deleted or merged away keeps its takes, its page saying it is gone.
 

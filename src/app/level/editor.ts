@@ -21,8 +21,10 @@ import type { LevelClip, LevelLine } from './level'
 // is a draft until it is let go, or until the keys have rested.
 
 // The waveform, from the clip Worker once it holds the clip: a byte per
-// 10 ms (../../engine/audio/peaks.ts).
+// 10 ms (../../engine/audio/peaks.ts). Closed until the learner opens the
+// editor, so a level opened to practise never decodes its clip.
 export const ClipWaveform = defineTaggedUnion({
+  Closed: {},
   Opening: {},
   Ready: { peaks: Schema.instanceOf(Uint8Array<ArrayBufferLike>) },
   Failed: { reason: Schema.String },
@@ -86,7 +88,7 @@ export type LineEditor = typeof LineEditor.Type
 export const initialEditor = (clip: LevelClip): LineEditor => {
   const first = clip.lines[0]
   return {
-    waveform: ClipWaveform.Opening(),
+    waveform: ClipWaveform.Closed(),
     selectedId: first?.id ?? '',
     playhead: first?.from ?? 0,
     play: LevelPlay.Stopped(),

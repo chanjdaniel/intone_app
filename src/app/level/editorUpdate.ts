@@ -102,15 +102,29 @@ export const failedAcquireClipEditor = (
     }),
   }))
 
-// Left, the level's waveform goes with its Worker, to be read again when
-// it opens.
+// Left, the level's waveform goes with its Worker, and the editor shuts,
+// to be opened again.
 export const releasedClipEditor = (model: Model): EditorUpdate =>
   withEditor(model, editor => ({
     editor: modifyFields(editor, {
-      waveform: () => ClipWaveform.Opening(),
+      waveform: () => ClipWaveform.Closed(),
       play: () => LevelPlay.Stopped(),
       maybeDraft: () => Option.none(),
     }),
+  }))
+
+// OPENING
+
+// The learner opens the editor: the level holds its clip from now on.
+const opened = (editor: LineEditor): LineEditor =>
+  editor.waveform._tag === 'Closed'
+    ? modifyFields(editor, { waveform: () => ClipWaveform.Opening() })
+    : editor
+
+export const clickedOpenLineEditor = (model: Model): EditorUpdate =>
+  withEditor(model, editor => ({
+    editor: opened(editor),
+    commands: [FocusLineEditor()],
   }))
 
 // SELECTING AND PLAYING
@@ -131,9 +145,10 @@ export const selectedLevelLine = (
     ) {
       return { editor }
     }
+    // From the list, a line is fixed in the editor, opened if it is shut.
     return {
       editor: startPlay(
-        modifyFields(editor, {
+        modifyFields(fromList ? opened(editor) : editor, {
           selectedId: () => lineId,
           maybeNotice: () => Option.none(),
         }),

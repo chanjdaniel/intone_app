@@ -52,6 +52,8 @@ export type Model = typeof Model.Type
 
 export const Message = defineMessageUnion({
   ClickedClip: { music: Schema.Boolean },
+  ClickedShut: {},
+  ClickedOpen: {},
   MovedEdge: {
     lineId: Schema.String,
     edge: EdgeName,
@@ -196,6 +198,28 @@ const placed = (model: Model, seconds: number): Model =>
 
 export const update = (model: Model, message: Message) =>
   Message.match<Update.Return<Model, Message>>(message, {
+    // Shut, as a level opens; opened, it shows the clip's waveform at
+    // once, where the app reads it from the clip Worker first.
+    ClickedShut: () => ({
+      model: modifyFields(model, {
+        editor: editor =>
+          modifyFields(editor, { waveform: () => ClipWaveform.Closed() }),
+      }),
+    }),
+    ClickedOpen: () => ({
+      model: modifyFields(model, {
+        editor: editor =>
+          modifyFields(editor, {
+            waveform: () =>
+              ClipWaveform.Ready({
+                peaks:
+                  model.clip.id === musicStudyEntry.id
+                    ? musicStudyPeaks
+                    : cutStudyPeaks,
+              }),
+          }),
+      }),
+    }),
     ClickedClip: ({ music }) => ({
       model: music
         ? opened(musicStudyEntry, musicStudyPeaks)
@@ -372,6 +396,16 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
           [
             clipButton(false, 'The cut study’s clip', h),
             clipButton(true, 'The same clip over music', h),
+            h.button(
+              [
+                h.Type('button'),
+                h.OnClick(Message.ClickedShut()),
+                h.Class(
+                  `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm focus-ring`,
+                ),
+              ],
+              ['Shut, as a level opens'],
+            ),
           ],
         ),
         lineEditorView(
@@ -389,6 +423,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
             remove: Message.ClickedDelete(),
             undo: Message.ClickedUndo(),
             follow: FollowPointer(),
+            open: Message.ClickedOpen(),
           },
           h,
         ),

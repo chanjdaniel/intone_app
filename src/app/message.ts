@@ -134,6 +134,7 @@ export const Message = defineMessageUnion({
   ReleasedClipEditor: {},
   SelectedLevelLine: { lineId: Schema.String },
   ClickedEditLevelLine: { lineId: Schema.String },
+  ClickedOpenLineEditor: {},
   ClickedPlayLevelLine: {},
   ClickedStopLevelLine: {},
   MovedLevelPlayhead: { playNumber: Schema.Finite, seconds: Schema.Finite },

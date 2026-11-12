@@ -47,6 +47,8 @@ export type LineEditorEvents<ViewMessage> = Readonly<{
   remove: ViewMessage
   undo: ViewMessage
   follow: Mount.MountAction<ViewMessage>
+  // Opens the editor, which reads the clip's audio.
+  open: ViewMessage
 }>
 
 const buttonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink hover:border-accent disabled:border-line disabled:text-muted focus-ring`
@@ -372,12 +374,59 @@ const alertText = (editor: LineEditor): string =>
       ? `The clip could not be opened to change its lines. ${editor.waveform.reason} Its lines can still be copied.`
       : ''
 
+// The editor shut, as a level opens: opening it decodes the whole clip,
+// which a level opened to practise never needs.
+const closedEditorView = <ViewMessage>(
+  clip: LevelClip,
+  events: LineEditorEvents<ViewMessage>,
+  h: HtmlBuilder<ViewMessage>,
+): Html =>
+  h.section(
+    [
+      h.Id(lineEditorId),
+      h.Tabindex(-1),
+      h.AriaLabelledBy('line-editor-heading'),
+      h.Class(
+        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-4 focus:outline-none sm:p-6',
+      ),
+    ],
+    [
+      h.div(
+        [h.Class('flex flex-col gap-1')],
+        [
+          h.h2(
+            [h.Id('line-editor-heading'), h.Class('text-xl font-bold')],
+            ['Fix the lines'],
+          ),
+          h.p(
+            [h.Class('text-base text-muted')],
+            [
+              `Move a line’s edges, or split, merge or delete lines, if the cut missed. Opening the editor reads all ${clip.lines.length === 1 ? 'of the clip' : `${clip.lines.length} lines of the clip`}, which takes a moment on a long one.`,
+            ],
+          ),
+        ],
+      ),
+      h.div(
+        [],
+        [
+          h.button(
+            [h.Type('button'), h.OnClick(events.open), h.Class(buttonClass)],
+            ['Open the line editor'],
+          ),
+        ],
+      ),
+    ],
+  )
+
 export const lineEditorView = <ViewMessage>(
   clip: LevelClip,
   editor: LineEditor,
   events: LineEditorEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
+  if (editor.waveform._tag === 'Closed') {
+    return closedEditorView(clip, events, h)
+  }
   const index = selectedIndexOf(clip, editor)
   const line = clip.lines[index]
   const before = clip.lines[index - 1]

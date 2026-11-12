@@ -1,18 +1,10 @@
 import { Option } from 'effect'
-import { Mount, expect, given, inside, role, scene, text } from 'foldkit/scene'
+import { expect, given, inside, role, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
 import { bundledClips } from '../line/lines'
-import {
-  AppRoute,
-  Message,
-  type Model,
-  initialModel,
-  update,
-  view,
-} from '../main'
+import { AppRoute, type Model, initialModel, update, view } from '../main'
 import { initialEditor } from './editor'
-import { FollowLineEditorPointer } from './editorPointer'
 import {
   DeleteState,
   type LevelClip,
@@ -40,11 +32,6 @@ const onLevel = (clip: LevelClip, stars: LevelStars): Model => ({
 })
 
 const bundled = levelClipOfBundled(bundledClips[0]!)
-
-const pointerFollowed = Mount.resolve(
-  FollowLineEditorPointer,
-  Message.CompletedFollowLineEditorPointer(),
-)
 
 describe('a level’s stars', () => {
   test('the bundled clip is a level: its line with its stars, no editor and nothing to delete', () => {
@@ -100,7 +87,6 @@ describe('a level’s stars', () => {
           }),
         ),
       ),
-      pointerFollowed,
       expect(role('heading', { name: '4 of 9 stars' })).toExist(),
       inside(
         role('link', { name: /^Line 1,/ }),
@@ -118,7 +104,6 @@ describe('a level’s stars', () => {
     scene(
       { update, view },
       given(onLevel(sampleClip(3), LevelStars.Loading())),
-      pointerFollowed,
       expect(role('img', { name: /of 3 stars$/ })).toBeAbsent(),
     )
     scene(
@@ -129,7 +114,6 @@ describe('a level’s stars', () => {
           LevelStars.Failed({ reason: 'The disk is busy.' }),
         ),
       ),
-      pointerFollowed,
       expect(role('alert')).toHaveText(
         'Your stars could not be read. The disk is busy.',
       ),

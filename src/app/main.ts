@@ -314,6 +314,7 @@ export const update = (model: Model, message: Message) =>
       EditorUpdate.selectedLevelLine(model, lineId, false),
     ClickedEditLevelLine: ({ lineId }) =>
       EditorUpdate.selectedLevelLine(model, lineId, true),
+    ClickedOpenLineEditor: () => EditorUpdate.clickedOpenLineEditor(model),
     ClickedPlayLevelLine: () => EditorUpdate.clickedPlayLevelLine(model),
     ClickedStopLevelLine: () => EditorUpdate.clickedStopLevelLine(model),
     MovedLevelPlayhead: ({ playNumber, seconds }) =>
@@ -697,6 +698,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
             remove: Message.ClickedDeleteLine(),
             undo: Message.ClickedUndoLineChange(),
             follow: FollowLineEditorPointer(),
+            open: Message.ClickedOpenLineEditor(),
           },
           deleteClip: Message.ClickedDeleteClip(),
           keepClip: Message.ClickedKeepClip(),

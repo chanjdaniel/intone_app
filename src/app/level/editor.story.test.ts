@@ -23,6 +23,7 @@ import {
   LevelStars,
   levelClipOf,
 } from './level'
+import { levelResources } from './resources'
 
 // The line editor's Model (ticket 14): an edge dragged or stepped by key
 // is a draft until it is let go or the keys rest; a split, a merge and a
@@ -646,10 +647,56 @@ describe('playing a line', () => {
       ),
       message(Message.ReleasedClipEditor()),
       model(current =>
-        expect(editorOf(current).waveform).toStrictEqual(
-          ClipWaveform.Opening(),
-        ),
+        expect(editorOf(current).waveform).toStrictEqual(ClipWaveform.Closed()),
       ),
+    )
+  })
+})
+
+describe('opening the editor', () => {
+  const shut = (): Model => {
+    const level = onLevel()
+    if (level.level._tag !== 'Ready') {
+      throw new Error('The level is not open.')
+    }
+    return {
+      ...level,
+      level: {
+        ...level.level,
+        editor: initialEditor(level.level.clip),
+      },
+    }
+  }
+  const needsClip = (current: Model) =>
+    Option.isSome(levelResources.clipEditor.modelToMaybeRequirements(current))
+
+  test('an upload’s level holds no clip until the editor is opened, so a level opened to practise decodes nothing', () => {
+    story(
+      update,
+      given(shut()),
+      model(current => {
+        expect(editorOf(current).waveform).toStrictEqual(ClipWaveform.Closed())
+        expect(needsClip(current)).toBe(false)
+      }),
+      message(Message.ClickedOpenLineEditor()),
+      Command.resolve(FocusLineEditor, Message.CompletedFocusLineEditor()),
+      model(current => {
+        expect(editorOf(current).waveform).toStrictEqual(ClipWaveform.Opening())
+        expect(needsClip(current)).toBe(true)
+      }),
+    )
+  })
+
+  test('fixing a line from the list opens the editor at that line', () => {
+    story(
+      update,
+      given(shut()),
+      message(Message.ClickedEditLevelLine({ lineId: '2' })),
+      Command.resolve(FocusLineEditor, Message.CompletedFocusLineEditor()),
+      model(current => {
+        expect(editorOf(current).selectedId).toBe('2')
+        expect(needsClip(current)).toBe(true)
+      }),
     )
   })
 })

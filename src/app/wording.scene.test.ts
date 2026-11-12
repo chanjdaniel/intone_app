@@ -407,7 +407,11 @@ describe('the wording', () => {
     maybeUndo: Option.some({ kind: 'Split', lineNumber: 2 }),
   }
   const editorStates: ReadonlyArray<readonly [string, LineEditor]> = [
-    ['opening', initialEditor(editing)],
+    ['shut', initialEditor(editing)],
+    [
+      'opening',
+      { ...initialEditor(editing), waveform: ClipWaveform.Opening() },
+    ],
     [
       'held, line 3',
       {
@@ -457,10 +461,14 @@ describe('the wording', () => {
             editor,
           }),
         }),
-        Mount.resolve(
-          FollowLineEditorPointer,
-          Message.CompletedFollowLineEditorPointer(),
-        ),
+        ...(editor.waveform._tag === 'Closed'
+          ? []
+          : [
+              Mount.resolve(
+                FollowLineEditorPointer,
+                Message.CompletedFollowLineEditorPointer(),
+              ),
+            ]),
         expect(text(/accura/i)).toBeAbsent(),
         expect(text(/\b(in)?correct/i)).toBeAbsent(),
         expect(text(gamified)).toBeAbsent(),

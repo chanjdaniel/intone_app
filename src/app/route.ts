@@ -69,10 +69,7 @@ export const settingsRouter = pipe(
   Route.mapTo(AppRoute.Settings),
 )
 
-const devLibraryRouter = pipe(
-  literal('dev'),
-  Route.mapTo(AppRoute.DevLibrary),
-)
+const devLibraryRouter = pipe(literal('dev'), Route.mapTo(AppRoute.DevLibrary))
 
 const devEntryRouter = pipe(
   literal('dev'),
