@@ -203,6 +203,10 @@ for (const voice of voiceNames) {
     const browser = await launch(playwright, wavOf(voice))
     try {
       await withPage(browser, async ({ page, requests, problems }) => {
+        // The microphone logs what the browser gave for the constraints it
+        // asked, which are best effort.
+        const logged: Array<string> = []
+        page.on('console', message => logged.push(message.text()))
         await openLine(page)
         const beforeTake = requests.length
         // The voice ends 1.9 s into the file; by 4 s its last frames are
@@ -215,6 +219,9 @@ for (const voice of voiceNames) {
         ).toBeVisible({ timeout: 30_000 })
         // Released on stop.
         expect(await trackStates(page)).toStrictEqual(['ended'])
+        const opened = logged.find(text => text.includes('Microphone opened'))
+        expect(opened, 'the microphone logs its settings').toBeDefined()
+        expect(opened).toMatch(/echoCancellation/)
 
         // Crisp: two device pixels behind each CSS pixel.
         expect(drawn.backing).toStrictEqual({
