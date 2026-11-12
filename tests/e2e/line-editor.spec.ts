@@ -209,6 +209,13 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         }
         const middle = (first.from + first.to) / 2
         const { xOf, box } = await windowOf(page)
+        // A right click is not a press: the playhead stays.
+        const playhead = page.getByRole('slider', { name: /^Playhead/ })
+        const playheadBefore = await valueOf(playhead)
+        await page.mouse.click(xOf(middle), box.y + box.height * 0.25, {
+          button: 'right',
+        })
+        expect(await valueOf(playhead)).toBe(playheadBefore)
         await page.mouse.click(xOf(middle), box.y + box.height * 0.25)
         await page.getByRole('button', { name: /^Split at / }).click()
         await kept(page, /^Line 1 is split at .*, into lines 1 and 2\.$/)
@@ -217,6 +224,16 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
           page.getByRole('slider', { name: 'End of Line 1' }),
         )
         expect(splitAt).toBeCloseTo(middle, 1)
+        // Pressing the other line's band selects it, in the window the
+        // shorter line 1 now shows.
+        const split = await windowOf(page)
+        await page.mouse.click(
+          split.xOf((splitAt + first.to) / 2),
+          split.box.y + split.box.height * 0.25,
+        )
+        await expect(
+          page.getByText('Line 2 of', { exact: false }),
+        ).toBeVisible()
         await report(testInfo, 'changes', {
           lines,
           endBefore,
