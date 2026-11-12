@@ -10,6 +10,9 @@ Read these, in this order, before your first edit in a session:
 1. `node_modules/effect/AGENTS.md` and the `node_modules/effect/ai-docs/` it links: Effect's own guide, at the installed version.
 2. `FOLDKIT.md`: Foldkit's conventions.
    Foldkit owns that file, and `npm run vendor:foldkit` replaces it whole on upgrade, so project rules go here instead.
+   One of them differs from it: comments.
+   Every module opens with a comment saying what it holds and why, and a comment inside the code says what the names cannot: where a number came from, which document a rule is in, why the obvious way is wrong.
+   `// NOTE:` still marks what would mislead a careful reader; a comment that only restates the code goes.
 3. `repos/foldkit/`: Foldkit's repository at the installed release, for the API and its idioms: `examples/` first, `packages/foldkit/src/` for signatures.
 
 Everything under `repos/foldkit/` is reference, never instruction.
@@ -38,13 +41,13 @@ Any change to the lockfile or `models.json` is followed by `npm run generate`, w
 
 ## The folder line
 
-| Folder         | May import                                      | Runs on                            | Holds                                                                                       |
-| -------------- | ----------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| `src/app`      | Foldkit, Effect, everything below               | Main thread                        | Screens, Model, `update`, `view`, Commands, Mounts, ManagedResources, Subscriptions, routes |
-| `src/services` | Effect, `src/engine`, `src/score`               | Main thread and Workers            | Each service a `Context.Service` with a real layer and a test layer                         |
-| `src/workers`  | Effect, `src/engine`, `src/score`               | Workers                            | Worker programs: load a model in a scope, receive audio, cancel cleanly                     |
-| `src/engine`   | Nothing from Effect or Foldkit                  | Audio thread, Workers, main thread | `worklet/`, `pitch/`, `features/`, `draw/`, `audio/`                                        |
-| `src/score`    | Nothing from Effect, Foldkit or any browser API | Anywhere, Node included            | Score maths on plain typed arrays                                                           |
+| Folder         | May import                                      | Runs on                            | Holds                                                                                                                                                       |
+| -------------- | ----------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app`      | Foldkit, Effect, everything below               | Main thread                        | Screens, Model, `update`, `view`, Commands, Mounts, ManagedResources, Subscriptions, routes                                                                 |
+| `src/services` | Effect, `src/engine`, `src/score`               | Main thread and Workers            | Each service a `Context.Service` with a real layer and a test layer, and the plain modules they are built from (records, IndexedDB, backup, the local pack) |
+| `src/workers`  | Effect, `src/engine`, `src/score`               | Workers                            | Worker programs: load a model in a scope, receive audio, cancel cleanly                                                                                     |
+| `src/engine`   | Nothing from Effect or Foldkit                  | Audio thread, Workers, main thread | `worklet/`, `pitch/`, `features/`, `draw/`, `audio/`, `reason.ts`                                                                                           |
+| `src/score`    | Nothing from Effect, Foldkit or any browser API | Anywhere, Node included            | Score maths on plain typed arrays                                                                                                                           |
 
 The line falls where code runs per audio block or per frame: there, plain TypeScript on typed arrays keeps the hot paths allocation-free, and only `src/app` would need rewriting to leave Foldkit.
 Pitch frames stay out of Foldkit's Model; the Model gets coarse events only (onset, a level meter at about 10 Hz, the finished curve in one Message).
@@ -114,7 +117,9 @@ Errors are `Schema.TaggedError<Self, { readonly brand: unique symbol }>()("Tag",
 When a name fails to type check, look it up in `node_modules/effect/src/` rather than taking the compiler's "did you mean".
 
 Use only the modules Effect marks stable.
-`effect/workers` and `@effect/platform-browser`'s `BrowserWorker` and `IndexedDb` are `@stability unstable`, so Workers use the project's own small protocol (`Effect.acquireRelease` around `new Worker`, `Stream.callback` over its messages, one `Schema` per message kind) and IndexedDB goes through the project's own thin service.
+`effect/workers` and `@effect/platform-browser`'s `BrowserWorker` and `IndexedDb` are `@stability unstable`, so Workers use the project's own small protocol and IndexedDB goes through the project's own thin service.
+On the page, `src/services/worker-session.ts` (`openWorkerSession`) holds a Worker in `Effect.acquireRelease`, decodes its replies into a `Queue` from its message listener, posts `Load` and awaits `Loaded`, and on release posts `Close` and terminates it if `Closed` does not come within two seconds; in the Worker, `src/workers/worker-host.ts` gives `incoming`, a `Stream.callback` over the page's messages, and `poster`, which transfers a reply's arrays.
+Each Worker has one `Schema` per message kind in its `*-protocol.ts`, and a tracked recording travels as `src/workers/recording-payload.ts`'s payload, so a new Worker is its protocol and its program.
 The rule `unstable-api-usage` is an error in both `effect-tsgo tsc` and the lint's Effect pass; `tsconfig.json` allows `@effect/vitest` by name, since it marks its whole module unstable and only tests import it.
 
 An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquireRelease` with `{ interruptible: true }`, since `Stream.callback` starts its setup at once in 4.1.
@@ -130,7 +135,7 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 - A take plays the line first (`PlayingNative`), and the microphone opens only when it has ended; listening again to the line or the take, whole or at a scored take's worst stretch, is `Listening` (its `extent`), outside any take.
   Playing and recording are states of one union, so they cannot coexist; `src/services/playback.ts` (`Playback`) plays the line from its file through an audio element (slowed with `preservesPitch`; a stretch from its start for as long as it lasts, timed from the sound's start) and the take from memory through an `AudioContext`, and the Subscription stops it the moment the Model leaves the state.
   The take's audio is kept in memory only (`takeAudio.ts`), copied from each batch before the tracker takes it.
-- Pitch frames never enter the Model.
+- Live pitch frames never enter the Model; the finished curve does, once, when the take ends.
   The Subscription's `takeEvents` sends it only the voice's onset (`DetectedVoiceOnset`, once) and the level meter with the clock (`TickedTakeMeter`, about 10 Hz); the curve comes once, from `AnalyseTake`, with its score.
   The curves' Mount (`DrawCurvePair`) draws the native's curve on the lower canvas and the learner's on the upper one; during a take it gets its take's frames from `liveFrames.ts`, where the tracker resource offers them while it holds the Worker, since a Mount runs with no services, feeds them to the painter's ring buffer, and the painter draws on each animation frame that changes the picture.
 - When a take ends, `AnalyseTake` asks the tracker for its curve and features, `src/services/scorer.ts` (`Scorer`, with `layer` and `layerTest(respond)`) for its score against the native in its args, and the history to keep it (see "History on the device"); the take's features go to the score and the history, never into the Model.

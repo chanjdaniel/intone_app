@@ -8,12 +8,8 @@ import {
   sileroStateSize,
   sileroWindow,
 } from '../engine/cut/silero'
-import {
-  type ModelLoadError,
-  ModelRunError,
-  openSession,
-  reasonOf,
-} from './onnx-session'
+import { reasonOf } from '../engine/reason'
+import { type ModelLoadError, ModelRunError, openSession } from './onnx-session'
 
 // Silero VAD in ONNX Runtime Web, its session held in a scope that
 // releases it on close (./onnx-session.ts): `input` (the window with its

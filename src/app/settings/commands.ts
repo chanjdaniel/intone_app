@@ -1,6 +1,7 @@
 import { Clock, Effect, Option, Schema } from 'effect'
 import { Calendar, Command, File } from 'foldkit'
 
+import { reasonOf } from '../../engine/reason'
 import { clipHasAudio } from '../../services/history-records'
 import { HistoryError, HistoryStore } from '../../services/history-store'
 import { isoDayOf } from '../history/format'
@@ -12,9 +13,6 @@ import type { Browser, Persistence, StorageFacts } from './settings'
 // storage promises, the kept-audio setting, the backup file, and
 // clearing everything. Nothing here sends anything anywhere: the backup
 // is a file the learner saves.
-
-const reasonOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
 
 // Safari, by its user agent: WebKit's own, without another browser's
 // name; on an iPhone or iPad every browser is WebKit, and only Safari

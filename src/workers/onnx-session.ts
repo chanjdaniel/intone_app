@@ -1,6 +1,8 @@
 import { Effect, Schema, type Scope } from 'effect'
 import * as ort from 'onnxruntime-web/wasm'
 
+import { reasonOf } from '../engine/reason'
+
 // One ONNX Runtime Web session, on one thread, held in a scope that
 // releases it, and its WebAssembly memory with it, on close. The tracker
 // and the clip Worker open their models through it.
@@ -14,9 +16,6 @@ export class ModelRunError extends Schema.TaggedError<
   ModelRunError,
   { readonly brand: unique symbol }
 >()('ModelRunError', { reason: Schema.String }) {}
-
-export const reasonOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
 
 // `wasmPaths` is where ONNX Runtime's WebAssembly is served from, the
 // app's own origin (`onnxRuntimeWasmPaths`); without it, ONNX Runtime's

@@ -1,10 +1,14 @@
 import { Schema } from 'effect'
 
+import {
+  Samples,
+  payloadTransferables,
+  recordingPayloadFields,
+} from './recording-payload'
+
 // The tracker Worker's protocol: one Schema per message kind, decoded at
 // the boundary once per message, so once per 20 ms batch and never per
 // sample. Sample and curve arrays travel transferred, never copied.
-
-const Samples = Schema.instanceOf(Float32Array<ArrayBufferLike>)
 
 // TO THE WORKER
 
@@ -44,19 +48,12 @@ export const Frames = Schema.TaggedStruct('Frames', {
 // The take's last frames have been sent: its curve follows.
 export const FramesEnded = Schema.TaggedStruct('FramesEnded', {})
 
-// The finished take: its curve, and the spectral features of the same
-// audio on the same frames, for the score's aligner (`featureDims` values
-// per frame, frame by frame).
+// The finished take, as a recording payload (./recording-payload.ts),
+// with its loudness.
 export const Tracked = Schema.TaggedStruct('Tracked', {
-  frameHz: Schema.Finite,
-  f0Hz: Samples,
-  confidence: Samples,
-  levelDb: Samples,
-  onsetFrame: Schema.Finite,
+  ...recordingPayloadFields,
   peakDb: Schema.Finite,
   gainDb: Schema.Finite,
-  featureDims: Schema.Finite,
-  features: Samples,
 })
 
 export const TooQuiet = Schema.TaggedStruct('TooQuiet', {
@@ -101,12 +98,7 @@ export const transferables = (
     return [message.f0Hz.buffer]
   }
   if (message._tag === 'Tracked') {
-    return [
-      message.f0Hz.buffer,
-      message.confidence.buffer,
-      message.levelDb.buffer,
-      message.features.buffer,
-    ]
+    return payloadTransferables(message)
   }
   return []
 }

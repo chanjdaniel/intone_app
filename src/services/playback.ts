@@ -1,5 +1,7 @@
 import { Context, Duration, Effect, Layer, Schedule, Schema } from 'effect'
 
+import { reasonOf } from '../engine/reason'
+
 // Playing a voice back: the native line from its file, at its own speed
 // or slowed without changing its pitch, and the learner's take from the
 // samples kept in memory, each whole or one stretch of it. Each play
@@ -30,9 +32,6 @@ export type MediaElement = Pick<
   defaultPlaybackRate: number
   preservesPitch: boolean
 }
-
-const reasonOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
 
 // How often a play says where it has got to, when asked.
 export const heardEvery = Duration.millis(50)

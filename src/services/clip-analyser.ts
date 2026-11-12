@@ -3,7 +3,6 @@ import {
   Duration,
   Effect,
   Layer,
-  Queue,
   Schema,
   type Scope,
   Stream,
@@ -19,6 +18,8 @@ import {
   type ToClip,
   transferables,
 } from '../workers/clip-protocol'
+import { recordingOfPayload } from '../workers/recording-payload'
+import { type WorkerPort, openWorkerSession } from './worker-session'
 
 // An audio file the learner brings, made into a clip's lines: its length
 // read first, from the file's own header where the browser can, so a clip
@@ -96,10 +97,7 @@ export type ClipEvent =
     }>
 
 // The parts of the browser the analyser uses, so tests can stand them in.
-export type ClipWorker = Pick<
-  Worker,
-  'postMessage' | 'addEventListener' | 'removeEventListener' | 'terminate'
->
+export type ClipWorker = WorkerPort
 
 export type ClipBrowser = Readonly<{
   // The file's length in seconds from its header, null when the browser
@@ -115,14 +113,8 @@ export type ClipBrowser = Readonly<{
   }>
 }>
 
-const reasonOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
-
 const failed = (failure: ClipFailure, reason: string) =>
   new ClipAnalyserError({ failure, reason })
-
-// How long a released Worker has to stop before it is terminated anyway.
-const closeGrace = Duration.seconds(2)
 
 // How long the browser may take to read a file's header.
 const probeTimeout = Duration.seconds(20)
@@ -143,20 +135,7 @@ const recordingOfLine = (curve: CutLine['curve']): AnalysedLine['native'] =>
     ? {
         _tag: 'Tracked',
         quality: curve.quality,
-        recording: {
-          curve: {
-            frameHz: curve.frameHz,
-            f0Hz: curve.f0Hz,
-            confidence: curve.confidence,
-            levelDb: curve.levelDb,
-            onsetFrame: curve.onsetFrame,
-          },
-          features: {
-            frameHz: curve.frameHz,
-            dims: curve.featureDims,
-            data: curve.features,
-          },
-        },
+        recording: recordingOfPayload(curve),
       }
     : curve
 
@@ -183,85 +162,26 @@ export const openClipWorker = (
   assets: ClipBrowser['assets'],
 ): Effect.Effect<ClipWorkerSession, ClipAnalyserError, Scope.Scope> =>
   Effect.gen(function* () {
-    const replies = yield* Queue.unbounded<FromClip>()
-    const decode = Schema.decodeUnknownExit(FromClip)
-    const onMessage = (event: MessageEvent): void => {
-      const decoded = decode(event.data)
-      Queue.offerUnsafe(
-        replies,
-        decoded._tag === 'Success'
-          ? decoded.value
-          : {
-              _tag: 'Failed',
-              reason: 'The clip analyser sent a message it should not have.',
-            },
-      )
-    }
-    const onError = (event: Event): void => {
-      Queue.offerUnsafe(replies, {
-        _tag: 'Failed',
-        reason:
-          event instanceof ErrorEvent && event.message !== ''
-            ? `The clip analyser stopped: ${event.message}`
-            : 'The clip analyser stopped.',
-      })
-    }
-    const post = (message: ToClip): Effect.Effect<void> =>
-      Effect.sync(() => {
-        worker.postMessage(message, [...transferables(message)])
-      })
-
-    const worker = yield* Effect.acquireRelease(
-      Effect.try({
-        try: () => {
-          const created = makeWorker()
-          created.addEventListener('message', onMessage)
-          created.addEventListener('error', onError)
-          created.addEventListener('messageerror', onError)
-          return created
-        },
-        catch: error => failed('Failed', reasonOf(error)),
-      }),
-      created =>
-        Effect.gen(function* () {
-          created.postMessage({ _tag: 'Close' })
-          yield* Queue.take(replies).pipe(
-            Effect.repeat({ until: reply => reply._tag === 'Closed' }),
-            Effect.timeout(closeGrace),
-            Effect.ignore,
-          )
-          created.removeEventListener('message', onMessage)
-          created.removeEventListener('error', onError)
-          created.removeEventListener('messageerror', onError)
-          created.terminate()
-        }),
-    )
-
-    yield* post({ _tag: 'Load', ...assets })
-    const loaded = yield* Queue.take(replies)
-    if (loaded._tag !== 'Loaded') {
-      return yield* failed(
-        'Failed',
-        loaded._tag === 'Failed'
-          ? loaded.reason
-          : `The clip analyser answered ${loaded._tag} out of turn.`,
-      )
-    }
-
-    const outOfTurn = (reply: FromClip) =>
-      failed(
-        'Failed',
-        reply._tag === 'Failed'
-          ? reply.reason
-          : `The clip analyser answered ${reply._tag} out of turn.`,
-      )
+    const session = yield* openWorkerSession({
+      name: 'The clip analyser',
+      makeWorker,
+      replies: FromClip,
+      transferables: (request: ToClip) => transferables(request),
+      load: { _tag: 'Load', ...assets },
+      close: { _tag: 'Close' },
+      fail: reason => failed('Failed', reason),
+    })
 
     const hold = (samples: Float32Array) =>
-      Effect.gen(function* () {
-        yield* post({ _tag: 'Hold', samples })
-        const reply = yield* Queue.take(replies)
-        return reply._tag === 'Held' ? reply.peaks : yield* outOfTurn(reply)
-      })
+      session
+        .post({ _tag: 'Hold', samples })
+        .pipe(
+          Effect.andThen(
+            session.reply(reply =>
+              reply._tag === 'Held' ? reply.peaks : undefined,
+            ),
+          ),
+        )
 
     const requests = { made: 0 }
     const track = (
@@ -270,7 +190,7 @@ export const openClipWorker = (
       Effect.gen(function* () {
         requests.made += 1
         const request = requests.made
-        yield* post({
+        yield* session.post({
           _tag: 'Track',
           request,
           spans: spans.map(span => ({
@@ -278,21 +198,33 @@ export const openClipWorker = (
             to: Math.round(span.to * clipSampleRate),
           })),
         })
-        const reply = yield* Queue.take(replies).pipe(
-          Effect.repeat({
-            until: answer =>
-              answer._tag !== 'TrackDone' || answer.request === request,
-          }),
-        )
-        return reply._tag === 'TrackDone'
-          ? reply.lines.map(analysedLineOf)
-          : yield* outOfTurn(reply)
+        // An earlier request's answer, one the learner moved on from, is
+        // passed over.
+        const answer = (): Effect.Effect<
+          ReadonlyArray<AnalysedLine>,
+          ClipAnalyserError
+        > =>
+          session
+            .reply<ReadonlyArray<AnalysedLine> | null>(reply =>
+              reply._tag === 'TrackDone'
+                ? reply.request === request
+                  ? reply.lines.map(analysedLineOf)
+                  : null
+                : undefined,
+            )
+            .pipe(
+              Effect.filterOrElse(
+                (lines): lines is ReadonlyArray<AnalysedLine> => lines !== null,
+                answer,
+              ),
+            )
+        return yield* answer()
       })
 
     const cut = (samples: Float32Array) => {
       const seconds = samples.length / clipSampleRate
-      return Stream.fromEffect(post({ _tag: 'Cut', samples })).pipe(
-        Stream.flatMap(() => Stream.fromQueue(replies)),
+      return Stream.fromEffect(session.post({ _tag: 'Cut', samples })).pipe(
+        Stream.flatMap(() => Stream.fromEffectRepeat(session.next)),
         Stream.takeUntil(
           reply => reply._tag === 'CutDone' || reply._tag === 'Failed',
         ),

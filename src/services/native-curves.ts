@@ -2,6 +2,7 @@ import { Context, Effect, Layer, Option, Schema } from 'effect'
 import { modelUrls } from 'virtual:intone/models'
 
 import { decodeWav } from '../engine/audio/wav'
+import { reasonOf } from '../engine/reason'
 import type { Recording } from '../score/score'
 import { CurveCache } from './curve-cache'
 import { Tracker, recordingOfTracked } from './tracker'
@@ -28,9 +29,6 @@ export const nativeTrackingVersion = 1
 
 export const cacheKeyOf = (line: NativeLine, trackerId: string): string =>
   JSON.stringify([nativeTrackingVersion, line.key, line.audioUrl, trackerId])
-
-const reasonOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
 
 // The line's file, fetched from the app's own origin and decoded to mono.
 export const fetchLineAudio = (

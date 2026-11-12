@@ -82,8 +82,9 @@ const setHeaders =
 const refuseMissing =
   (base: string): Middleware =>
   (request, response, next) => {
-    const asked = request as typeof request & { originalUrl?: string }
-    const path = (asked.originalUrl ?? request.url ?? '').split('?')[0] ?? ''
+    const original: unknown = Reflect.get(request, 'originalUrl')
+    const asked = typeof original === 'string' ? original : request.url
+    const path = (asked ?? '').split('?')[0] ?? ''
     if (cacheControlOf(path, base) === revalidated) {
       next()
       return

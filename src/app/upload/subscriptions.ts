@@ -1,6 +1,7 @@
 import { Clock, Effect, Fiber, Layer, Option, Schema, Stream } from 'effect'
 import { File, Subscription } from 'foldkit'
 
+import { reasonOf } from '../../engine/reason'
 import { ClipAnalyser, type ClipEvent } from '../../services/clip-analyser'
 import { HistoryStore } from '../../services/history-store'
 import { type PackEvent, importPack } from '../../services/local-pack'
@@ -24,9 +25,6 @@ const stepOf = (event: Exclude<ClipEvent, { _tag: 'Analysed' }>): UploadStep =>
       : event._tag === 'FindingLines'
         ? UploadStep.FindingLines({ done: event.done, total: event.total })
         : UploadStep.TrackingLines({ done: event.done, total: event.total })
-
-const reasonOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
 
 // Keeps the cut clip on the device: its file, read once more, and its
 // lines. It runs to its end once begun, so a cancel never leaves a file

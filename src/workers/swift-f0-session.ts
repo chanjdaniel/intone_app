@@ -2,12 +2,8 @@ import { Effect, type Scope } from 'effect'
 import * as ort from 'onnxruntime-web/wasm'
 
 import type { SwiftF0Inference } from '../engine/pitch/swift-f0'
-import {
-  type ModelLoadError,
-  ModelRunError,
-  openSession,
-  reasonOf,
-} from './onnx-session'
+import { reasonOf } from '../engine/reason'
+import { type ModelLoadError, ModelRunError, openSession } from './onnx-session'
 
 // SwiftF0 in ONNX Runtime Web, its session held in a scope that releases
 // it on close (./onnx-session.ts).

@@ -1,4 +1,4 @@
-import { Effect, Exit, Match, Queue, Schema, Scope, Stream } from 'effect'
+import { Effect, Exit, Match, Schema, Scope, Stream } from 'effect'
 
 import { spectralFeatures } from '../engine/features/spectral'
 import { type LiveTracker, createLiveTracker } from '../engine/pitch/live'
@@ -8,9 +8,12 @@ import {
   swiftF0SampleRate,
 } from '../engine/pitch/swift-f0'
 import { analyseTake } from '../engine/pitch/take'
+import { reasonOf } from '../engine/reason'
 import { fetchModel } from './onnx-session'
+import { payloadOf } from './recording-payload'
 import { openSwiftF0 } from './swift-f0-session'
 import { type FromTracker, ToTracker, transferables } from './tracker-protocol'
+import { incoming, poster } from './worker-host'
 
 // The tracker Worker: one take's audio in, its curve out. It loads SwiftF0
 // inside a scope on `Load` and learns the take's rate on `Start`. It
@@ -21,35 +24,12 @@ import { type FromTracker, ToTracker, transferables } from './tracker-protocol'
 // says `Closed` and closes itself. Tracking never runs on the main
 // thread.
 
-const post = (message: FromTracker): Effect.Effect<void> =>
-  Effect.sync(() => {
-    self.postMessage(message, { transfer: [...transferables(message)] })
-  })
-
-const reasonOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
+const post = poster<FromTracker>(transferables)
 
 class TrackError extends Schema.TaggedError<
   TrackError,
   { readonly brand: unique symbol }
 >()('TrackError', { reason: Schema.String }) {}
-
-// Every message the page sends, in order, until the Worker closes.
-const incoming = Stream.callback<unknown>(queue =>
-  Effect.acquireRelease(
-    Effect.sync(() => {
-      const listener = (event: MessageEvent): void => {
-        Queue.offerUnsafe(queue, event.data)
-      }
-      self.addEventListener('message', listener)
-      return listener
-    }),
-    listener =>
-      Effect.sync(() => {
-        self.removeEventListener('message', listener)
-      }),
-  ),
-)
 
 const concatenate = (parts: ReadonlyArray<Float32Array>): Float32Array => {
   const whole = new Float32Array(
@@ -135,15 +115,9 @@ const program = Effect.gen(function* () {
       const features = spectralFeatures(samples)
       return yield* post({
         _tag: 'Tracked',
-        frameHz: analysis.curve.frameHz,
-        f0Hz: analysis.curve.f0Hz,
-        confidence: analysis.curve.confidence,
-        levelDb: analysis.curve.levelDb,
-        onsetFrame: analysis.curve.onsetFrame,
+        ...payloadOf(analysis.curve, features),
         peakDb: analysis.peakDb,
         gainDb: analysis.gainDb,
-        featureDims: features.dims,
-        features: features.data,
       })
     }
     return yield* post(analysis)

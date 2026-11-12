@@ -1,11 +1,9 @@
 import {
   Context,
-  Duration,
   Effect,
   Exit,
   Layer,
   PubSub,
-  Queue,
   Schema,
   type Scope,
   Stream,
@@ -16,12 +14,14 @@ import { onnxRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'
 
 import type { LiveFrames } from '../engine/pitch/live'
 import type { Recording } from '../score/score'
+import { recordingOfPayload } from '../workers/recording-payload'
 import {
   FromTracker,
   type ToTracker,
   type TrackerResult,
   transferables,
 } from '../workers/tracker-protocol'
+import { type WorkerPort, openWorkerSession } from './worker-session'
 
 // The tracker during a take: its Worker, with SwiftF0 loaded, from before
 // the microphone opens until the take's curve is back. While the take
@@ -35,20 +35,7 @@ export type { TrackerResult } from '../workers/tracker-protocol'
 // A tracked recording's curve and features, as the score reads them.
 export const recordingOfTracked = (
   tracked: Extract<TrackerResult, { _tag: 'Tracked' }>,
-): Recording => ({
-  curve: {
-    frameHz: tracked.frameHz,
-    f0Hz: tracked.f0Hz,
-    confidence: tracked.confidence,
-    levelDb: tracked.levelDb,
-    onsetFrame: tracked.onsetFrame,
-  },
-  features: {
-    frameHz: tracked.frameHz,
-    dims: tracked.featureDims,
-    data: tracked.features,
-  },
-})
+): Recording => recordingOfPayload(tracked)
 
 export class TrackerError extends Schema.TaggedError<
   TrackerError,
@@ -69,145 +56,74 @@ export type TrackerSession = Readonly<{
 }>
 
 // The part of a Worker the tracker uses, so tests can stand one in.
-export type TrackerWorker = Pick<
-  Worker,
-  'postMessage' | 'addEventListener' | 'removeEventListener' | 'terminate'
->
+export type TrackerWorker = WorkerPort
 
 export type TrackerAssets = Readonly<{ modelUrl: string; wasmPaths: string }>
-
-// How long a released Worker has to free its model before it is
-// terminated anyway.
-const closeGrace = Duration.seconds(2)
 
 // The frame messages kept for a subscriber that comes late: every one of
 // a take of 80 s, one per 20 ms batch, past the longest take.
 const framesReplay = 4096
-
-const reasonOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
 
 export const openTrackerWorker = (
   makeWorker: () => TrackerWorker,
   assets: TrackerAssets,
 ): Effect.Effect<TrackerSession, TrackerError, Scope.Scope> =>
   Effect.gen(function* () {
-    const replies = yield* Queue.unbounded<FromTracker>()
     const liveFrames = yield* PubSub.unbounded<Take.Take<LiveFrames>>({
       replay: framesReplay,
     })
     const endFrames = (): void => {
       PubSub.endUnsafe(liveFrames, Exit.void)
     }
-    const decode = Schema.decodeUnknownExit(FromTracker)
-    const onMessage = (event: MessageEvent): void => {
-      Exit.match(decode(event.data), {
-        onSuccess: reply => {
-          if (reply._tag === 'Frames') {
-            PubSub.publishUnsafe(liveFrames, [
-              { firstFrame: reply.firstFrame, f0Hz: reply.f0Hz },
-            ])
-            return
-          }
-          if (reply._tag === 'FramesEnded') {
-            endFrames()
-            return
-          }
-          if (reply._tag !== 'Loaded') {
-            endFrames()
-          }
-          Queue.offerUnsafe(replies, reply)
-        },
-        onFailure: () => {
-          endFrames()
-          Queue.offerUnsafe(replies, {
-            _tag: 'Failed',
-            reason: 'The tracker sent a message it should not have.',
-          })
-        },
-      })
-    }
-    const onError = (event: Event): void => {
-      endFrames()
-      Queue.offerUnsafe(replies, {
-        _tag: 'Failed',
-        reason:
-          event instanceof ErrorEvent && event.message !== ''
-            ? `The tracker stopped: ${event.message}`
-            : 'The tracker stopped.',
-      })
-    }
-
-    const post = (message: ToTracker): Effect.Effect<void> =>
-      Effect.sync(() => {
-        worker.postMessage(message, [...transferables(message)])
-      })
-
-    const nextReply = <A>(
-      accept: (reply: FromTracker) => A | undefined,
-    ): Effect.Effect<A, TrackerError> =>
-      Effect.gen(function* () {
-        const reply = yield* Queue.take(replies)
-        const accepted = accept(reply)
-        if (accepted !== undefined) {
-          return accepted
+    const session = yield* openWorkerSession({
+      name: 'The tracker',
+      makeWorker,
+      replies: FromTracker,
+      transferables: (request: ToTracker) => transferables(request),
+      load: {
+        _tag: 'Load',
+        modelUrl: assets.modelUrl,
+        wasmPaths: assets.wasmPaths,
+      },
+      close: { _tag: 'Close' },
+      fail: reason => new TrackerError({ reason }),
+      // Frames go to the live curve as they come, never to the queue; any
+      // reply but these and Loaded means no more frames are coming.
+      route: reply => {
+        if (reply._tag === 'Frames') {
+          PubSub.publishUnsafe(liveFrames, [
+            { firstFrame: reply.firstFrame, f0Hz: reply.f0Hz },
+          ])
+          return true
         }
-        return yield* new TrackerError({
-          reason:
-            reply._tag === 'Failed'
-              ? reply.reason
-              : `The tracker answered ${reply._tag} out of turn.`,
-        })
-      })
-
-    const worker = yield* Effect.acquireRelease(
-      Effect.try({
-        try: () => {
-          const created = makeWorker()
-          created.addEventListener('message', onMessage)
-          created.addEventListener('error', onError)
-          created.addEventListener('messageerror', onError)
-          return created
-        },
-        catch: error => new TrackerError({ reason: reasonOf(error) }),
-      }),
-      created =>
-        Effect.gen(function* () {
+        if (reply._tag === 'FramesEnded') {
           endFrames()
-          created.postMessage({ _tag: 'Close' })
-          yield* Queue.take(replies).pipe(
-            Effect.repeat({ until: reply => reply._tag === 'Closed' }),
-            Effect.timeout(closeGrace),
-            Effect.ignore,
-          )
-          created.removeEventListener('message', onMessage)
-          created.removeEventListener('error', onError)
-          created.removeEventListener('messageerror', onError)
-          created.terminate()
-        }),
-    )
-
-    yield* post({
-      _tag: 'Load',
-      modelUrl: assets.modelUrl,
-      wasmPaths: assets.wasmPaths,
+          return true
+        }
+        if (reply._tag !== 'Loaded') {
+          endFrames()
+        }
+        return false
+      },
+      onStop: endFrames,
     })
-    yield* nextReply(reply => (reply._tag === 'Loaded' ? true : undefined))
 
     return {
-      start: sampleRate => post({ _tag: 'Start', sampleRate }),
-      push: samples => post({ _tag: 'Batch', samples }),
-      finish: post({ _tag: 'Finish' }).pipe(
-        Effect.andThen(
-          nextReply<TrackerResult>(reply =>
-            reply._tag === 'Tracked' ||
-            reply._tag === 'TooQuiet' ||
-            reply._tag === 'TooNoisy'
-              ? reply
-              : undefined,
+      start: sampleRate => session.post({ _tag: 'Start', sampleRate }),
+      push: samples => session.post({ _tag: 'Batch', samples }),
+      finish: session
+        .post({ _tag: 'Finish' })
+        .pipe(
+          Effect.andThen(
+            session.reply<TrackerResult>(reply =>
+              reply._tag === 'Tracked' ||
+              reply._tag === 'TooQuiet' ||
+              reply._tag === 'TooNoisy'
+                ? reply
+                : undefined,
+            ),
           ),
         ),
-      ),
       frames: Stream.fromPubSubTake(liveFrames),
     }
   })

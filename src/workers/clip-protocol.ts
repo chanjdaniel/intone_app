@@ -1,10 +1,14 @@
 import { Schema } from 'effect'
 
+import {
+  Samples,
+  payloadTransferables,
+  recordingPayloadFields,
+} from './recording-payload'
+
 // The clip Worker's protocol: one Schema per message kind, decoded at the
 // boundary once per message. The clip's audio and every curve travel
 // transferred, never copied.
-
-const Samples = Schema.instanceOf(Float32Array<ArrayBufferLike>)
 
 // TO THE WORKER
 
@@ -58,17 +62,10 @@ export const LineQuality = Schema.Struct({
   pausePitchedShare: Schema.Finite,
 })
 
-// A line's native curve and the spectral features of the same audio, as
-// the tracker Worker sends a take's (./tracker-protocol.ts, `Tracked`),
-// and its quality.
+// A line's native curve as a recording payload (./recording-payload.ts),
+// as the tracker Worker sends a take's, and its quality.
 export const LineCurve = Schema.TaggedStruct('Tracked', {
-  frameHz: Schema.Finite,
-  f0Hz: Samples,
-  confidence: Samples,
-  levelDb: Samples,
-  onsetFrame: Schema.Finite,
-  featureDims: Schema.Finite,
-  features: Samples,
+  ...recordingPayloadFields,
   quality: LineQuality,
 })
 export type LineCurve = typeof LineCurve.Type
@@ -131,14 +128,7 @@ export const transferables = (
     return [
       ...new Set(
         message.lines.flatMap(({ curve }) =>
-          curve._tag === 'Tracked'
-            ? [
-                curve.f0Hz.buffer,
-                curve.confidence.buffer,
-                curve.levelDb.buffer,
-                curve.features.buffer,
-              ]
-            : [],
+          curve._tag === 'Tracked' ? payloadTransferables(curve) : [],
         ),
       ),
     ]

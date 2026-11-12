@@ -1,6 +1,7 @@
 import { Effect, Option, Schema } from 'effect'
 import { ManagedResource } from 'foldkit'
 
+import { reasonOf } from '../../engine/reason'
 import {
   Microphone,
   MicrophoneError,
@@ -34,9 +35,6 @@ export type MicrophoneResourceService = ManagedResource.ServiceOf<
 export type TakeResourceServices =
   | TrackerResourceService
   | MicrophoneResourceService
-
-const reasonOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
 
 const TakeRequirements = Schema.Option(
   Schema.Struct({ takeNumber: Schema.Finite }),

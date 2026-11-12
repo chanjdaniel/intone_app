@@ -1,13 +1,4 @@
-import {
-  Effect,
-  Exit,
-  Fiber,
-  Match,
-  Queue,
-  Schema,
-  Scope,
-  Stream,
-} from 'effect'
+import { Effect, Exit, Fiber, Match, Schema, Scope, Stream } from 'effect'
 
 import { waveformPeaks } from '../engine/audio/peaks'
 import {
@@ -18,15 +9,18 @@ import {
 } from '../engine/cut/clip'
 import type { SileroInference } from '../engine/cut/silero'
 import type { SwiftF0Inference } from '../engine/pitch/swift-f0'
+import { reasonOf } from '../engine/reason'
 import {
   type CutLine,
   type FromClip,
   ToClip,
   transferables,
 } from './clip-protocol'
-import { fetchModel, reasonOf } from './onnx-session'
+import { fetchModel } from './onnx-session'
+import { payloadOf } from './recording-payload'
 import { openSilero } from './silero-session'
 import { openSwiftF0 } from './swift-f0-session'
+import { incoming, poster } from './worker-host'
 
 // The clip Worker: a whole clip's audio in, its lines and each line's
 // native curve out. It loads Silero VAD and SwiftF0 inside a scope on
@@ -38,10 +32,7 @@ import { openSwiftF0 } from './swift-f0-session'
 // (`Hold`, answered with its waveform) and tracks the lines the learner
 // changed (`Track`), one request at a time.
 
-const post = (message: FromClip): Effect.Effect<void> =>
-  Effect.sync(() => {
-    self.postMessage(message, { transfer: [...transferables(message)] })
-  })
+const post = poster<FromClip>(transferables)
 
 class CutError extends Schema.TaggedError<
   CutError,
@@ -51,23 +42,6 @@ class CutError extends Schema.TaggedError<
 // What the engine throws from its progress callback once the page has
 // asked to stop: it ends the cut between two model runs.
 class Stopped extends Error {}
-
-// Every message the page sends, in order, until the Worker closes.
-const incoming = Stream.callback<unknown>(queue =>
-  Effect.acquireRelease(
-    Effect.sync(() => {
-      const listener = (event: MessageEvent): void => {
-        Queue.offerUnsafe(queue, event.data)
-      }
-      self.addEventListener('message', listener)
-      return listener
-    }),
-    listener =>
-      Effect.sync(() => {
-        self.removeEventListener('message', listener)
-      }),
-  ),
-)
 
 // Lets the Worker's event loop run, so a `Close` waiting in it is read.
 const yieldToMessages = (): Promise<void> =>
@@ -84,13 +58,10 @@ const cutLineOf = (line: ClipLine): CutLine =>
         to: line.to,
         curve: {
           _tag: 'Tracked',
-          frameHz: line.curve.curve.frameHz,
-          f0Hz: line.curve.curve.f0Hz,
-          confidence: line.curve.curve.confidence,
-          levelDb: line.curve.curve.levelDb,
-          onsetFrame: line.curve.curve.onsetFrame,
-          featureDims: line.curve.featureDims,
-          features: line.curve.features,
+          ...payloadOf(line.curve.curve, {
+            dims: line.curve.featureDims,
+            data: line.curve.features,
+          }),
           quality: line.curve.quality,
         },
       }
