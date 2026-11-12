@@ -74,7 +74,9 @@ test('holds 60 frames a second through a 20 s take at 6x CPU throttle', async ({
       const gaps = times.slice(1).map((t, i) => t - (times[i] ?? t))
       const seconds = ((times.at(-1) ?? 0) - (times[0] ?? 0)) / 1000
       // A frame that missed one vsync lasts 33.3 ms; a long frame is one
-      // that missed more.
+      // that missed more. Frames that missed one are bounded by the frame
+      // rate below: at 58 a second, about 40 in the 1,200 at most
+      // (docs/latency.md).
       const longFrames = gaps.filter(gap => gap > 34)
       const framesPerSecond = gaps.length / seconds
       await report(testInfo, 'frame-rate.json', {

@@ -58,7 +58,8 @@ The test fails above 2 s.
 
 ## The frame rate
 
-`tests/e2e/frame-rate.spec.ts` records a 20 s take with the CPU slowed six times (`Emulation.setCPUThrottlingRate`) and times every animation frame: it must hold 58 frames a second or more, with at most 5 frames longer than 34 ms (a frame that misses one refresh lasts 33.3 ms), and the curve must keep drawing to the end.
+`tests/e2e/frame-rate.spec.ts` records a 20 s take with the CPU slowed six times (`Emulation.setCPUThrottlingRate`) and times every animation frame: it must hold 58 frames a second or more, with at most 5 frames longer than 34 ms, and the curve must keep drawing to the end.
+A long frame is one that misses more than one refresh; a frame that misses a single refresh lasts 33.3 ms and is not counted as long, but the 58 frames a second floor bounds those too, to about 40 in the 1,200.
 Measured alone on the machine above, four runs held 60.00 frames a second with no frame over 16.8 ms, while the take kept the slowed main thread about 16% busy (4% of it script).
 With five copies of the test running at once on the same machine, it dropped to 56 frames a second, so it runs in a Playwright project of its own, `frame-rate`, after every other end-to-end test.
 `docs/upgrading.md` names it as the check every Foldkit upgrade runs.
