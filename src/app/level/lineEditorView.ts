@@ -377,7 +377,6 @@ const alertText = (editor: LineEditor): string =>
 // The editor shut, as a level opens: opening it decodes the whole clip,
 // which a level opened to practise never needs.
 const closedEditorView = <ViewMessage>(
-  clip: LevelClip,
   events: LineEditorEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
@@ -401,7 +400,7 @@ const closedEditorView = <ViewMessage>(
           h.p(
             [h.Class('text-base text-muted')],
             [
-              `Move a line’s edges, or split, merge or delete lines, if the cut missed. Opening the editor reads all ${clip.lines.length === 1 ? 'of the clip' : `${clip.lines.length} lines of the clip`}, which takes a moment on a long one.`,
+              'Move a line’s edges, or split, merge or delete lines, if the cut missed. Opening the editor reads the whole clip, which takes a moment on a long one.',
             ],
           ),
         ],
@@ -425,7 +424,7 @@ export const lineEditorView = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
   if (editor.waveform._tag === 'Closed') {
-    return closedEditorView(clip, events, h)
+    return closedEditorView(events, h)
   }
   const index = selectedIndexOf(clip, editor)
   const line = clip.lines[index]
