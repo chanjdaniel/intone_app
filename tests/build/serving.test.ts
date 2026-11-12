@@ -211,6 +211,16 @@ describe.each(['dev', 'preview'] as const)('the %s server', server => {
     }
   })
 
+  test('names an icon in the page, and serves it, so no page asks for a missing /favicon.ico', async () => {
+    const page = await (await fetch(`${origins[server]}/`)).text()
+    const href = /<link rel="icon" href="([^"]+)"/.exec(page)?.[1]
+    expect(href).toBeDefined()
+    const response = await fetch(`${origins[server]}${href}`)
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toMatch(/^image\/svg\+xml/)
+    expect(await response.text()).toContain('<svg')
+  })
+
   test('sends nosniff and no cross-origin isolation header', async () => {
     const [model] = servedModelFiles(models)
     for (const path of ['/', `/${model?.path}`]) {
