@@ -22,7 +22,7 @@ import { defineFollowLineEditorPointer } from '../../level/editorPointer'
 import { levelClipOf } from '../../level/level'
 import { lineEditorView } from '../../level/lineEditorView'
 import { preciseClockText } from '../../line/lines'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 import {
   cutStudyEntry,
   cutStudyPeaks,
@@ -354,7 +354,7 @@ const clipButton = (
       h.Type('button'),
       h.OnClick(Message.ClickedClip({ music })),
       h.Class(
-        `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm ${buttonFocusClass}`,
+        `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm focus-ring`,
       ),
     ],
     [text],

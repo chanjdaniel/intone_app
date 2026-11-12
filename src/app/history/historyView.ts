@@ -2,8 +2,8 @@ import { Array, Option } from 'effect'
 import { Calendar } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
+import { pageFrame } from '../pageFrame'
 import { homeRouter } from '../route'
-import { type Place, siteNav } from '../siteNav'
 import { practiceCalendar } from './calendar'
 import { countText } from './format'
 import { HistoryPage, Rescoring } from './history'
@@ -20,24 +20,6 @@ export type HistoryEvents<ViewMessage> = Readonly<{
   showMore: ViewMessage
   rescore: ViewMessage
 }>
-
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
-export const pageFrame = <ViewMessage>(
-  place: Place,
-  body: ReadonlyArray<Html>,
-  h: HtmlBuilder<ViewMessage>,
-): Html =>
-  h.main(
-    [h.Class('min-h-screen bg-surface text-ink px-4 py-6 sm:px-6 sm:py-10')],
-    [
-      h.div(
-        [h.Class('mx-auto flex max-w-2xl flex-col gap-8')],
-        [siteNav(place, h), ...body],
-      ),
-    ],
-  )
 
 const section = <ViewMessage>(
   id: string,
@@ -77,7 +59,7 @@ const rescoreBox = <ViewMessage>(
               h.Type('button'),
               h.OnClick(rescore),
               h.Class(
-                `inline-flex min-h-11 items-center justify-center self-start rounded-md bg-accent px-5 text-base font-semibold text-on-accent ${focusRing}`,
+                `inline-flex min-h-11 items-center justify-center self-start rounded-md bg-accent px-5 text-base font-semibold text-on-accent focus-ring`,
               ),
             ],
             [`Score ${countText(outdated, 'take')} again`],
@@ -121,7 +103,7 @@ const emptyHistory = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
         [
           h.Href(homeRouter({ maybeFind: Option.none() })),
           h.Class(
-            `inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 ${focusRing}`,
+            `inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring`,
           ),
         ],
         ['Choose a line to copy'],

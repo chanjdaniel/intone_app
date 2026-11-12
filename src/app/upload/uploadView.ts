@@ -3,7 +3,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { FileDrop } from '@foldkit/ui'
 
-import { pageFrame } from '../history/historyView'
+import { pageFrame } from '../pageFrame'
 import { uploadStatusAttribute } from './commands'
 import { type PackEvents, packPanel } from './packView'
 import { progressBar } from './progressBar'
@@ -24,9 +24,6 @@ export type UploadEvents<ViewMessage> = Readonly<{
   fileDrop: (message: FileDrop.Message) => ViewMessage
   cancel: ViewMessage
 }>
-
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 export const privacySentence = 'Your clip stays on this device.'
 
@@ -103,7 +100,7 @@ const working = <ViewMessage>(
             ? [h.Disabled(true)]
             : [h.OnClick(events.cancel)]),
           h.Class(
-            `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink disabled:text-muted ${focusRing}`,
+            `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink disabled:text-muted focus-ring`,
           ),
         ],
         ['Stop'],

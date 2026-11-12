@@ -27,9 +27,6 @@ export type DueListEvents<ViewMessage> = Readonly<{
   showMore: ViewMessage
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
 export const dueFindInputId = 'find-due-lines'
 
 // A row's second line, before the day of its last blind take, which is
@@ -55,7 +52,7 @@ const dueRow = <ViewMessage>(
           h.Href(lineRouter({ clipId: line.clipId, lineId: line.lineId })),
           h.DataAttribute(dueRowAttribute, String(index)),
           h.Class(
-            `flex min-h-11 items-center justify-between gap-4 rounded-lg border border-line bg-raised px-4 py-3 text-ink hover:border-accent ${focusRing}`,
+            `flex min-h-11 items-center justify-between gap-4 rounded-lg border border-line bg-raised px-4 py-3 text-ink hover:border-accent focus-ring`,
           ),
         ],
         [

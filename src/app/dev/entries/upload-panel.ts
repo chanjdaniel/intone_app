@@ -15,7 +15,7 @@ import {
   stepText,
 } from '../../upload/upload'
 import { uploadPanel } from '../../upload/uploadView'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 
 // The upload screen's working part in each of its states: the drop zone,
 // the cut step by step with its stop button, and what the screen says of
@@ -190,7 +190,7 @@ const stateButtons = (model: Model, h: HtmlBuilder<Message>): Html =>
           h.Type('button'),
           h.OnClick(Message.ClickedState({ name })),
           h.Class(
-            `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm ${buttonFocusClass}`,
+            `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm focus-ring`,
           ),
         ],
         [name],

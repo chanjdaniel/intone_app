@@ -32,9 +32,6 @@ export type ListFrame<Row, ViewMessage> = Readonly<{
   row: (row: Row, index: number) => Html
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
 export const listFrame = <Row, ViewMessage>(
   list: ListFrame<Row, ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
@@ -68,7 +65,7 @@ export const listFrame = <Row, ViewMessage>(
                   h.Spellcheck(false),
                   h.OnInput(list.changedWords),
                   h.Class(
-                    `min-h-11 w-full rounded-md border border-line bg-surface px-3 text-base text-ink placeholder:text-muted ${focusRing}`,
+                    `min-h-11 w-full rounded-md border border-line bg-surface px-3 text-base text-ink placeholder:text-muted focus-ring`,
                   ),
                 ]),
               ],

@@ -6,7 +6,7 @@ import { modifyFields } from 'foldkit/struct'
 
 import { takePanel } from '../../take/panel'
 import { Extent, Take, TakeResult, Voice } from '../../take/take'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 import { sampleScores, withOutcome } from '../sampleScores'
 
 // The mic state panel in every state a take can be in, each picked from
@@ -210,7 +210,7 @@ const pickerView = (model: Model, h: HtmlBuilder<Message>): Html =>
               h.AriaPressed(model.sample === name ? 'true' : 'false'),
               h.OnClick(Message.SelectedSample({ name })),
               h.Class(
-                `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent ${buttonFocusClass}`,
+                `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent focus-ring`,
               ),
             ],
             [name],

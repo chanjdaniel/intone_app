@@ -8,9 +8,6 @@ import { historyRouter, homeRouter, settingsRouter } from './route'
 
 export type Place = 'Lines' | 'History' | 'Settings'
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
 const places: ReadonlyArray<Readonly<{ place: Place; href: string }>> = [
   { place: 'Lines', href: homeRouter({ maybeFind: Option.none() }) },
   { place: 'History', href: historyRouter({ maybeFind: Option.none() }) },
@@ -39,7 +36,7 @@ export const siteNav = <ViewMessage>(
                       place === current
                         ? 'font-semibold text-ink underline decoration-2 underline-offset-8'
                         : 'text-accent hover:underline hover:underline-offset-4'
-                    } ${focusRing}`,
+                    } focus-ring`,
                   ),
                 ],
                 [place],

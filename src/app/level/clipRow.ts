@@ -10,9 +10,6 @@ import { lengthText } from './levelView'
 // many lines it has and how long it is, the whole row a link to its
 // lines.
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
 export const clipRow = <ViewMessage>(
   clip: ClipSummary,
   h: HtmlBuilder<ViewMessage>,
@@ -21,7 +18,7 @@ export const clipRow = <ViewMessage>(
     [
       h.Href(levelRouter({ clipId: clip.id, maybeFind: Option.none() })),
       h.Class(
-        `flex min-h-11 items-center justify-between gap-4 rounded-lg border border-line bg-raised p-4 text-ink hover:border-accent sm:p-5 ${focusRing}`,
+        `flex min-h-11 items-center justify-between gap-4 rounded-lg border border-line bg-raised p-4 text-ink hover:border-accent sm:p-5 focus-ring`,
       ),
     ],
     [

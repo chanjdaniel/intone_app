@@ -40,13 +40,8 @@ export type TakePanelEvents<ViewMessage> = Readonly<{
   stopListening: ViewMessage
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
-const buttonBase = `inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-5 text-base font-semibold ${focusRing}`
-
-const primaryButton = `${buttonBase} bg-accent text-on-accent`
-const secondaryButton = `${buttonBase} border border-line bg-surface text-ink`
+const primaryButton = 'button-primary'
+const secondaryButton = 'button-secondary'
 
 export const headingId = 'take-heading'
 

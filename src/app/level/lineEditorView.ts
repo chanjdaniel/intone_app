@@ -49,9 +49,7 @@ export type LineEditorEvents<ViewMessage> = Readonly<{
   follow: Mount.MountAction<ViewMessage>
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-const buttonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink hover:border-accent disabled:border-line disabled:text-muted ${focusRing}`
+const buttonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink hover:border-accent disabled:border-line disabled:text-muted focus-ring`
 
 // Seconds as a share of the window, for a CSS left or width.
 const percentIn = (shown: Span, seconds: number): number =>
@@ -116,7 +114,7 @@ const edgeSlider = <ViewMessage>(
           : Option.none(),
       ),
       h.Class(
-        `absolute inset-y-0 z-20 w-11 -translate-x-1/2 touch-none ${movable ? 'cursor-ew-resize' : 'cursor-not-allowed'} rounded-sm ${focusRing}`,
+        `absolute inset-y-0 z-20 w-11 -translate-x-1/2 touch-none ${movable ? 'cursor-ew-resize' : 'cursor-not-allowed'} rounded-sm focus-ring`,
       ),
     ],
     [
@@ -163,7 +161,7 @@ const playheadSlider = <ViewMessage>(
         Option.map(keyStep(key, modifiers), step => events.stepPlayhead(step)),
       ),
       h.Class(
-        `absolute inset-y-0 z-10 w-6 -translate-x-1/2 ${inView ? '' : 'opacity-0'} rounded-sm ${focusRing}`,
+        `absolute inset-y-0 z-10 w-6 -translate-x-1/2 ${inView ? '' : 'opacity-0'} rounded-sm focus-ring`,
       ),
     ],
     [

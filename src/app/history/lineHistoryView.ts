@@ -5,6 +5,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { SCORE_VERSION } from '../../score/constants'
 import { lineOf } from '../line/lines'
 import { scoredLearnerOf } from '../line/practiceView'
+import { pageFrame } from '../pageFrame'
 import { type LineReturn, isReturnDue } from '../returns/lineReturn'
 import { historyRouter, lineRouter } from '../route'
 import { type PairLearner, curvePairView } from '../take/curvePair'
@@ -18,7 +19,6 @@ import {
   type LineNow,
   type ShownTake,
 } from './history'
-import { pageFrame } from './historyView'
 import { scoreTrend } from './trend'
 
 // A line's history: its match over every take, and its first, best and
@@ -35,10 +35,7 @@ export type LineHistoryEvents<ViewMessage> = Readonly<{
   }) => Mount.MountAction<ViewMessage>
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
-const linkClass = `inline-flex min-h-11 items-center gap-1.5 rounded-md text-accent ${focusRing}`
+const linkClass = `inline-flex min-h-11 items-center gap-1.5 rounded-md text-accent focus-ring`
 
 // The takes the page draws, each once, named by what it is.
 export const shownTakesOf = (

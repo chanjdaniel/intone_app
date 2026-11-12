@@ -5,7 +5,7 @@ import { defineMessageUnion } from 'foldkit/message'
 import { modifyFields } from 'foldkit/struct'
 
 import styles from '../../styles.css?raw'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 
 // The app's tokens, read from the one place they are defined: the
 // `@theme` block of `src/app/styles.css`.
@@ -195,7 +195,7 @@ const coloursView = (model: Model, h: HtmlBuilder<Message>): Html =>
                   ),
                   h.OnClick(Message.SelectedColour({ name })),
                   h.Class(
-                    `flex w-full items-center gap-3 rounded-md border border-line bg-surface p-2 text-left aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent ${buttonFocusClass}`,
+                    `flex w-full items-center gap-3 rounded-md border border-line bg-surface p-2 text-left aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent focus-ring`,
                   ),
                 ],
                 [

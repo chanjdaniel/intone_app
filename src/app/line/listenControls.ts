@@ -18,10 +18,7 @@ export type ListenControls<ViewMessage> = Readonly<{
   selectSpeed: (speed: ListenSpeed) => ViewMessage
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
-const buttonClass = `inline-flex min-h-12 min-w-48 items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink disabled:cursor-not-allowed disabled:text-muted disabled:opacity-60 ${focusRing}`
+const buttonClass = `inline-flex min-h-12 min-w-48 items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink disabled:cursor-not-allowed disabled:text-muted disabled:opacity-60 focus-ring`
 
 export const speedLabel = (speed: ListenSpeed): string => `${speed}×`
 

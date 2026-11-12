@@ -4,7 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { Dialog } from '@foldkit/ui'
 
 import { bytesText, countText } from '../history/format'
-import { pageFrame } from '../history/historyView'
+import { pageFrame } from '../pageFrame'
 import {
   BackupState,
   type Browser,
@@ -32,12 +32,9 @@ export type SettingsEvents<ViewMessage> = Readonly<{
   dialog: (message: Dialog.Message) => ViewMessage
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-const buttonBase = `inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-5 text-base font-semibold ${focusRing}`
-const primaryButton = `${buttonBase} bg-accent text-on-accent disabled:opacity-60`
-const secondaryButton = `${buttonBase} border border-line bg-surface text-ink disabled:text-muted`
-const dangerButton = `${buttonBase} bg-bad text-on-accent disabled:opacity-60`
+const primaryButton = 'button-primary disabled:opacity-60'
+const secondaryButton = 'button-secondary disabled:text-muted'
+const dangerButton = 'button bg-bad text-on-accent disabled:opacity-60'
 
 const section = <ViewMessage>(
   id: string,
@@ -95,7 +92,7 @@ const checkbox = <ViewMessage>(
         h.Type('checkbox'),
         h.Checked(checked),
         ...(enabled ? [h.OnClick(toggle(!checked))] : [h.Disabled(true)]),
-        h.Class(`size-6 shrink-0 accent-accent ${focusRing}`),
+        h.Class(`size-6 shrink-0 accent-accent focus-ring`),
       ]),
       h.label(
         [

@@ -9,7 +9,7 @@ import { curvePairView, defineDrawCurvePair } from '../../take/curvePair'
 import { takePanel } from '../../take/panel'
 import { matchText, partsOf } from '../../take/scoreCard'
 import { Extent, Take, Voice } from '../../take/take'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 import {
   type SampleScoreName,
   sampleNative,
@@ -157,7 +157,7 @@ const pickerView = (model: Model, h: HtmlBuilder<Message>): Html =>
               h.AriaPressed(model.sample === name ? 'true' : 'false'),
               h.OnClick(Message.SelectedSample({ sample: name })),
               h.Class(
-                `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent ${buttonFocusClass}`,
+                `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent focus-ring`,
               ),
             ],
             [name],

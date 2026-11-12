@@ -5,6 +5,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { swiftF0FrameHz } from '../../engine/pitch/swift-f0'
 import { dayText } from '../history/format'
 import { starRow, starRules } from '../level/starRow'
+import { screenFrame } from '../pageFrame'
 import { isReturnDue } from '../returns/lineReturn'
 import { levelRouter, lineHistoryRouter, lineRouter } from '../route'
 import { PairLearner, curvePairView, describeCurve } from '../take/curvePair'
@@ -49,9 +50,6 @@ export type PracticeState = Readonly<{
   canPlayTake: boolean
   maybePlaybackFailure: Option.Option<string>
 }>
-
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 const spanNote =
   "Each curve starts at its voice onset, around its speaker's own typical pitch; the lines are 3 semitones apart, and dashes bridge short pauses."
@@ -182,7 +180,7 @@ const keptNote = <ViewMessage>(
                       }),
                     ),
                     h.Class(
-                      `inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 ${focusRing}`,
+                      `inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring`,
                     ),
                   ],
                   ['See this line’s history'],
@@ -234,7 +232,7 @@ const nativePending = <ViewMessage>(
               h.Type('button'),
               h.OnClick(events.retryNative),
               h.Class(
-                `inline-flex min-h-11 items-center rounded-md bg-accent px-5 text-base font-semibold text-on-accent ${focusRing}`,
+                `inline-flex min-h-11 items-center rounded-md bg-accent px-5 text-base font-semibold text-on-accent focus-ring`,
               ),
             ],
             ['Try again'],
@@ -391,7 +389,7 @@ const nextView = <ViewMessage>(
                   lineRouter({ clipId: place.clipId, lineId: next.lineId }),
                 ),
                 h.Class(
-                  `inline-flex min-h-11 items-center gap-1.5 self-start rounded-md text-lg font-semibold text-accent ${focusRing}`,
+                  `inline-flex min-h-11 items-center gap-1.5 self-start rounded-md text-lg font-semibold text-accent focus-ring`,
                 ),
               ],
               [
@@ -422,7 +420,7 @@ const nextView = <ViewMessage>(
                   }),
                 ),
                 h.Class(
-                  `inline-flex min-h-11 items-center gap-1.5 self-start rounded-md text-lg font-semibold text-accent ${focusRing}`,
+                  `inline-flex min-h-11 items-center gap-1.5 self-start rounded-md text-lg font-semibold text-accent focus-ring`,
                 ),
               ],
               [
@@ -487,55 +485,48 @@ export const practiceView = <ViewMessage>(
 ): Html => {
   const native = state.native
   const back = backOf(clipId)
-  return h.main(
-    [h.Class('min-h-screen bg-surface text-ink px-4 py-6 sm:px-6 sm:py-10')],
+  return screenFrame(
+    'gap-6',
     [
-      h.div(
-        [h.Class('mx-auto flex max-w-2xl flex-col gap-6')],
+      h.nav(
+        [h.AriaLabel('Back')],
         [
-          h.nav(
-            [h.AriaLabel('Back')],
+          h.a(
             [
-              h.a(
-                [
-                  h.Href(back.href),
-                  h.Class(
-                    `inline-flex min-h-11 items-center gap-1.5 rounded-md text-accent ${focusRing}`,
-                  ),
-                ],
-                [
-                  h.span([h.AriaHidden(true)], ['←']),
-                  h.span(
-                    [h.Class('underline underline-offset-4')],
-                    [back.text],
-                  ),
-                ],
+              h.Href(back.href),
+              h.Class(
+                `inline-flex min-h-11 items-center gap-1.5 rounded-md text-accent focus-ring`,
               ),
             ],
+            [
+              h.span([h.AriaHidden(true)], ['←']),
+              h.span([h.Class('underline underline-offset-4')], [back.text]),
+            ],
           ),
-          lineHeader(maybeLine, h),
-          linePlaceView(state.place, h),
-          native._tag === 'Ready'
-            ? readyBody(native.line, native.curve, state, events, h)
-            : nativePending(native, events, h),
-          nextView(state.place, h),
-          Option.match(maybeLine, {
-            onNone: () => h.empty,
-            onSome: line =>
-              h.footer(
-                [h.Class('flex flex-col gap-1 text-sm text-muted')],
-                [
-                  h.p([], [line.credit]),
-                  ...Option.match(line.maybeSource, {
-                    onNone: () => [],
-                    onSome: source => [sourceLink(source, h)],
-                  }),
-                ],
-              ),
-          }),
         ],
       ),
+      lineHeader(maybeLine, h),
+      linePlaceView(state.place, h),
+      native._tag === 'Ready'
+        ? readyBody(native.line, native.curve, state, events, h)
+        : nativePending(native, events, h),
+      nextView(state.place, h),
+      Option.match(maybeLine, {
+        onNone: () => h.empty,
+        onSome: line =>
+          h.footer(
+            [h.Class('flex flex-col gap-1 text-sm text-muted')],
+            [
+              h.p([], [line.credit]),
+              ...Option.match(line.maybeSource, {
+                onNone: () => [],
+                onSome: source => [sourceLink(source, h)],
+              }),
+            ],
+          ),
+      }),
     ],
+    h,
   )
 }
 

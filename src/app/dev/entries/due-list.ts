@@ -8,7 +8,7 @@ import { dayText } from '../../history/format'
 import { dueRowAttribute } from '../../returns/commands'
 import { dueSection } from '../../returns/dueList'
 import { DuePage, dueLinesFound, dueRowsPerPage } from '../../returns/returns'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 import { sampleDue, sampleToday } from '../sampleReturns'
 
 // The home screen's lines due back for a blind take, in the app's frame
@@ -77,7 +77,8 @@ export const update = (model: Model, message: Message) =>
 
 // VIEW
 
-const secondaryButton = `inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-surface px-5 text-base font-semibold text-accent hover:border-accent ${buttonFocusClass}`
+const secondaryButton =
+  'button border border-line bg-surface text-accent hover:border-accent'
 
 export const readOut = (model: Model): string => {
   const found = dueLinesFound(sampleDue.due, model.words)

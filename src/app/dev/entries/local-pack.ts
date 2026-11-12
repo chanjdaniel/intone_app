@@ -21,7 +21,7 @@ import {
   initialUpload,
   packStepText,
 } from '../../upload/upload'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 import { examplePackClip } from '../samplePack'
 
 // The local pack's part of /upload in each of its states, and the level
@@ -221,7 +221,7 @@ const stateButtons = (h: HtmlBuilder<Message>): Html =>
           h.Type('button'),
           h.OnClick(Message.ClickedState({ name })),
           h.Class(
-            `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm ${buttonFocusClass}`,
+            `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm focus-ring`,
           ),
         ],
         [name],

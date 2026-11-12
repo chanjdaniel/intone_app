@@ -152,10 +152,7 @@ export type StretchControls<ViewMessage> = Readonly<{
   stop: ViewMessage
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
-const stretchButton = `inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink ${focusRing}`
+const stretchButton = `inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink focus-ring`
 
 const secondsText = (seconds: number): string => `${seconds.toFixed(2)} s`
 

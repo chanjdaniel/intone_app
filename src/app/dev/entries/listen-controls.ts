@@ -7,7 +7,7 @@ import { modifyFields } from 'foldkit/struct'
 import { listenControls } from '../../line/listenControls'
 import { ListenSpeed } from '../../line/native'
 import { Voice } from '../../take/take'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 
 // The controls for listening again, with nothing playing: each button
 // toggles its voice as the practice screen's Model would, and the take's
@@ -86,7 +86,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
             h.AriaPressed(model.hasTake ? 'true' : 'false'),
             h.OnClick(Message.ClickedToggleTake()),
             h.Class(
-              `inline-flex min-h-11 w-fit items-center rounded-md border border-line bg-surface px-3 text-sm aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent ${buttonFocusClass}`,
+              `inline-flex min-h-11 w-fit items-center rounded-md border border-line bg-surface px-3 text-sm aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent focus-ring`,
             ),
           ],
           ['A take has finished'],

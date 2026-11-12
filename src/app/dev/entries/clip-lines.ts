@@ -12,7 +12,7 @@ import {
   levelRowsPerPage,
 } from '../../level/level'
 import { levelLineList } from '../../level/levelView'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 import { cutStudyClip, musicStudyClip } from '../sampleClips'
 
 // A clip's lines in the large-list frame, as /level/:clipId shows them:
@@ -137,7 +137,7 @@ const clipButton = (
       h.Type('button'),
       h.OnClick(Message.ClickedClip({ clip })),
       h.Class(
-        `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm ${buttonFocusClass}`,
+        `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm focus-ring`,
       ),
     ],
     [text],

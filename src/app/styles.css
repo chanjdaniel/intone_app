@@ -92,3 +92,29 @@
     }
   }
 }
+
+/*
+ * The app's shared looks, as classes, so a change to one is a change
+ * everywhere it is used: the focus ring every control shows when the
+ * keyboard reaches it, and the buttons.
+ */
+@utility focus-ring {
+  &:focus-visible {
+    outline-style: solid;
+    outline-width: 2px;
+    outline-offset: 2px;
+    outline-color: var(--color-accent);
+  }
+}
+
+@utility button {
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-5 text-base font-semibold focus-ring;
+}
+
+@utility button-primary {
+  @apply button bg-accent text-on-accent;
+}
+
+@utility button-secondary {
+  @apply button border border-line bg-surface text-ink;
+}

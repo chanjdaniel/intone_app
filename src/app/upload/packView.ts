@@ -24,9 +24,6 @@ export type PackEvents<ViewMessage> = Readonly<{
   cancelPack: ViewMessage
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
 export const packPrivacySentence =
   'Your local pack stays on this device: nothing of it is sent anywhere, and the app never fetches its links. A line’s source opens only in a new tab, when you choose it.'
 
@@ -130,7 +127,7 @@ const working = <ViewMessage>(
         ? [h.Disabled(true)]
         : [h.OnClick(events.cancelPack)]),
       h.Class(
-        `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink disabled:text-muted ${focusRing}`,
+        `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink disabled:text-muted focus-ring`,
       ),
     ],
     ['Stop'],

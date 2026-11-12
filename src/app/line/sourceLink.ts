@@ -8,9 +8,6 @@ import { type SourceLink, clockText } from './lines'
 // opener and no referrer. The app only shows it and never fetches it, so a
 // YouTube line is something to find again, not audio the app has.
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
 // The link's site, as its address names it, without a leading "www.".
 export const siteOf = (url: string): string => {
   const host = /^https?:\/\/([^/?#:]+)/i.exec(url)?.[1] ?? url
@@ -47,7 +44,7 @@ export const sourceLink = <ViewMessage>(
       h.Target('_blank'),
       h.Rel('noopener noreferrer'),
       h.Class(
-        `inline-flex min-h-11 items-center gap-1 self-start rounded-md text-sm text-accent ${focusRing}`,
+        `inline-flex min-h-11 items-center gap-1 self-start rounded-md text-sm text-accent focus-ring`,
       ),
     ],
     [

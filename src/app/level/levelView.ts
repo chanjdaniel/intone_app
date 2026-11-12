@@ -4,10 +4,10 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { Dialog } from '@foldkit/ui'
 
 import { countText } from '../history/format'
-import { pageFrame } from '../history/historyView'
 import { clockText } from '../line/lines'
 import { sourceLink } from '../line/sourceLink'
 import { listFrame } from '../listFrame'
+import { pageFrame } from '../pageFrame'
 import { homeRouter, lineRouter } from '../route'
 import { levelRowAttribute } from './commands'
 import {
@@ -47,11 +47,8 @@ export type LevelEvents<ViewMessage> = Readonly<{
   dialog: (message: Dialog.Message) => ViewMessage
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-const buttonBase = `inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-5 text-base font-semibold ${focusRing}`
-const secondaryButton = `${buttonBase} border border-line bg-surface text-ink disabled:text-muted`
-const dangerButton = `${buttonBase} bg-bad text-on-accent disabled:opacity-60`
+const secondaryButton = 'button-secondary disabled:text-muted'
+const dangerButton = 'button bg-bad text-on-accent disabled:opacity-60'
 
 export const levelFindInputId = 'find-level-lines'
 
@@ -181,7 +178,7 @@ export const levelRow = <ViewMessage>(
             [
               h.Href(lineRouter({ clipId, lineId: line.id })),
               h.DataAttribute(levelRowAttribute, String(index)),
-              h.Class(`${rowClass} hover:border-accent ${focusRing}`),
+              h.Class(`${rowClass} hover:border-accent focus-ring`),
             ],
             [
               ...lineRowBody(line, maybeWhy, h),
@@ -209,7 +206,7 @@ export const levelRow = <ViewMessage>(
                 h.AriaLabel(`Fix ${levelLineTitle(line).toLowerCase()}`),
                 h.OnClick(editLine(line.id)),
                 h.Class(
-                  `inline-flex min-h-11 shrink-0 items-center rounded-lg border border-line bg-surface px-4 text-base font-semibold text-ink hover:border-accent ${focusRing}`,
+                  `inline-flex min-h-11 shrink-0 items-center rounded-lg border border-line bg-surface px-4 text-base font-semibold text-ink hover:border-accent focus-ring`,
                 ),
               ],
               ['Fix'],
@@ -407,7 +404,7 @@ const backLink = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
         [
           h.Href(homeRouter({ maybeFind: Option.none() })),
           h.Class(
-            `inline-flex min-h-11 items-center gap-1.5 self-start rounded-md text-accent ${focusRing}`,
+            `inline-flex min-h-11 items-center gap-1.5 self-start rounded-md text-accent focus-ring`,
           ),
         ],
         [

@@ -32,6 +32,7 @@ import { practiceView } from './line/practiceView'
 import * as LineUpdate from './line/update'
 import { Message } from './message'
 import { type Model } from './model'
+import { pageFrame } from './pageFrame'
 import type { AppResourceServices } from './resources'
 import { dueSection } from './returns/dueList'
 import { DuePage } from './returns/returns'
@@ -41,7 +42,6 @@ import { AskToPersistStorage } from './settings/commands'
 import { SettingsPage, clearDialogId } from './settings/settings'
 import { settingsView } from './settings/settingsView'
 import * as SettingsUpdate from './settings/update'
-import { siteNav } from './siteNav'
 import { ForgetTakeAudio } from './take/commands'
 import { DrawCurvePair } from './take/curvePair'
 import { subscriptions as takeSubscriptions } from './take/subscriptions'
@@ -443,9 +443,6 @@ export const update = (model: Model, message: Message) =>
 export const tagline =
   'Practise Japanese pitch accent by copying native speakers, line by line, on your own device.'
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
 // The learner's own clips on the home screen, newest first, and the way to
 // bring another.
 const clipsSection = (clips: ClipsPage, h: HtmlBuilder<Message>): Html =>
@@ -486,7 +483,7 @@ const clipsSection = (clips: ClipsPage, h: HtmlBuilder<Message>): Html =>
         [
           h.Href(uploadRouter()),
           h.Class(
-            `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-accent hover:border-accent ${focusRing}`,
+            `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-accent hover:border-accent focus-ring`,
           ),
         ],
         ['Bring your own audio'],
@@ -494,7 +491,8 @@ const clipsSection = (clips: ClipsPage, h: HtmlBuilder<Message>): Html =>
     ],
   )
 
-const secondaryButton = `inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-surface px-5 text-base font-semibold text-accent hover:border-accent ${focusRing}`
+const secondaryButton =
+  'button border border-line bg-surface text-accent hover:border-accent'
 
 const homeView = (
   lines: ReadonlyArray<BundledLine>,
@@ -504,62 +502,58 @@ const homeView = (
   maybeNotice: Option.Option<string>,
   h: HtmlBuilder<Message>,
 ): Html =>
-  h.main(
-    [h.Class('min-h-screen bg-surface text-ink px-4 py-6 sm:px-6 sm:py-10')],
+  pageFrame(
+    'Lines',
     [
-      h.div(
-        [h.Class('mx-auto flex max-w-2xl flex-col gap-10')],
+      h.header(
+        [h.Class('flex flex-col gap-3 text-center')],
         [
-          siteNav('Lines', h),
-          h.header(
-            [h.Class('flex flex-col gap-3 text-center')],
-            [
-              h.h1([h.Class('text-5xl font-bold tracking-tight')], ['Intone']),
-              h.p([h.Class('mx-auto max-w-md text-lg text-muted')], [tagline]),
-            ],
-          ),
-          h.p(
-            [
-              h.Role('status'),
-              h.Class(
-                'rounded-lg border border-good bg-surface p-4 text-base text-ink break-words empty:hidden',
-              ),
-            ],
-            [Option.getOrElse(maybeNotice, () => '')],
-          ),
-          dueSection(
-            due,
-            words,
-            {
-              changedWords: words => Message.ChangedFindDueLines({ words }),
-              showMore: Message.ClickedShowMoreDueLines(),
-            },
-            secondaryButton,
-            h,
-          ),
-          h.section(
-            [h.AriaLabelledBy('lines-heading'), h.Class('flex flex-col gap-4')],
-            [
-              h.h2(
-                [h.Id('lines-heading'), h.Class('text-xl font-bold')],
-                ['Lines to copy'],
-              ),
-              h.ul(
-                [h.Class('flex flex-col gap-3')],
-                lines.map(line =>
-                  h.keyed('li')(
-                    `${line.clipId}/${line.lineId}`,
-                    [],
-                    [lineRow(line, h)],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          clipsSection(clips, h),
+          h.h1([h.Class('text-5xl font-bold tracking-tight')], ['Intone']),
+          h.p([h.Class('mx-auto max-w-md text-lg text-muted')], [tagline]),
         ],
       ),
+      h.p(
+        [
+          h.Role('status'),
+          h.Class(
+            'rounded-lg border border-good bg-surface p-4 text-base text-ink break-words empty:hidden',
+          ),
+        ],
+        [Option.getOrElse(maybeNotice, () => '')],
+      ),
+      dueSection(
+        due,
+        words,
+        {
+          changedWords: words => Message.ChangedFindDueLines({ words }),
+          showMore: Message.ClickedShowMoreDueLines(),
+        },
+        secondaryButton,
+        h,
+      ),
+      h.section(
+        [h.AriaLabelledBy('lines-heading'), h.Class('flex flex-col gap-4')],
+        [
+          h.h2(
+            [h.Id('lines-heading'), h.Class('text-xl font-bold')],
+            ['Lines to copy'],
+          ),
+          h.ul(
+            [h.Class('flex flex-col gap-3')],
+            lines.map(line =>
+              h.keyed('li')(
+                `${line.clipId}/${line.lineId}`,
+                [],
+                [lineRow(line, h)],
+              ),
+            ),
+          ),
+        ],
+      ),
+      clipsSection(clips, h),
     ],
+    h,
+    'gap-10',
   )
 
 const lineView = (
@@ -616,7 +610,7 @@ const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
         [
           h.Href(homeRouter({ maybeFind: Option.none() })),
           h.Class(
-            'inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+            'inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring',
           ),
         ],
         ['Go to the start'],

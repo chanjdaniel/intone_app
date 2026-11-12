@@ -26,9 +26,6 @@ export type LineList<ViewMessage> = Readonly<{
   showMore: ViewMessage
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
 export const findInputId = 'find-lines'
 
 export const linesFound = (
@@ -69,7 +66,7 @@ const lineRow = <ViewMessage>(
           ),
           h.DataAttribute(lineRowAttribute, String(index)),
           h.Class(
-            `flex min-h-11 items-center justify-between gap-4 rounded-lg border border-line bg-raised px-4 py-3 text-ink hover:border-accent ${focusRing}`,
+            `flex min-h-11 items-center justify-between gap-4 rounded-lg border border-line bg-raised px-4 py-3 text-ink hover:border-accent focus-ring`,
           ),
         ],
         [
@@ -117,7 +114,7 @@ export const lineList = <ViewMessage>(
       countLine: countLine(found.length, list.lines.length, list.words),
       changedWords: list.changedWords,
       showMore: list.showMore,
-      moreButtonClass: `inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink ${focusRing}`,
+      moreButtonClass: `inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink focus-ring`,
       row: (line, index) => lineRow(line, index, h),
     },
     h,

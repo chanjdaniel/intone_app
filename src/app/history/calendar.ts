@@ -20,9 +20,6 @@ export type PracticeCalendar<ViewMessage> = Readonly<{
   next: ViewMessage
 }>
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
 const weekdays = [
   ['Mon', 'Monday'],
   ['Tue', 'Tuesday'],
@@ -79,7 +76,7 @@ const monthButton = <ViewMessage>(
       h.AriaLabel(label),
       ...(enabled ? [h.OnClick(message)] : [h.Disabled(true)]),
       h.Class(
-        `inline-flex size-11 items-center justify-center rounded-md border border-line bg-surface text-lg text-ink disabled:text-line ${focusRing}`,
+        `inline-flex size-11 items-center justify-center rounded-md border border-line bg-surface text-lg text-ink disabled:text-line focus-ring`,
       ),
     ],
     [h.span([h.AriaHidden(true)], [arrow])],

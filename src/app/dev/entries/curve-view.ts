@@ -10,7 +10,7 @@ import {
   defineDrawCurvePair,
   describeCurve,
 } from '../../take/curvePair'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 import {
   type SampleTakeName,
   sampleLine,
@@ -93,7 +93,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
                     h.AriaPressed(model.take === take ? 'true' : 'false'),
                     h.OnClick(Message.SelectedTake({ take })),
                     h.Class(
-                      `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent ${buttonFocusClass}`,
+                      `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-3 text-sm aria-pressed:border-accent aria-pressed:bg-raised aria-pressed:ring-1 aria-pressed:ring-accent focus-ring`,
                     ),
                   ],
                   [sampleTakeLabel[take]],

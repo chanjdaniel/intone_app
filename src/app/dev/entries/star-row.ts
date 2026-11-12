@@ -13,7 +13,7 @@ import {
 } from '../../level/progress'
 import { starRow, starRules, starsText } from '../../level/starRow'
 import { TakeScore } from '../../take/take'
-import { type DevEntry, buttonFocusClass, entryFrame } from '../entry'
+import { type DevEntry, entryFrame } from '../entry'
 
 // A line's stars, 0 to 3, at both sizes, and what a take says of them:
 // press a take to see it scored against the line's stars so far, by the
@@ -184,7 +184,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
                       h.Type('button'),
                       h.OnClick(Message.ClickedTake({ take: take.name })),
                       h.Class(
-                        `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink ${buttonFocusClass}`,
+                        `inline-flex min-h-11 items-center rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink focus-ring`,
                       ),
                     ],
                     [take.name],
@@ -195,7 +195,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html =>
                     h.Type('button'),
                     h.OnClick(Message.ClickedStartAgain()),
                     h.Class(
-                      `inline-flex min-h-11 items-center rounded-sm text-base font-semibold text-accent underline underline-offset-4 ${buttonFocusClass}`,
+                      `inline-flex min-h-11 items-center rounded-sm text-base font-semibold text-accent underline underline-offset-4 focus-ring`,
                     ),
                   ],
                   ['Start again'],
