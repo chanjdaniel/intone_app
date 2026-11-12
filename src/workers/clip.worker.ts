@@ -14,6 +14,7 @@ import {
   type CutLine,
   type FromClip,
   ToClip,
+  clipSampleRate,
   transferables,
 } from './clip-protocol'
 import { fetchModel } from './onnx-session'
@@ -189,7 +190,7 @@ const program = Effect.gen(function* () {
             state.held = samples
             yield* post({
               _tag: 'Held',
-              peaks: waveformPeaks(samples, 16_000),
+              peaks: waveformPeaks(samples, clipSampleRate),
             })
           }),
         Track: ({ request, spans }) =>

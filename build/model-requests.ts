@@ -25,6 +25,10 @@ export const contentTypeOf = (path: string): string => {
       return 'application/json'
     case '.txt':
       return 'text/plain; charset=utf-8'
+    case '.wasm':
+      return 'application/wasm'
+    case '.mjs':
+      return 'text/javascript'
     default:
       return 'application/octet-stream'
   }
@@ -73,7 +77,8 @@ export const requestedRange = (
   }
 }
 
-const send = async (
+// Sends the file at `path`, whole or the byte range asked for.
+export const send = async (
   request: IncomingMessage,
   response: ServerResponse,
   path: string,
@@ -105,6 +110,24 @@ const send = async (
   await pipeline(createReadStream(path, { start, end }), response)
 }
 
+// Runs a handler's answer, and passes what it throws to the next handler,
+// or drops the response when it has already begun.
+export const answering = (
+  response: ServerResponse,
+  next: Next,
+  answer: () => Promise<void>,
+): void => {
+  answer().catch((error: unknown) => {
+    if (response.headersSent) {
+      // The client went away, or the file failed mid-way: nothing more
+      // can be said on this response.
+      response.destroy()
+    } else {
+      next(error)
+    }
+  })
+}
+
 export type ModelRequestOptions = Readonly<{
   base: string
   // Where a listed file is on disk, by its path below the base, or
@@ -131,13 +154,5 @@ export const modelRequestHandler =
       }
       await send(request, response, located)
     }
-    answer().catch((error: unknown) => {
-      if (response.headersSent) {
-        // The client went away, or the file failed mid-way: nothing more
-        // can be said on this response.
-        response.destroy()
-      } else {
-        next(error)
-      }
-    })
+    answering(response, next, answer)
   }

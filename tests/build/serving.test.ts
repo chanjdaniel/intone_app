@@ -138,6 +138,25 @@ describe.each(['dev', 'preview'] as const)('the %s server', server => {
     }
   })
 
+  test("serves ONNX Runtime's files with their type and length", async () => {
+    const ort = `/${onnxRuntimeDirectory(await onnxRuntimeVersion())}`
+    for (const file of onnxRuntimeFiles) {
+      // Uncompressed, so its length is the file's: `vite preview`
+      // compresses text for a client that accepts it.
+      const response = await fetch(`${origins[server]}${ort}${file}`, {
+        headers: { 'Accept-Encoding': 'identity' },
+      })
+      const body = await response.arrayBuffer()
+      expect(response.status, file).toBe(200)
+      expect(response.headers.get('content-type'), file).toBe(
+        file.endsWith('.wasm') ? 'application/wasm' : 'text/javascript',
+      )
+      expect(response.headers.get('content-length'), file).toBe(
+        String(body.byteLength),
+      )
+    }
+  })
+
   test('answers one byte range with 206 and an unsatisfiable one with 416', async () => {
     const decoder = whisperDecoder()
     const url = `${origins[server]}/${decoder.path}`

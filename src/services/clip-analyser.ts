@@ -16,6 +16,7 @@ import {
   type CutLine,
   FromClip,
   type ToClip,
+  clipSampleRate,
   transferables,
 } from '../workers/clip-protocol'
 import { recordingOfPayload } from '../workers/recording-payload'
@@ -39,7 +40,7 @@ import { type WorkerPort, openWorkerSession } from './worker-session'
 // 48 kHz holds about 230 MB.
 export const longestClipSeconds = 600
 
-export const clipSampleRate = 16_000
+export { clipSampleRate } from '../workers/clip-protocol'
 
 export const ClipFailure = Schema.Literals([
   // The browser cannot play or decode the file.
@@ -122,7 +123,7 @@ const probeTimeout = Duration.seconds(20)
 const tooLong = (seconds: number) =>
   failed(
     'TooLong',
-    `It is ${minutesText(seconds)} long, and a clip can be at most 10 minutes. Cut it shorter first.`,
+    `It is ${minutesText(seconds)} long, and a clip can be at most ${longestClipSeconds / 60} minutes. Cut it shorter first.`,
   )
 
 const minutesText = (seconds: number): string => {

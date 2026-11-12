@@ -10,6 +10,10 @@ import {
 // boundary once per message. The clip's audio and every curve travel
 // transferred, never copied.
 
+// The clip's rate, at which Silero VAD and SwiftF0 both run: every
+// sample position in these messages counts at it.
+export const clipSampleRate = 16_000
+
 // TO THE WORKER
 
 export const Load = Schema.TaggedStruct('Load', {

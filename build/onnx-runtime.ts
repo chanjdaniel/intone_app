@@ -1,9 +1,9 @@
-import { createReadStream } from 'node:fs'
 import { copyFile, mkdir, readFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
-import { pipeline } from 'node:stream/promises'
 import { fileURLToPath } from 'node:url'
 import type { Plugin } from 'vite'
+
+import { answering, send } from './model-requests.ts'
 
 // ONNX Runtime Web's WebAssembly build, served from the app's own origin.
 // The app runs it on one thread with no cross-origin isolation, so only
@@ -46,59 +46,48 @@ export const onnxRuntimeDirectory = (version: string): string =>
 export const onnxRuntimeModuleId = 'virtual:intone/onnx-runtime'
 const resolvedModuleId = `\0${onnxRuntimeModuleId}`
 
-const contentTypes: Record<string, string> = {
-  '.wasm': 'application/wasm',
-  '.mjs': 'text/javascript',
-}
-
 export const onnxRuntime = (): Plugin => {
   let root = process.cwd()
   let base = '/'
+  let directory = ''
   return {
     name: 'intone:onnx-runtime',
-    configResolved(config) {
+    async configResolved(config) {
       root = config.root
       base = config.base
+      directory = onnxRuntimeDirectory(await onnxRuntimeVersion())
     },
     resolveId(id) {
       return id === onnxRuntimeModuleId ? resolvedModuleId : undefined
     },
-    async load(id) {
+    load(id) {
       if (id !== resolvedModuleId) {
         return undefined
       }
-      const paths = base + onnxRuntimeDirectory(await onnxRuntimeVersion())
-      return `export const onnxRuntimeWasmPaths = ${JSON.stringify(paths)}\n`
+      return `export const onnxRuntimeWasmPaths = ${JSON.stringify(base + directory)}\n`
     },
     async writeBundle(output) {
-      const target = join(
-        output.dir ?? resolve(root, 'dist'),
-        onnxRuntimeDirectory(await onnxRuntimeVersion()),
-      )
+      const target = join(output.dir ?? resolve(root, 'dist'), directory)
       await mkdir(target, { recursive: true })
       for (const file of onnxRuntimeFiles) {
         await copyFile(join(distDirectory(), file), join(target, file))
       }
     },
+    // In development, from the package itself, as model files are sent
+    // (./model-requests.ts): the type, the length, a byte range.
     configureServer(server) {
-      server.middlewares.use(async (request, response, next) => {
+      server.middlewares.use((request, response, next) => {
         const path = (request.url ?? '').split('?')[0] ?? ''
-        const directory =
-          base + onnxRuntimeDirectory(await onnxRuntimeVersion())
-        const file = onnxRuntimeFiles.find(each => path === directory + each)
+        const file = onnxRuntimeFiles.find(
+          each => path === base + directory + each,
+        )
         if (file === undefined) {
           next()
           return
         }
-        response.setHeader(
-          'Content-Type',
-          contentTypes[file.slice(file.lastIndexOf('.'))] ??
-            'application/octet-stream',
+        answering(response, next, () =>
+          send(request, response, join(distDirectory(), file)),
         )
-        await pipeline(
-          createReadStream(join(distDirectory(), file)),
-          response,
-        ).catch(next)
       })
     },
   }
