@@ -5,7 +5,7 @@ Every number here comes from `docs/score-study.md`, which `npm run score:study` 
 
 ## What it is
 
-`scoreTake(native, take)` in `src/score/score.ts` takes two `Recording`s, each a curve (`src/score/curve.ts`) and its features (`src/score/features.ts`), and returns a `Score`: `Scored` with the match, the pitch accent and timing parts, the worst stretch and `provisional: true`, or `CouldNotCompare` with its reason.
+`scoreTake(native, take)` in `src/score/score.ts` takes two `Recording`s, each a curve (`src/score/curve.ts`) and its features (`src/score/features.ts`), and returns the `Score`, `Scored` with the match, the pitch accent and timing parts, the worst stretch and `provisional: true`, or `CouldNotCompare` with its reason, with the pairs of frames it lined up (none when it could not compare).
 It runs anywhere: `src/score` imports nothing from Effect, Foldkit or any browser API, which lint enforces (AGENTS.md, "The folder line").
 Every constant lives in `src/score/constants.ts`, each naming the section of this file or of the study it came from.
 `SCORE_VERSION` is 1; bump it on any change that moves a score, so takes stored before can be scored again.
@@ -89,7 +89,7 @@ On audio ("Pitch range on audio"), with the fixture voices' spans running from 5
 
 So on audio the clamp is span-blind inside its band as far as an unbounded gain is: what correlation remains inside the band (0.27 to 0.30) is there with no clamp at all, and comes from voices with similar spans being alike in other ways, not from the gain.
 Outside the band the clamp works as meant, keeping a take that barely moves from scoring as a full one.
-The property tests check the band directly: scaling a take's span by 0.5x to 2x moves its skill by under 0.01, and a fifth of the span lowers it by over 0.3.
+The property tests check the band directly: on drawn lines and voices, scaling a take's span while the gain it needs stays inside the band moves its pitch accent part by under 0.01 of skill, and a fifth of a right take's span lowers the part by over 0.3.
 
 ## Gaps
 
@@ -108,7 +108,7 @@ Reaching past the voice over sound 6 dB clear of the recording's quietest tenth 
 
 ## Timing
 
-The timing part reads how far the take's local tempo strays from its own overall tempo, so a take said slower or faster throughout keeps it: on the fixtures the median timing part is 0.98 for right takes, 0.98 slower and 0.95 faster, and a property test holds a uniformly paced synthetic take above 0.95 and within 0.05 of the same take at the native's pace.
+The timing part reads how far the take's local tempo strays from its own overall tempo, so a take said slower or faster throughout keeps it: on the fixtures the median timing part is 0.98 for right takes, 0.98 slower and 0.95 faster, but on drawn lines a property test finds short lines much less steady ("What drawn curves found").
 
 It is the weak part.
 The chance that an `uneven` take (a third of its morae held half again as long, a quarter clipped to six tenths) strays further than a steady one is 0.64, 0.51 and 0.71 at 5, 8 and 19 morae on the chosen path, and 0.72, 0.60 and 0.79 even on the labelled boundaries ("Timing"): the eight voices' own timing differs about as much as the uneven variant's, so across voices timing barely tells them apart.
@@ -134,7 +134,25 @@ No right take at its own pace is refused, and no take is refused as too little v
 ## Octave jumps
 
 With one voiced frame in 50 moved an octave up or down, the pitch accent part moves by 0.041 at most; one in 20, by 0.042; one in 10, by 0.239 at most and 0.010 at the median ("Octave jumps").
-Tests hold the fixtures under 0.05 at one in 50 and synthetic takes under 0.05 of skill at one in 20.
+Tests hold the fixtures under 0.05 at one in 50; on drawn lines and voices, one in 20 moves the skill by up to 0.31 ("What drawn curves found").
+
+## What drawn curves found
+
+`src/score/score.test.ts` checks the spec's properties on curves fast-check draws: a native line in a Tokyo accent pattern of 2 to 8 morae (60 for the flat take), at 150 to 300 Hz with a span of 3 to 8 semitones, and a take of it in another voice, at 90 to 300 Hz, 7 to 12 frames a mora, with its own colour, noise and up to 2 semitones of jitter.
+Shifting the take's register leaves the score unchanged, and scaling its span inside the gain band moves it by under 0.01 of skill, on every draw.
+Three properties hold only within wider bounds than the fixed takes showed, measured as the worst of 5,000 draws each (fast-check seeds 7, 8 and 9 in the measurement); the tests pin their draws to fixed seeds and hold these bounds with a margin.
+They are ticket 22's input; this round changes neither the score's maths nor `SCORE_VERSION`.
+
+| Property                                          | Worst seen | By morae, 2 to 8                                | Worst draw                                                                                                                                      |
+| ------------------------------------------------- | ---------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| A flat take's pitch accent part                   | 0.105      | 0.105, 0.088, 0.066, 0.094, 0.068, 0.062, 0.064 | 2 morae `[L, H]`; flat take at 91 Hz, seed 995288                                                                                               |
+| An evenly paced take's timing part                | 0.18       | 0.18, 0.67, 0.83, 0.89, 0.90, 0.91, 0.96        | 2 morae `[H, L]`, native 196 Hz, span 4, seed 649283; take 90 Hz, said at 17 frames a mora against the same take at 9, colour 0.53, seed 310066 |
+| Its drift from the same take at the native's pace | 0.82       | 0.82, 0.33, 0.17, 0.11, 0.10, 0.09, 0.04        | the same draw                                                                                                                                   |
+| Octave jumps in one frame in 20, as skill         | 0.31       | 0.31, 0.24, 0.21, 0.10, 0.09, 0.12, 0.25        | 2 morae `[L, H]`, native 298 Hz, span 3, seed 7; take 123 Hz, 8 and 12 frames, colour 0.57, jitter 2, seed 265657                               |
+
+- **Short lines and timing.** A 2-mora line lasts about 0.29 s, barely longer than the 0.2 s window the local tempo is read over (`timingWindowSeconds`), so an even change of pace reads as uneven; 3 and 4 morae suffer less, and from 5 morae the timing part stays above 0.89.
+- **A flat take** keeps up to 0.105 of the pitch accent part, most on 2 morae, where one rise is the whole line.
+- **Octave jumps** move the skill by up to 0.31 on 2 morae and 0.25 on 8; the worst draw pairs a 3-semitone span with a take jittered by 2 semitones.
 
 ## The top of the scale
 

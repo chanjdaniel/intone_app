@@ -78,8 +78,9 @@ const loudLevelDb = (curve: Curve): number => {
   )
 }
 
-// A score and the raw measures behind it, for docs/score.md's study:
-// `scoreTake` is the score's one way in.
+// A score and the raw measures behind it, read only by docs/score.md's
+// study (tests/support/score-study.ts); the app and its tests score
+// through `scoreTake`.
 export type ScoreDetail = Readonly<{
   score: Score
   // The pitch skill before the scale's top, and the tempo deviation.
@@ -210,16 +211,15 @@ export const scoreDetail = (
   }
 }
 
-// The score of `take` copying `native`.
-export const scoreTake = (native: Recording, take: Recording): Score =>
-  scoreDetail(native, take).score
+// The score's one way in: the score of `take` copying `native`, and the
+// pairs of frames it lined up, for drawing the take over the native where
+// it was compared (`alignedTakeF0`), or null when it could not compare.
+export type ScoredTake = Readonly<{
+  score: Score
+  alignment: AlignmentPath | null
+}>
 
-// The score, and the pairs of frames it lined up, for drawing the take
-// over the native where it was compared (`alignedTakeF0`).
-export const scoreWithAlignment = (
-  native: Recording,
-  take: Recording,
-): Readonly<{ score: Score; alignment: AlignmentPath | null }> => {
+export const scoreTake = (native: Recording, take: Recording): ScoredTake => {
   const { score, alignment } = scoreDetail(native, take)
   return { score, alignment }
 }

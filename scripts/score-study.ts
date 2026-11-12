@@ -697,7 +697,7 @@ out.push(
 )
 const jumpRows = [50, 20, 10].map(every => {
   const moves = cleanRight.flatMap(pair => {
-    const before = scoreTake(pair.native.recording, pair.take.recording)
+    const before = scoreTake(pair.native.recording, pair.take.recording).score
     const f0Hz = pair.take.recording.curve.f0Hz.slice()
     let voiced = 0
     for (let f = 0; f < f0Hz.length; f++) {
@@ -709,7 +709,7 @@ const jumpRows = [50, 20, 10].map(every => {
     const after = scoreTake(pair.native.recording, {
       ...pair.take.recording,
       curve: { ...pair.take.recording.curve, f0Hz },
-    })
+    }).score
     return before._tag === 'Scored' && after._tag === 'Scored'
       ? [Math.abs(after.parts.pitchAccent - before.parts.pitchAccent)]
       : []
@@ -750,7 +750,7 @@ if (values.time === true) {
   // other.
   const started = process.hrtime.bigint()
   for (const pair of pairs)
-    scoreTake(pair.native.recording, pair.take.recording)
+    scoreTake(pair.native.recording, pair.take.recording).score
   const each = Number(process.hrtime.bigint() - started) / 1e6 / pairs.length
   const long = (id: string) => {
     const tracked = readTracked(id)
@@ -760,7 +760,7 @@ if (values.time === true) {
   const gongitsune = long('real/gongitsune')
   const goodBye = long('real/good-bye')
   const longStarted = process.hrtime.bigint()
-  const longScore = scoreTake(gongitsune, goodBye)
+  const longScore = scoreTake(gongitsune, goodBye).score
   console.log(
     `${pairs.length} takes of 5 to 19 morae: ${each.toFixed(2)} ms each; two 29 s readings: ${(Number(process.hrtime.bigint() - longStarted) / 1e6).toFixed(0)} ms (${longScore._tag})`,
   )

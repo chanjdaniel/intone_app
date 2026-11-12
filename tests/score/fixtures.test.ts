@@ -135,7 +135,7 @@ describe('the score across voices', () => {
         const score = scoreTake(
           pair.native.recording,
           flatTake(pair.take).recording,
-        )
+        ).score
         return score._tag === 'Scored' ? score.parts.pitchAccent : Number.NaN
       })
     expect(Math.max(...flat)).toBeLessThan(0.05)
@@ -156,7 +156,7 @@ describe('the score across voices', () => {
       const jumped = scoreTake(pair.native.recording, {
         ...pair.take.recording,
         curve: { ...pair.take.recording.curve, f0Hz },
-      })
+      }).score
       expect(jumped._tag).toBe('Scored')
       if (jumped._tag === 'Scored') {
         expect(

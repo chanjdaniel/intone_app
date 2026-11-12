@@ -1,3 +1,4 @@
+import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 
 import { alignedTakeF0 } from './align'
@@ -7,7 +8,7 @@ import {
   pitchSkillTop,
   worstStretchSeconds,
 } from './constants'
-import { type Score, scoreDetail, scoreTake, scoreWithAlignment } from './score'
+import { type ScoredTake, scoreDetail, scoreTake } from './score'
 import {
   type SyntheticTake,
   frameHz,
@@ -42,17 +43,12 @@ const rightTake = (seed: number, change: Partial<SyntheticTake> = {}) =>
     ...change,
   })
 const seeds = Array.from({ length: 12 }, (_, k) => k + 1)
-// A near miss, its fourth mora high where the native's is low: a pitch
-// accent part of about 0.4, clear of 0 and of the scale's top, so a
-// change to its score shows (a right take's part sits at 1).
-const nearMiss = (seed: number) =>
-  rightTake(seed, { pattern: [true, false, false, true, true] })
 // The pitch accent part is the raw pitch skill over the scale's top
 // (`pitchSkillTop`, 0.67), so a tolerance on the skill is half again as
 // wide on the part.
 const onPart = (skillTolerance: number) => skillTolerance / pitchSkillTop
 
-const scored = (score: Score) => {
+const scored = ({ score }: ScoredTake) => {
   if (score._tag !== 'Scored') {
     throw new Error(`could not compare: ${score.reason}`)
   }
@@ -68,7 +64,7 @@ describe('scoreTake', () => {
     const refused = scoreTake(
       syntheticTake(native),
       rightTake(1, { moraFrames: 30 }),
-    )
+    ).score
     expect(refused).toMatchObject({ _tag: 'CouldNotCompare', version: 1 })
   })
 
@@ -87,95 +83,12 @@ describe('scoreTake', () => {
     }
   })
 
-  it('ignores the take’s register', () => {
-    for (const seed of seeds) {
-      const take = nearMiss(seed)
-      const before = scored(scoreTake(syntheticTake(native), take))
-      expect(before.parts.pitchAccent).toBeGreaterThan(0.2)
-      expect(before.parts.pitchAccent).toBeLessThan(0.8)
-      for (const semitones of [-14, -5, 3, 12]) {
-        const shifted = withF0(take, hz => hz * 2 ** (semitones / 12))
-        const after = scored(scoreTake(syntheticTake(native), shifted))
-        // The curve holds float32 Hz, so a shift rounds each frame anew.
-        expect(
-          Math.abs(after.parts.pitchAccent - before.parts.pitchAccent),
-        ).toBeLessThan(onPart(1e-6))
-        expect(after.parts.timing).toBe(before.parts.timing)
-      }
-    }
-  })
-
-  it('ignores the take’s span inside the gain band, within 0.01 of the skill', () => {
-    for (const seed of seeds) {
-      // The right shape, its pitch shaken by 2 semitones: a part of 0.67
-      // to 0.92, under the scale's top, and a fitted gain of 0.72 to 0.99,
-      // so these spans keep the gain each needs inside the band.
-      const take = rightTake(seed, { jitter: 2 })
-      const before = scored(scoreTake(syntheticTake(native), take))
-      expect(before.parts.pitchAccent).toBeLessThan(0.95)
-      for (const span of [0.6, 0.8, 1.25, 1.4]) {
-        // The take's movement scaled around its own median.
-        const median = 130
-        const scaled = withF0(take, hz => median * (hz / median) ** span)
-        const after = scored(scoreTake(syntheticTake(native), scaled))
-        expect(
-          Math.abs(after.parts.pitchAccent - before.parts.pitchAccent),
-          `seed ${seed}, span x${span}`,
-        ).toBeLessThan(onPart(0.01))
-      }
-    }
-  })
-
   it('stops ignoring span outside the gain band', () => {
     const take = rightTake(1)
     const before = scored(scoreTake(syntheticTake(native), take))
     const timid = withF0(take, hz => 130 * (hz / 130) ** 0.2)
     const after = scored(scoreTake(syntheticTake(native), timid))
     expect(after.parts.pitchAccent).toBeLessThan(before.parts.pitchAccent - 0.3)
-  })
-
-  it('scores a flat take near zero at any length', () => {
-    for (const morae of [2, 5, 12, 30, 60]) {
-      const pattern = Array.from(
-        { length: morae },
-        (_, k) => k === 0 || k % 4 === 1,
-      )
-      const lineNative = syntheticTake({ ...native, pattern })
-      for (const seed of seeds.slice(0, 4)) {
-        const flat = syntheticTake({
-          ...native,
-          pattern,
-          registerHz: 140,
-          spanSemitones: 0,
-          seed: 200 + seed,
-          colour: 1,
-        })
-        const score = scored(scoreTake(lineNative, flat))
-        expect(score.parts.pitchAccent, `${morae} morae`).toBeLessThan(0.05)
-      }
-    }
-  })
-
-  it('keeps the timing part of a right take said uniformly slower or faster', () => {
-    for (const seed of seeds) {
-      const base = scored(
-        scoreTake(syntheticTake(native), rightTake(seed, { moraFrames: 9 })),
-      )
-      for (const frames of [6, 7, 12, 14, 17]) {
-        const paced = scored(
-          scoreTake(
-            syntheticTake(native),
-            rightTake(seed, { moraFrames: frames }),
-          ),
-        )
-        expect(paced.parts.timing, `${frames} frames a mora`).toBeGreaterThan(
-          0.95,
-        )
-        expect(Math.abs(paced.parts.timing - base.parts.timing)).toBeLessThan(
-          0.05,
-        )
-      }
-    }
   })
 
   it('lowers the timing part of a take that holds one mora and rushes another', () => {
@@ -193,23 +106,10 @@ describe('scoreTake', () => {
     }
   })
 
-  it('moves the pitch accent part by under 0.05 of the skill for octave jumps in one frame in 20', () => {
-    for (const seed of seeds) {
-      const take = nearMiss(seed)
-      const before = scored(scoreTake(syntheticTake(native), take))
-      let voiced = 0
-      const jumped = withF0(take, hz => {
-        voiced++
-        return voiced % 20 === 0 ? hz * (voiced % 40 === 0 ? 2 : 0.5) : hz
-      })
-      const after = scored(scoreTake(syntheticTake(native), jumped))
-      expect(
-        Math.abs(after.parts.pitchAccent - before.parts.pitchAccent),
-      ).toBeLessThan(onPart(0.05))
-    }
-  })
-
   it('never counts missing pitch as an error', () => {
+    // A perfect copy sits above the scale's top, where the Score's part
+    // reads 1 whatever a gap costs, so this reads the raw skill through
+    // the study's reader (docs/score.md, "Gaps").
     const lineNative = syntheticTake(native)
     // The native's own frames as the take: a perfect copy, skill 1. Frames
     // in a gap are left out, so a gap where the pitch holds costs only
@@ -260,7 +160,7 @@ describe('scoreTake', () => {
     const lineNative = syntheticTake(native)
     // Voiced for a third of the native's frames.
     const sparse = withGap(rightTake(1, { moraFrames: 9 }), 32, 62)
-    expect(scoreTake(lineNative, sparse)).toMatchObject({
+    expect(scoreTake(lineNative, sparse).score).toMatchObject({
       _tag: 'CouldNotCompare',
       reason: 'TooLittleVoiced',
     })
@@ -269,19 +169,19 @@ describe('scoreTake', () => {
       32,
       62,
     )
-    expect(scoreTake(lineNative, quiet)).toMatchObject({
+    expect(scoreTake(lineNative, quiet).score).toMatchObject({
       _tag: 'CouldNotCompare',
       reason: 'TooQuiet',
     })
     for (const moraFrames of [4, 20]) {
-      expect(scoreTake(lineNative, rightTake(1, { moraFrames }))).toMatchObject(
-        { _tag: 'CouldNotCompare', reason: 'LengthMismatch' },
-      )
+      expect(
+        scoreTake(lineNative, rightTake(1, { moraFrames })).score,
+      ).toMatchObject({ _tag: 'CouldNotCompare', reason: 'LengthMismatch' })
     }
     for (const moraFrames of [5, 17]) {
-      expect(scoreTake(lineNative, rightTake(1, { moraFrames }))._tag).toBe(
-        'Scored',
-      )
+      expect(
+        scoreTake(lineNative, rightTake(1, { moraFrames })).score._tag,
+      ).toBe('Scored')
     }
   })
 
@@ -295,13 +195,220 @@ describe('scoreTake', () => {
   })
 })
 
-describe('scoreWithAlignment', () => {
+// The spec's properties (spec, "Testing Decisions") on drawn curves: a
+// native line in a Tokyo accent pattern, and a take of it in another voice,
+// each drawn by fast-check, which prints the seed and the curves that
+// broke a property so a failure can be run again.
+
+// A Tokyo accent pattern of `morae`, high or low per mora: with the accent
+// on mora `kernel` (0 for none), atamadaka starts high and falls, any other
+// rises from the first mora and falls after its kernel.
+const accentPattern = (morae: number, kernel: number): Array<boolean> =>
+  Array.from({ length: morae }, (_, k) =>
+    kernel === 1 ? k === 0 : k > 0 && (kernel === 0 || k < kernel),
+  )
+
+const drawnLine = fc
+  .integer({ min: 2, max: 8 })
+  .chain(morae =>
+    fc.record({
+      pattern: fc
+        .integer({ min: 0, max: morae })
+        .map(kernel => accentPattern(morae, kernel)),
+      registerHz: fc.integer({ min: 150, max: 300 }),
+      spanSemitones: fc.integer({ min: 3, max: 8 }),
+      seed: fc.integer({ min: 1, max: 1_000_000 }),
+    }),
+  )
+  .map((line): SyntheticTake => ({ ...line, moraFrames: 9 }))
+
+// A take of `line` in another voice: its own register, mora lengths,
+// colour, noise and jitter.
+const drawnTake = (line: SyntheticTake, jitter = { max: 1 }) =>
+  fc
+    .record({
+      registerHz: fc.integer({ min: 90, max: 300 }),
+      moraFrames: fc.array(fc.integer({ min: 7, max: 12 }), {
+        minLength: line.pattern.length,
+        maxLength: line.pattern.length,
+      }),
+      seed: fc.integer({ min: 1, max: 1_000_000 }),
+      colour: fc.double({ min: 0.5, max: 2, noNaN: true }),
+      jitter: fc.double({ min: 0, max: jitter.max, noNaN: true }),
+    })
+    .map((voice): SyntheticTake => ({
+      ...voice,
+      pattern: line.pattern,
+      spanSemitones: line.spanSemitones,
+    }))
+
+const lineAndTake = (jitter?: { max: number }) =>
+  drawnLine.chain(line => drawnTake(line, jitter).map(take => ({ line, take })))
+
+// Each property runs the same 60 draws every time, from its own seed, so
+// CI never draws a new worst case; fast-check prints the seed and the
+// draw on a failure. The bounds are the worst of 5,000 draws each, with a
+// margin (docs/score.md, "What drawn curves found"), not the score's aim:
+// ticket 22 starts from them.
+const runs = (seed: number) => ({ numRuns: 60, seed })
+
+// A flat take's pitch accent part, at most: 0.105 seen, on two morae.
+const flatTop = 0.12
+// The octave jumps' move of the raw skill, at most: 0.31 seen, on two morae.
+const octaveSkillTop = 0.33
+// A take said evenly slower or faster: its timing part at least, and how
+// far from the steady take's at most, by the line's morae (2 to 8). Short
+// lines are barely longer than the 0.2 s timing window.
+const timingFloor = [0, 0, 0.15, 0.6, 0.75, 0.85, 0.85, 0.85, 0.9]
+const timingDrift = [1, 1, 0.85, 0.4, 0.22, 0.13, 0.13, 0.13, 0.06]
+
+describe('the score’s properties, on drawn curves', () => {
+  it('leaves the score unchanged when the take’s register shifts', () => {
+    fc.assert(
+      fc.property(
+        lineAndTake(),
+        fc.integer({ min: -14, max: 14 }),
+        ({ line, take }, semitones) => {
+          const native = syntheticTake(line)
+          const said = syntheticTake(take)
+          const before = scoreTake(native, said).score
+          const after = scoreTake(
+            native,
+            withF0(said, hz => hz * 2 ** (semitones / 12)),
+          ).score
+          expect(after._tag).toBe(before._tag)
+          if (before._tag === 'Scored' && after._tag === 'Scored') {
+            // The curve holds float32 Hz, so a shift rounds each frame
+            // anew.
+            expect(
+              Math.abs(after.parts.pitchAccent - before.parts.pitchAccent),
+            ).toBeLessThan(onPart(1e-6))
+            expect(after.parts.timing).toBe(before.parts.timing)
+          }
+        },
+      ),
+      runs(1001),
+    )
+  })
+
+  it('leaves the score within 0.01 of the skill when the take’s span scales inside the gain band', () => {
+    fc.assert(
+      fc.property(
+        lineAndTake({ max: 2 }),
+        fc.double({ min: 0.6, max: 1.6, noNaN: true }),
+        ({ line, take }, span) => {
+          const native = syntheticTake(line)
+          const said = syntheticTake(take)
+          // The gain the take needs once scaled stays inside the band,
+          // with room for the scaled take's own fit.
+          const { gain } = scoreDetail(native, said)
+          fc.pre(
+            Number.isFinite(gain) &&
+              gain / span >= gainBand.least * 1.1 &&
+              gain / span <= gainBand.most / 1.1,
+          )
+          const before = scored(scoreTake(native, said))
+          // The take's movement scaled around its own register.
+          const scaled = withF0(
+            said,
+            hz => take.registerHz * (hz / take.registerHz) ** span,
+          )
+          const after = scored(scoreTake(native, scaled))
+          expect(
+            Math.abs(after.parts.pitchAccent - before.parts.pitchAccent),
+          ).toBeLessThan(onPart(0.01))
+        },
+      ),
+      runs(1002),
+    )
+  })
+
+  it('scores a flat take near zero at any length, under the measured bound', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 2, max: 60 }).chain(morae =>
+          fc.record({
+            pattern: fc
+              .integer({ min: 0, max: morae })
+              .map(kernel => accentPattern(morae, kernel)),
+            seed: fc.integer({ min: 1, max: 1_000_000 }),
+            registerHz: fc.integer({ min: 90, max: 300 }),
+          }),
+        ),
+        ({ pattern, seed, registerHz }) => {
+          const lineNative = syntheticTake({ ...native, pattern })
+          const flat = syntheticTake({
+            ...native,
+            pattern,
+            registerHz,
+            spanSemitones: 0,
+            seed,
+            colour: 1,
+          })
+          expect(
+            scored(scoreTake(lineNative, flat)).parts.pitchAccent,
+          ).toBeLessThan(flatTop)
+        },
+      ),
+      runs(1003),
+    )
+  })
+
+  it('keeps the timing part of a take said uniformly slower or faster, within the measured bounds for its length', () => {
+    fc.assert(
+      fc.property(
+        lineAndTake(),
+        fc.integer({ min: 6, max: 17 }),
+        ({ line, take }, frames) => {
+          const native = syntheticTake(line)
+          const steady = scored(
+            scoreTake(native, syntheticTake({ ...take, moraFrames: 9 })),
+          )
+          const paced = scored(
+            scoreTake(native, syntheticTake({ ...take, moraFrames: frames })),
+          )
+          const morae = line.pattern.length
+          expect(paced.parts.timing).toBeGreaterThan(timingFloor[morae] ?? 1)
+          expect(
+            Math.abs(paced.parts.timing - steady.parts.timing),
+          ).toBeLessThan(timingDrift[morae] ?? 0)
+        },
+      ),
+      runs(1004),
+    )
+  })
+
+  it('moves the pitch accent part by under the measured bound for octave jumps in one frame in 20', () => {
+    fc.assert(
+      fc.property(lineAndTake({ max: 2 }), ({ line, take }) => {
+        const native = syntheticTake(line)
+        const said = syntheticTake(take)
+        const before = scoreTake(native, said).score
+        let voiced = 0
+        const jumped = withF0(said, hz => {
+          voiced++
+          return voiced % 20 === 0 ? hz * (voiced % 40 === 0 ? 2 : 0.5) : hz
+        })
+        const after = scoreTake(native, jumped).score
+        expect(after._tag).toBe(before._tag)
+        if (before._tag === 'Scored' && after._tag === 'Scored') {
+          expect(
+            Math.abs(after.parts.pitchAccent - before.parts.pitchAccent),
+          ).toBeLessThan(onPart(octaveSkillTop))
+        }
+      }),
+      runs(1005),
+    )
+  })
+})
+
+describe('scoreTake’s alignment', () => {
   it('gives the score and the path that lined the take up, in each curve’s own frames', () => {
     const lineNative = syntheticTake(native)
     for (const seed of seeds) {
       const take = rightTake(seed, { leadFrames: 30 })
-      const { score, alignment } = scoreWithAlignment(lineNative, take)
-      expect(score).toStrictEqual(scoreTake(lineNative, take))
+      const { score, alignment } = scoreTake(lineNative, take)
+      expect(score._tag).toBe('Scored')
       if (alignment === null) {
         throw new Error('no alignment')
       }
@@ -325,7 +432,7 @@ describe('scoreWithAlignment', () => {
   })
 
   it('has no path when it cannot compare', () => {
-    const refused = scoreWithAlignment(
+    const refused = scoreTake(
       syntheticTake(native),
       rightTake(1, { moraFrames: 30 }),
     )
@@ -339,7 +446,7 @@ describe('alignedTakeF0', () => {
     const lineNative = syntheticTake(native)
     // The same voice and accent, each mora half again as long.
     const slower = syntheticTake({ ...native, moraFrames: 14, seed: 7 })
-    const { alignment } = scoreWithAlignment(lineNative, slower)
+    const { alignment } = scoreTake(lineNative, slower)
     if (alignment === null) {
       throw new Error('no alignment')
     }

@@ -156,8 +156,9 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 
 ## The score
 
-- `src/score/score.ts` exports `scoreTake(native, take)`: two `Recording`s (a curve and its features) in, a `Score` out (`Scored` or `CouldNotCompare`), as the spec's interface gives it; `docs/score.md` says what each step does and the numbers each was chosen from.
-  `scoreWithAlignment` adds the pairs of frames it lined up, which `alignedTakeF0` (`align.ts`) turns into the take's pitch at each native frame, for drawing; `scoreDetail` adds the raw measures, for the study alone.
+- `src/score/score.ts` exports `scoreTake(native, take)`, the score's one way in: two `Recording`s (a curve and its features) in, and out the `Score` (`Scored` or `CouldNotCompare`) with the pairs of frames it lined up, which `alignedTakeF0` (`align.ts`) turns into the take's pitch at each native frame, for drawing; `docs/score.md` says what each step does and the numbers each was chosen from.
+  `scoreDetail` adds the raw measures, read only by the study (`tests/support/score-study.ts`) and by the gap test, where a perfect copy sits above the scale's top.
+  `src/score/score.test.ts` proves the spec's properties on curves fast-check draws, from fixed seeds, within the bounds `docs/score.md` ("What drawn curves found") measured.
 - Its steps: `track.ts` (gates, the octave filter, semitones around the median, the speech span), `align.ts` (the `Aligner` interface, `normaliseFeatures`, `stretchAligner`, `dtwAligner`, `withFallback`), `compare.ts` (the pitch skill with the clamped gain, the tempo deviation).
   The aligner never looks at pitch: it lines the take up by its features, the 24 log mel bands of `src/engine/features/spectral.ts`; a speech model's frames go through it too, put on the curve's frames by `onCurveFrames` (`src/score/features.ts`), though the app uses none (`docs/sounds.md`).
 - Every constant is in `src/score/constants.ts`, each naming its data; `SCORE_VERSION` is bumped on any change that moves a score.

@@ -1,11 +1,11 @@
 import { alignedTakeF0 } from '../score/align'
-import { type Recording, scoreWithAlignment } from '../score/score'
+import { type Recording, scoreTake } from '../score/score'
 import type { Comparison } from './scorer'
 
 // The score's maths, in a chunk of its own that the Scorer loads on the
 // first take (./scorer.ts).
 export const compareTake = (native: Recording, take: Recording): Comparison => {
-  const { score, alignment } = scoreWithAlignment(native, take)
+  const { score, alignment } = scoreTake(native, take)
   return {
     score,
     alignedTakeF0:

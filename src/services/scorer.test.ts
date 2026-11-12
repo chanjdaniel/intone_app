@@ -37,7 +37,7 @@ describe('the Scorer', () => {
       Effect.gen(function* () {
         const take = takeOf(11)
         const { score, alignedTakeF0 } = yield* scored(take)
-        expect(score).toStrictEqual(scoreTake(native, take))
+        expect(score).toStrictEqual(scoreTake(native, take).score)
         expect(score._tag).toBe('Scored')
         expect(alignedTakeF0?.length).toBe(native.curve.f0Hz.length)
         // Voiced where the native speaks, as the take does there.

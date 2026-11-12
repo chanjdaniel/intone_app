@@ -35,12 +35,14 @@ describe('a take’s score in the Model', () => {
       features: takeFeaturesOf(native.features),
     })
     expect(kept).toStrictEqual(native)
-    expect(scoreTake(kept, take)).toStrictEqual(scoreTake(native, take))
+    expect(scoreTake(kept, take).score).toStrictEqual(
+      scoreTake(native, take).score,
+    )
   })
 
   test('keeps the score’s fields, its parts by name, and the take lined up with the native', () => {
     const score = takeScoreOf(compareTake(native, take), native)
-    const raw = scoreTake(native, take)
+    const raw = scoreTake(native, take).score
     if (score._tag !== 'Scored' || raw._tag !== 'Scored') {
       throw new Error('not scored')
     }
