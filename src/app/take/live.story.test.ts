@@ -19,6 +19,7 @@ const voiceFromBatch = 25
 const microphone: MicrophoneSession = {
   sampleRate: 48_000,
   settings: {},
+  ended: Effect.never,
   batches: Stream.tick('20 millis').pipe(
     Stream.take(batchCount),
     Stream.mapAccum(
@@ -151,6 +152,37 @@ describe('the take, as its Model hears it', () => {
             )
           }),
         )
+      }),
+  )
+
+  it.effect(
+    'hears at once that the microphone stopped on its own, unplugged or taken back',
+    () =>
+      Effect.gen(function* () {
+        const tracker = yield* trackerOf
+        const heard: Array<Message> = []
+        const listening = yield* takeEvents(
+          3,
+          { ...microphone, ended: Effect.sleep('1 second') },
+          tracker.session,
+          () => Effect.void,
+        ).pipe(
+          Stream.runForEach(event => Effect.sync(() => heard.push(event))),
+          Effect.forkChild,
+        )
+        yield* Effect.yieldNow
+        for (let step = 0; step < 105; step++) {
+          yield* TestClock.adjust('10 millis')
+        }
+        const failed = heard.filter(event => event._tag === 'FailedRecordTake')
+        expect(failed).toStrictEqual([
+          Message.FailedRecordTake({
+            takeNumber: 3,
+            reason:
+              'The microphone stopped during the take: it was unplugged, or the browser took back its permission.',
+          }),
+        ])
+        yield* Fiber.interrupt(listening)
       }),
   )
 })

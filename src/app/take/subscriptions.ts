@@ -98,9 +98,19 @@ export const takeEvents = (
           )
         }),
       )
-      return Stream.mergeAll<Message, never, never>([forward, meter, onset], {
-        concurrency: 'unbounded',
-      })
+      const lost = Stream.fromEffect(microphone.ended).pipe(
+        Stream.map(() =>
+          Message.FailedRecordTake({
+            takeNumber,
+            reason:
+              'The microphone stopped during the take: it was unplugged, or the browser took back its permission.',
+          }),
+        ),
+      )
+      return Stream.mergeAll<Message, never, never>(
+        [forward, meter, onset, lost],
+        { concurrency: 'unbounded' },
+      )
     }),
   )
 

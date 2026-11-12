@@ -35,6 +35,9 @@ export type MicrophoneSession = Readonly<{
   // The AudioContext's rate, which every batch is at.
   sampleRate: number
   settings: MicrophoneSettings
+  // Completes if the microphone stops on its own during the session:
+  // unplugged, or its permission taken back. Never, otherwise.
+  ended: Effect.Effect<void>
   // Every 20 ms of the microphone's samples, mono, from the moment it is
   // connected, in order; it ends when the session is released.
   batches: Stream.Stream<Float32Array>
@@ -125,11 +128,16 @@ const stopTracks = (stream: MediaStream): Effect.Effect<void> =>
     stream.getTracks().forEach(track => track.stop())
   })
 
-// Connects a source to the running capture node and says what it is.
+// Connects a source to the running capture node, says what it is, and
+// when it stops on its own.
 type Connect = (
   context: AudioContext,
   node: AudioWorkletNode,
-) => Effect.Effect<MicrophoneSettings, MicrophoneError, Scope.Scope>
+) => Effect.Effect<
+  Readonly<{ settings: MicrophoneSettings; ended: Effect.Effect<void> }>,
+  MicrophoneError,
+  Scope.Scope
+>
 
 const openCapture = (
   connect: Connect,
@@ -169,7 +177,7 @@ const openCapture = (
     // stream opens: the worklet must already be running, or the start of
     // the take is lost (docs/fake-microphone.md).
     yield* Deferred.await(running)
-    const settings = yield* connect(context, node)
+    const { settings, ended } = yield* connect(context, node)
     connected = true
     yield* Effect.log('Microphone opened', {
       sampleRate: context.sampleRate,
@@ -178,6 +186,7 @@ const openCapture = (
     return {
       sampleRate: context.sampleRate,
       settings,
+      ended,
       batches: Stream.fromQueue(batches),
     }
   })
@@ -205,9 +214,21 @@ const connectMicrophone: Connect = (context, node) =>
         message: 'The microphone gave no audio track.',
       })
     }
-    return yield* Schema.decodeUnknownEffect(MicrophoneSettings)(
+    // A track ends on its own when its device goes or its permission is
+    // taken back; stopping it ourselves fires no `ended`.
+    const ended = yield* Deferred.make<void>()
+    yield* Effect.acquireRelease(
+      Effect.sync(() => {
+        const onEnded = () => Deferred.doneUnsafe(ended, Effect.void)
+        track.addEventListener('ended', onEnded)
+        return onEnded
+      }),
+      onEnded => Effect.sync(() => track.removeEventListener('ended', onEnded)),
+    )
+    const settings = yield* Schema.decodeUnknownEffect(MicrophoneSettings)(
       track.getSettings(),
     ).pipe(Effect.orElseSucceed(() => ({})))
+    return { settings, ended: Deferred.await(ended) }
   })
 
 const connectBuffer =
@@ -218,7 +239,7 @@ const connectBuffer =
         Effect.sync(() => playBuffer(audioBufferOf(wav), node)),
         playback => Effect.sync(() => playback.stop()),
       )
-      return {}
+      return { settings: {}, ended: Effect.never }
     })
 
 export class Microphone extends Context.Service<

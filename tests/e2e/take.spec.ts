@@ -286,6 +286,42 @@ test('leaving the screen mid-take releases the microphone', async ({
   }
 })
 
+test('a microphone that stops on its own mid-take ends the take and says why', async ({
+  playwright,
+}) => {
+  test.setTimeout(60_000)
+  const browser = await launch(playwright, wavOf('middle'))
+  try {
+    await withPage(browser, async ({ page, problems }) => {
+      await openLine(page)
+      await page.getByRole('button', { name: 'Record', exact: true }).click()
+      await expect(
+        page.getByRole('heading', { name: 'Recording' }),
+      ).toBeVisible({ timeout: 30_000 })
+      // As Chromium tells a page its microphone was unplugged.
+      await page.evaluate(() => {
+        const [track]: unknown = Reflect.get(window, 'intoneTracks')
+        if (!(track instanceof MediaStreamTrack)) {
+          throw new Error('no microphone track')
+        }
+        track.dispatchEvent(new Event('ended'))
+      })
+      await expect(
+        page.getByRole('heading', { name: 'Your take could not be tracked' }),
+      ).toBeVisible()
+      await expect(
+        page.getByText(
+          'The microphone stopped during the take: it was unplugged, or the browser took back its permission.',
+        ),
+      ).toBeVisible()
+      await expect.poll(() => trackStates(page)).toStrictEqual(['ended'])
+      expect(problems).toStrictEqual([])
+    })
+  } finally {
+    await browser.close()
+  }
+})
+
 test('a refused microphone says how to allow it', async ({ playwright }) => {
   test.setTimeout(60_000)
   const browser = await launch(playwright, wavOf('middle'), false)
