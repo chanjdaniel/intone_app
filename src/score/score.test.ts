@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import { alignedTakeF0 } from './align'
-import { SCORE_VERSION, gainBand, worstStretchSeconds } from './constants'
+import {
+  SCORE_VERSION,
+  gainBand,
+  pitchSkillTop,
+  worstStretchSeconds,
+} from './constants'
 import { type Score, scoreDetail, scoreTake, scoreWithAlignment } from './score'
 import {
   type SyntheticTake,
@@ -37,6 +42,15 @@ const rightTake = (seed: number, change: Partial<SyntheticTake> = {}) =>
     ...change,
   })
 const seeds = Array.from({ length: 12 }, (_, k) => k + 1)
+// A near miss, its fourth mora high where the native's is low: a pitch
+// accent part of about 0.4, clear of 0 and of the scale's top, so a
+// change to its score shows (a right take's part sits at 1).
+const nearMiss = (seed: number) =>
+  rightTake(seed, { pattern: [true, false, false, true, true] })
+// The pitch accent part is the raw pitch skill over the scale's top
+// (`pitchSkillTop`, 0.67), so a tolerance on the skill is half again as
+// wide on the part.
+const onPart = (skillTolerance: number) => skillTolerance / pitchSkillTop
 
 const scored = (score: Score) => {
   if (score._tag !== 'Scored') {
@@ -75,45 +89,49 @@ describe('scoreTake', () => {
 
   it('ignores the take’s register', () => {
     for (const seed of seeds) {
-      const take = rightTake(seed)
-      const before = scoreDetail(syntheticTake(native), take)
+      const take = nearMiss(seed)
+      const before = scored(scoreTake(syntheticTake(native), take))
+      expect(before.parts.pitchAccent).toBeGreaterThan(0.2)
+      expect(before.parts.pitchAccent).toBeLessThan(0.8)
       for (const semitones of [-14, -5, 3, 12]) {
         const shifted = withF0(take, hz => hz * 2 ** (semitones / 12))
-        const after = scoreDetail(syntheticTake(native), shifted)
+        const after = scored(scoreTake(syntheticTake(native), shifted))
         // The curve holds float32 Hz, so a shift rounds each frame anew.
-        expect(Math.abs(after.pitchSkill - before.pitchSkill)).toBeLessThan(
-          1e-6,
-        )
-        expect(after.score._tag).toBe('Scored')
-        expect(after.tempoDeviation).toBe(before.tempoDeviation)
+        expect(
+          Math.abs(after.parts.pitchAccent - before.parts.pitchAccent),
+        ).toBeLessThan(onPart(1e-6))
+        expect(after.parts.timing).toBe(before.parts.timing)
       }
     }
   })
 
-  it('ignores the take’s span inside the gain band, within 0.01', () => {
+  it('ignores the take’s span inside the gain band, within 0.01 of the skill', () => {
     for (const seed of seeds) {
-      const take = rightTake(seed)
-      const before = scoreDetail(syntheticTake(native), take)
-      for (const span of [0.5, 0.6, 0.8, 1.25, 1.6, 2]) {
+      // The right shape, its pitch shaken by 2 semitones: a part of 0.67
+      // to 0.92, under the scale's top, and a fitted gain of 0.72 to 0.99,
+      // so these spans keep the gain each needs inside the band.
+      const take = rightTake(seed, { jitter: 2 })
+      const before = scored(scoreTake(syntheticTake(native), take))
+      expect(before.parts.pitchAccent).toBeLessThan(0.95)
+      for (const span of [0.6, 0.8, 1.25, 1.4]) {
         // The take's movement scaled around its own median.
         const median = 130
         const scaled = withF0(take, hz => median * (hz / median) ** span)
-        const after = scoreDetail(syntheticTake(native), scaled)
+        const after = scored(scoreTake(syntheticTake(native), scaled))
         expect(
-          Math.abs(after.pitchSkill - before.pitchSkill),
+          Math.abs(after.parts.pitchAccent - before.parts.pitchAccent),
           `seed ${seed}, span x${span}`,
-        ).toBeLessThan(0.01)
+        ).toBeLessThan(onPart(0.01))
       }
     }
   })
 
   it('stops ignoring span outside the gain band', () => {
     const take = rightTake(1)
-    const before = scoreDetail(syntheticTake(native), take).pitchSkill
+    const before = scored(scoreTake(syntheticTake(native), take))
     const timid = withF0(take, hz => 130 * (hz / 130) ** 0.2)
-    expect(scoreDetail(syntheticTake(native), timid).pitchSkill).toBeLessThan(
-      before - 0.3,
-    )
+    const after = scored(scoreTake(syntheticTake(native), timid))
+    expect(after.parts.pitchAccent).toBeLessThan(before.parts.pitchAccent - 0.3)
   })
 
   it('scores a flat take near zero at any length', () => {
@@ -175,17 +193,19 @@ describe('scoreTake', () => {
     }
   })
 
-  it('moves the pitch skill by under 0.05 for octave jumps in one frame in 20', () => {
+  it('moves the pitch accent part by under 0.05 of the skill for octave jumps in one frame in 20', () => {
     for (const seed of seeds) {
-      const take = rightTake(seed)
-      const before = scoreDetail(syntheticTake(native), take)
+      const take = nearMiss(seed)
+      const before = scored(scoreTake(syntheticTake(native), take))
       let voiced = 0
       const jumped = withF0(take, hz => {
         voiced++
         return voiced % 20 === 0 ? hz * (voiced % 40 === 0 ? 2 : 0.5) : hz
       })
-      const after = scoreDetail(syntheticTake(native), jumped)
-      expect(Math.abs(after.pitchSkill - before.pitchSkill)).toBeLessThan(0.05)
+      const after = scored(scoreTake(syntheticTake(native), jumped))
+      expect(
+        Math.abs(after.parts.pitchAccent - before.parts.pitchAccent),
+      ).toBeLessThan(onPart(0.05))
     }
   })
 
