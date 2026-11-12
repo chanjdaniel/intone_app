@@ -9,14 +9,16 @@
 #
 # It fetches the release tag and adds it with `git subtree add --squash` the
 # first time; after that it replaces repos/foldkit/ with the release's tree.
-# Then it drops two things from the subtree:
+# Then it drops three things from the subtree:
 #
 # - the files that would load as instructions in an agent session: every
 #   CLAUDE.md, .claude/, .claude-plugin/ and .agents/ (Foldkit maintainers'
 #   own guide, settings and skills);
 # - Foldkit's own vendored repos/, whose Effect source is at the version
 #   Foldkit develops on, not the one this project installs; the project
-#   reads node_modules/effect/ instead.
+#   reads node_modules/effect/ instead;
+# - Foldkit's CI, deploy and secrets files: every .github/, vercel.json and
+#   .env*, which never run here but would look like this project's own.
 #
 # It keeps the rest (AGENTS.md, skills/, examples/, packages/foldkit/src/
 # and so on) as reading, replaces FOLDKIT.md whole with the release's
@@ -31,7 +33,7 @@ repository="${FOLDKIT_REPOSITORY:-https://github.com/foldkit/foldkit.git}"
 prefix=repos/foldkit
 template="$prefix/packages/create-foldkit-app/templates/base/FOLDKIT.md"
 # A path the script drops from the subtree, as above.
-dropped="^$prefix/repos/|(^|/)(CLAUDE\\.md|\\.claude|\\.claude-plugin|\\.agents)(/|\$)"
+dropped="^$prefix/repos/|(^|/)(CLAUDE\\.md|\\.claude|\\.claude-plugin|\\.agents|\\.github|vercel\\.json|\\.env[^/]*)(/|\$)"
 
 fail() {
   printf 'vendor-foldkit: %s\n' "$1" >&2
@@ -75,7 +77,7 @@ git add FOLDKIT.md
 
 if ! git diff --cached --quiet; then
   git commit --quiet --message "$subject" \
-    --message "Foldkit commit $release. Drops the subtree's CLAUDE.md, .claude/, .claude-plugin/ and .agents/, which would load as instructions in an agent session, and Foldkit's own vendored repos/, and replaces FOLDKIT.md with $tag's template."
+    --message "Foldkit commit $release. Drops the subtree's CLAUDE.md, .claude/, .claude-plugin/ and .agents/, which would load as instructions in an agent session, Foldkit's own vendored repos/, and its .github/, vercel.json and .env* files, and replaces FOLDKIT.md with $tag's template."
 fi
 
 printf 'vendor-foldkit: repos/foldkit is at %s\n' "$tag"

@@ -95,6 +95,10 @@ beforeEach(() => {
     '.claude-plugin/plugin.json': '{}\n',
     '.agents/skills/release-version/SKILL.md': 'Release Foldkit.\n',
     'repos/effect/packages/effect/src/Effect.ts': 'export const v = 1\n',
+    '.github/workflows/deploy-website.yml': 'on: push\n',
+    'examples/pixel-art/vercel.json': '{}\n',
+    'packages/typing-game/client/vercel.json': '{}\n',
+    'packages/typing-game/client/.env.example': 'API_KEY=\n',
     'packages/foldkit/CLAUDE.md': 'Package rules.\n',
     'packages/foldkit/src/index.ts': 'export const version = 1\n',
     'skills/generate-program/SKILL.md': 'Generate a program.\n',
@@ -117,12 +121,15 @@ afterEach(() => {
 })
 
 // What the script must drop: anything that loads as instructions in an agent
-// session, and Foldkit's own vendored repos/.
+// session, Foldkit's own vendored repos/, and its CI, deploy and secrets
+// files, which would never run here but look like this project's own.
 const dropped = (paths: ReadonlyArray<string>) =>
   paths.filter(
     path =>
       path.startsWith('repos/foldkit/repos/') ||
-      /(^|\/)(CLAUDE\.md|\.claude|\.claude-plugin|\.agents)(\/|$)/.test(path),
+      /(^|\/)(CLAUDE\.md|\.claude|\.claude-plugin|\.agents|\.github|vercel\.json|\.env[^/]*)(\/|$)/.test(
+        path,
+      ),
   )
 
 describe('vendoring Foldkit', () => {
