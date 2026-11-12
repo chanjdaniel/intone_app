@@ -8,9 +8,17 @@ import {
   selector,
   text,
 } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import {
+  Command,
+  given as storyGiven,
+  message,
+  model,
+  story,
+} from 'foldkit/story'
+import { describe, test, expect as vitestExpect } from 'vitest'
 
-import { init, update, view } from './local-pack'
+import { levelRowsPerPage } from '../../level/level'
+import { FocusRow, Message, init, update, view } from './local-pack'
 
 describe('the local pack entry', () => {
   test('shows each state of the import, and the example pack’s lines with their links', () => {
@@ -42,6 +50,18 @@ describe('the local pack entry', () => {
         ),
       ).toExist(),
       expect(text(/^Choices for you/)).toExist(),
+    )
+  })
+
+  test('pages its lines as the app does: new words show the first page again, and Show more focuses the first new row', () => {
+    story(
+      update,
+      storyGiven({ ...init().model, shownRows: 2 * levelRowsPerPage }),
+      message(Message.ChangedWords({ words: '橋' })),
+      model(current => vitestExpect(current.shownRows).toBe(levelRowsPerPage)),
+      message(Message.ClickedShowMore()),
+      Command.expectExact(FocusRow({ index: levelRowsPerPage })),
+      Command.resolve(FocusRow, Message.CompletedFocusRow()),
     )
   })
 })

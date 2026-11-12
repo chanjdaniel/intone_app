@@ -1,11 +1,12 @@
-import { Array, Option, Schema } from 'effect'
-import { Runtime, Update } from 'foldkit'
+import { Array, Effect, Option, Schema } from 'effect'
+import { Command, Dom, Runtime, Update } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { modifyFields } from 'foldkit/struct'
 
 import { FileDrop } from '@foldkit/ui'
 
+import { levelRowAttribute } from '../../level/commands'
 import {
   LevelStars,
   levelLinesFound,
@@ -86,8 +87,23 @@ export const Message = defineMessageUnion({
   ClickedCancel: {},
   ChangedWords: { words: Schema.String },
   ClickedShowMore: {},
+  CompletedFocusRow: {},
 })
 export type Message = typeof Message.Type
+
+// COMMAND
+
+// Puts focus on row `index`, the first of those just shown, as the app's
+// list does.
+export const FocusRow = Command.define('FocusRow', {
+  args: { index: Schema.Finite },
+  messages: [Message.CompletedFocusRow],
+  execute: ({ index }) =>
+    Dom.focus(`[data-${levelRowAttribute}="${index}"]`).pipe(
+      Effect.ignore,
+      Effect.as(Message.CompletedFocusRow()),
+    ),
+})
 
 // INIT
 
@@ -165,13 +181,18 @@ export const update = (model: Model, message: Message) =>
           : model,
     }),
     ChangedWords: ({ words }) => ({
-      model: modifyFields(model, { words: () => words }),
+      model: modifyFields(model, {
+        words: () => words,
+        shownRows: () => levelRowsPerPage,
+      }),
     }),
     ClickedShowMore: () => ({
       model: modifyFields(model, {
         shownRows: shown => shown + levelRowsPerPage,
       }),
+      commands: [FocusRow({ index: model.shownRows })],
     }),
+    CompletedFocusRow: () => ({ model }),
   })
 
 // VIEW

@@ -1,4 +1,5 @@
 import {
+  Command,
   all,
   click,
   expect,
@@ -12,7 +13,7 @@ import {
 } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
-import { init, update, view } from './clip-lines'
+import { FocusRow, Message, init, update, view } from './clip-lines'
 
 const rows = all.role('link', { name: /^Line \d+/ })
 
@@ -28,6 +29,9 @@ describe('the clip lines entry', () => {
       click(role('button', { name: 'A ten-minute clip' })),
       expect(label('Find a line')).toExist(),
       click(role('button', { name: 'Show 50 more' })),
+      // Focus goes to the first row just shown, as in the app.
+      Command.expectExact(FocusRow({ index: 50 })),
+      Command.resolve(FocusRow, Message.CompletedFocusRow()),
       expect(
         text('Read-out: ten-minutes.m4a: 200 of 200 lines found, 100 shown'),
       ).toExist(),
