@@ -96,6 +96,23 @@ const centreOf = async (locator: Locator) => {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
 
+const playButton = (page: Page) =>
+  page.locator('#line-editor').getByRole('button', { name: /^Play line \d+$/ })
+
+// Stops the selected line's play if it is still running, and waits until
+// none is. A short line may end before a click lands, and a click waits
+// for good on a Stop that has gone, so the look and the press are one step
+// in the page.
+const stopPlay = async (page: Page) => {
+  await page.locator('#line-editor').evaluate(editor => {
+    const stop = Array.from(editor.querySelectorAll('button')).find(
+      button => button.textContent.trim() === 'Stop',
+    )
+    stop?.click()
+  })
+  await expect(playButton(page)).toBeVisible()
+}
+
 const editorStatus = (page: Page) =>
   page.locator('#line-editor').getByRole('status')
 
@@ -139,7 +156,7 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         await expect(
           page.getByText('Line 3 of', { exact: false }),
         ).toBeVisible()
-        await page.getByRole('button', { name: 'Stop' }).click()
+        await stopPlay(page)
         const end = page.getByRole('slider', { name: 'End of Line 3' })
         const endBefore = await valueOf(end)
         const { secondsPerPixel } = await windowOf(page)
@@ -220,7 +237,7 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         await page
           .getByRole('button', { name: 'Fix line 1', exact: true })
           .click()
-        await page.getByRole('button', { name: 'Stop' }).click()
+        await stopPlay(page)
         const first = {
           from: await valueOf(
             page.getByRole('slider', { name: 'Start of Line 1' }),
@@ -322,7 +339,10 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         await expect(waveform(page).locator('svg path')).toBeVisible({
           timeout: 30_000,
         })
-        await page.getByRole('button', { name: 'Stop' }).click()
+        // Line 1 lasts 1.5 s: its play ends here before the stop, as it may
+        // on a slow machine.
+        await expect(playButton(page)).toBeVisible({ timeout: 10_000 })
+        await stopPlay(page)
         const endOfLine1 = page.getByRole('slider', { name: 'End of Line 1' })
         await endOfLine1.focus()
         await page.keyboard.press('Shift+ArrowLeft')
