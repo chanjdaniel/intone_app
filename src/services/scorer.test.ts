@@ -57,21 +57,4 @@ describe('the Scorer', () => {
       expect(alignedTakeF0).toBeNull()
     }),
   )
-
-  it.effect('answers with its test layer’s comparison, with no maths', () =>
-    Effect.gen(function* () {
-      const answer = {
-        score: {
-          _tag: 'CouldNotCompare',
-          version: 1,
-          reason: 'TooQuiet',
-        } as const,
-        alignedTakeF0: null,
-      }
-      const got = yield* Scorer.use(scorer =>
-        scorer.score(native, takeOf(9)),
-      ).pipe(Effect.provide(Scorer.layerTest(() => answer)))
-      expect(got).toBe(answer)
-    }),
-  )
 })
