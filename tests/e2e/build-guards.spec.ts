@@ -1,9 +1,5 @@
-import { createHash } from 'node:crypto'
-import { join } from 'node:path'
-
 import { expect, test } from '@playwright/test'
 
-import { modelPath, readModelList } from '../../build/models.ts'
 import {
   onnxRuntimeDirectory,
   onnxRuntimeFiles,
@@ -11,10 +7,9 @@ import {
 } from '../../build/onnx-runtime.ts'
 
 // The production build in Chromium: the policy holds and nothing breaks
-// it, the dev library is absent, and the model and WebAssembly files are
-// served from the app's own origin.
-
-const root = join(import.meta.dirname, '..', '..')
+// it, the dev library is absent, and ONNX Runtime's WebAssembly is served
+// from the app's own origin. tests/e2e/model-serving.spec.ts and
+// tests/build/serving.test.ts read the model files.
 
 test('the home screen loads under the Content Security Policy with no violation or request elsewhere', async ({
   page,
@@ -69,17 +64,6 @@ test('a production build has no component library at /dev', async ({
     page.getByRole('heading', { level: 1, name: 'Nothing here' }),
   ).toBeVisible()
   await expect(page.getByText('Choices for you')).toHaveCount(0)
-})
-
-test('each model file is served whole from its versioned same-origin path', async ({
-  request,
-}) => {
-  for (const model of await readModelList(join(root, 'models.json'))) {
-    const response = await request.get(`/${modelPath(model)}`)
-    expect(response.status()).toBe(200)
-    const body = await response.body()
-    expect(createHash('sha256').update(body).digest('hex')).toBe(model.sha256)
-  }
 })
 
 test("ONNX Runtime's WebAssembly is served from the app's own origin", async ({

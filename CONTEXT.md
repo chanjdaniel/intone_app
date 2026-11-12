@@ -35,5 +35,7 @@ Every screen, test, doc and name in the code uses these words with these meaning
 - **Starter set:** the bundled, openly licensed lines.
 - **Local pack:** Daniel's untracked `local/` folder and its manifest, `pack.json`, imported from the files chosen as one level kept on the device; its lines may carry text, kana and a **source** link, shown and never fetched.
 - **Fixture:** generated, labelled test audio with its known curve, accent and mora boundaries.
+- **Local production build:** the app built by `vite build` and served by `vite preview` on the machine itself; where Daniel practises (`npm start`, `http://localhost:4300`) and where the end-to-end tests run, until there is a deploy.
+- **Model directory:** the versioned folder `/models/<id>/<version>/` that holds every file of one model, whose version changes when any of its files does.
 
 The app says "match", never "accuracy", and never that a take is correct: it claims only what it measured.

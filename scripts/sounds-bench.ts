@@ -281,7 +281,7 @@ for (const model of models) {
       JSON.stringify({
         model: model.id,
         browser: context.browser()?.version(),
-        bytes: model.bytes,
+        bytes: model.file.bytes,
         error: timing.error,
         fetchMs: Math.round(timing.fetched ?? Number.NaN),
         loadMs: Math.round(timing.loaded ?? Number.NaN),

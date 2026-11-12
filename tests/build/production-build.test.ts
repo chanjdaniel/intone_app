@@ -7,11 +7,16 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, relative } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { contentSecurityPolicyDirectives } from '../../build/content-security-policy.ts'
-import { modelPath, readModelList } from '../../build/models.ts'
+import {
+  modelDirectory,
+  modelVersion,
+  readModelList,
+  servedModelFiles,
+} from '../../build/models.ts'
 import {
   onnxRuntimeFiles,
   onnxRuntimeVersion,
@@ -85,17 +90,26 @@ describe('the production build', () => {
     expect(policy['media-src']).toStrictEqual(["'self'", 'blob:'])
   })
 
-  test('writes each listed model file, checked, under its versioned path', async () => {
+  test("writes every file of every model, checked, in its model's directory", async () => {
     const models = await readModelList(join(root, 'models.json'))
     expect(models.length).toBeGreaterThan(0)
-    for (const model of models) {
-      const bytes = readFileSync(join(dist, modelPath(model)))
-      expect(bytes.length).toBe(model.bytes)
-      expect(sha256(bytes)).toBe(model.sha256)
-      expect(modelPath(model)).toBe(
-        `models/${model.id}/${model.sha256.slice(0, 16)}/${model.file}`,
+    for (const { model, file, path } of servedModelFiles(models)) {
+      const bytes = readFileSync(join(dist, path))
+      expect(bytes.length).toBe(file.bytes)
+      expect(sha256(bytes)).toBe(file.sha256)
+      expect(path).toBe(
+        `models/${model.id}/${modelVersion(model)}/${file.path}`,
       )
     }
+    expect(
+      files()
+        .filter(file => file.startsWith(`models${sep}`))
+        .sort(),
+    ).toStrictEqual(
+      servedModelFiles(models)
+        .map(({ path }) => join(path))
+        .sort(),
+    )
   })
 
   test('puts no model bytes in any JavaScript chunk', async () => {
@@ -104,8 +118,8 @@ describe('the production build', () => {
       .filter(file => /\.m?js$/.test(file))
       .map(file => readFileSync(join(dist, file)))
     expect(scripts.length).toBeGreaterThan(0)
-    for (const model of models) {
-      const bytes = readFileSync(join(dist, modelPath(model)))
+    for (const { path } of servedModelFiles(models)) {
+      const bytes = readFileSync(join(dist, path))
       for (const offset of [
         0,
         Math.floor(bytes.length / 2),
@@ -124,7 +138,12 @@ describe('the production build', () => {
       files()
         .filter(file => file.endsWith('.onnx'))
         .sort(),
-    ).toStrictEqual(models.map(modelPath).sort())
+    ).toStrictEqual(
+      servedModelFiles(models)
+        .map(({ path }) => join(path))
+        .filter(path => path.endsWith('.onnx'))
+        .sort(),
+    )
   })
 
   test("ships ONNX Runtime's WebAssembly from its own origin, unchanged", async () => {
@@ -141,14 +160,14 @@ describe('the production build', () => {
     ])
   })
 
-  test('maps each model id and ONNX Runtime to their same-origin URLs', async () => {
+  test('maps each model id to its directory, each one-file model to its file, and ONNX Runtime to its directory, all same-origin', async () => {
     const entry = join(planted, 'reads-the-maps.ts')
     writeFileSync(
       entry,
       [
-        "import { modelUrls } from 'virtual:intone/models'",
+        "import { modelDirectories, modelUrls } from 'virtual:intone/models'",
         "import { onnxRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'",
-        'export const read = [modelUrls, onnxRuntimeWasmPaths]',
+        'export const read = [modelDirectories, modelUrls, onnxRuntimeWasmPaths]',
         '',
       ].join('\n'),
     )
@@ -167,7 +186,15 @@ describe('the production build', () => {
         .map(chunk => chunk.code)
         .join('\n')
       for (const model of models) {
-        expect(code).toMatch(quotedPair(model.id, base + modelPath(model)))
+        expect(code).toMatch(quotedPair(model.id, base + modelDirectory(model)))
+        if (model.files.length === 1) {
+          expect(code).toMatch(
+            quotedPair(
+              model.id,
+              base + modelDirectory(model) + model.files[0].path,
+            ),
+          )
+        }
       }
       expect(code).toContain(`${base}ort/${version}/`)
     }

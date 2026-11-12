@@ -32,7 +32,7 @@ The pins that move together:
 - `effect`, `@effect/platform-browser` and `@effect/vitest` at 4.1.2, inside Foldkit's peer range `~4.1.0`.
 - `@effect/tsgo` 0.67.5 on TypeScript 7, which accepts only oxlint 1.88.0 to 1.92.0 (1.92.0 here) and oxlint-tsgolint 7.0.2004 to 7.0.2006 (7.0.2006 here).
 - `onnxruntime-web` 1.31.1, whose WebAssembly the build serves from `/ort/<version>/`.
-- Node 24.22.1, in `.nvmrc` only, read by CI and Vercel.
+- Node 24.22.1, in `.nvmrc` only, read by CI and the local tools (`nvm use`), and by a host once there is one.
 
 Any change to the lockfile or `models.json` is followed by `npm run generate`, which rewrites `NOTICES.md` and `src/virtual-modules.d.ts`; CI fails while either is stale.
 
@@ -64,12 +64,15 @@ When a folder's rule changes, change its fixtures with it.
 
 `build/` holds the build's own code, imported by `vite.config.ts` and run by Node under its type stripping (so its relative imports name the `.ts` file); it is linted and type checked by `tsconfig.node.json`, and tested in `tests/build/`.
 
-- **Content Security Policy:** `build/content-security-policy.ts` defines it once; the production build puts it in `index.html` as the head's first `<meta>`.
+- **Content Security Policy:** `build/content-security-policy.ts` defines it once; the production build puts it in `index.html` as the head's first `<meta>`, and `vite preview` sends it as a header too, with `frame-ancestors 'none'`.
   Everything comes from `'self'`, with two relaxations: `'wasm-unsafe-eval'`, for WebAssembly, and `media-src blob:`, to play a file already on the device.
   The dev server runs without it.
-- **Models:** `models.json` lists every model file: id, name, file, source URL at a pinned commit, size, SHA-256, licence and source page.
-  The build fetches each into the git-ignored `.cache/models/`, reuses a cached copy whose hash matches, fails naming the file on a size or hash mismatch, and copies it to `dist/models/<id>/<first 16 hex of its SHA-256>/<file>`; the dev server serves the same paths.
-  Code reads a model's URL only from `modelUrls` in `virtual:intone/models`, typed by the ids in the list; nothing hard-codes a model path, and no model file is committed.
+- **Serving:** `build/headers.ts` holds the one caching table both servers use (`public, max-age=31536000, immutable` on `/models/`, `/ort/<version>/` and `/assets/`, `no-cache` on every other path) and the security headers (`nosniff` on both, the policy from `vite preview` only); no cross-origin isolation header is sent.
+  `docs/deploying.md` says how the app is served today and what the shelved deploy will take; a later host's configuration is written from that table.
+- **Models:** `models.json` lists every model: id, name, licence, source page, and its files, each a relative `path` that may name a folder, its URL at a pinned commit, size and SHA-256.
+  The build fetches each file into the git-ignored `.cache/models/` (`npm run fetch:models` does it alone), reuses a cached copy whose hash matches, fails naming the file on a size or hash mismatch, and copies it into the model's directory, `dist/models/<id>/<version>/<path>`, whose version is the first 16 hex of the SHA-256 of the model's sorted `<path> <sha256>` lines.
+  `build/model-requests.ts` serves those paths in both servers, from the cache in the dev server and from `dist/` in `vite preview`, with the content type by extension and byte ranges.
+  Code reads a model's place only from `virtual:intone/models`: `modelDirectories` (each model's directory, ending in `/`) and `modelUrls` (the file of each model of one file), typed by the ids in the list; nothing hard-codes a model path, and no model file is committed.
 - **ONNX Runtime:** the build copies `onnxruntime-web`'s single-threaded CPU build (`ort-wasm-simd-threaded.wasm` and `.mjs`) to `dist/ort/<version>/`; code points `wasmPaths` at `onnxRuntimeWasmPaths` from `virtual:intone/onnx-runtime`.
   `vite.config.ts` resolves the package with its `onnxruntime-web-use-extern-wasm` condition, so the bundle loads those files rather than inlining the loader and emitting the 15 MB binary again under `assets/`.
 - **Bundle budget:** `bundle-budget.json` caps the gzip size of the entry chunk and the chunks it imports statically, what the page loads before it starts, and `npm run check:budget` reads a build's `dist/` against it in CI; `docs/bundle-budget.md` says how it was set and how a raise is justified.
@@ -249,7 +252,7 @@ npm test
 ```
 
 `npm run check:effect` runs the `effect-tsgo` check on both tsconfigs, `npm run format:check` the formatter, `npm run generate:check` that the generated files are current, `npm run check:budget` the bundle budget against `dist/`, and `npm run test:e2e` builds and runs Playwright against the production build; CI runs all of them.
-The build and its tests fetch the listed model files once, so they need the network until `.cache/models/` holds them.
+The build and its tests fetch the listed model files once, about 160 MB, most of it `whisper-small`'s decoder (`npm run fetch:models` fetches them alone, as CI does first), so they need the network until `.cache/models/` holds them.
 `npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, `tests/support`, `tests/tracker`, `tests/score`, in Node, type checked by `tsconfig.node.json`).
 
 ## Content and privacy

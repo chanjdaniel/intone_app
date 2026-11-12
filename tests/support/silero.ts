@@ -14,11 +14,15 @@ import { root } from './run.ts'
 export const loadSileroModel = async (): Promise<Uint8Array<ArrayBuffer>> => {
   const list = await readModelList(join(root, 'models.json'))
   const silero = list.find(entry => entry.id === 'silero-vad')
-  if (silero === undefined) {
-    throw new Error('models.json lists no silero-vad')
+  if (silero === undefined || silero.files.length !== 1) {
+    throw new Error('models.json lists no silero-vad of one file')
   }
   return readFileSync(
-    await ensureCached(silero, join(root, '.cache', 'models')),
+    await ensureCached(
+      silero.id,
+      silero.files[0],
+      join(root, '.cache', 'models'),
+    ),
   )
 }
 

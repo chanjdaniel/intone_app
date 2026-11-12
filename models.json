@@ -3,22 +3,44 @@
     {
       "id": "swift-f0",
       "name": "SwiftF0 0.3.0",
-      "file": "model.onnx",
-      "url": "https://raw.githubusercontent.com/lars76/swift-f0/d1ba77fe5331310b778ebe126b6cb3656d41d24f/swift_f0/model.onnx",
-      "bytes": 135090,
-      "sha256": "6385e8c2ebc3872e82c9ff5946228de44cd3be77a750ea53698b7dbfe94b0a22",
       "licence": "MIT",
-      "source": "https://github.com/lars76/swift-f0/tree/v0.3.0"
+      "source": "https://github.com/lars76/swift-f0/tree/v0.3.0",
+      "files": [
+        {
+          "path": "model.onnx",
+          "url": "https://raw.githubusercontent.com/lars76/swift-f0/d1ba77fe5331310b778ebe126b6cb3656d41d24f/swift_f0/model.onnx",
+          "bytes": 135090,
+          "sha256": "6385e8c2ebc3872e82c9ff5946228de44cd3be77a750ea53698b7dbfe94b0a22"
+        }
+      ]
     },
     {
       "id": "silero-vad",
       "name": "Silero VAD 6.2.3",
-      "file": "silero_vad.onnx",
-      "url": "https://raw.githubusercontent.com/snakers4/silero-vad/5cd7945676eb32225748052e2e6a0580e4686a08/src/silero_vad/data/silero_vad.onnx",
-      "bytes": 2327524,
-      "sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
       "licence": "MIT",
-      "source": "https://github.com/snakers4/silero-vad/tree/v6.2.3"
+      "source": "https://github.com/snakers4/silero-vad/tree/v6.2.3",
+      "files": [
+        {
+          "path": "silero_vad.onnx",
+          "url": "https://raw.githubusercontent.com/snakers4/silero-vad/5cd7945676eb32225748052e2e6a0580e4686a08/src/silero_vad/data/silero_vad.onnx",
+          "bytes": 2327524,
+          "sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3"
+        }
+      ]
+    },
+    {
+      "id": "whisper-small",
+      "name": "Whisper small, ONNX by onnx-community",
+      "licence": "MIT",
+      "source": "https://github.com/openai/whisper/tree/86098128c0b4f24f0e2aa2994de830614b474227",
+      "files": [
+        {
+          "path": "onnx/decoder_model_merged_int8.onnx",
+          "url": "https://huggingface.co/onnx-community/whisper-small/resolve/36050c46d777d46dc4b5f43f6d90574fc38f8732/onnx/decoder_model_merged_int8.onnx",
+          "bytes": 156750845,
+          "sha256": "ec07c3cbb64172c39791e26ee870a65ac22b458c36722bfe2776b3dbf741e0c9"
+        }
+      ]
     }
   ]
 }

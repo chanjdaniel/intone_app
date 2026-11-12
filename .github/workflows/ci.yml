@@ -26,11 +26,17 @@ jobs:
 
       - run: npm ci
 
-      # Model files listed in models.json, fetched and checked by the build.
+      # Model files listed in models.json, whisper-small's 149.5 MiB decoder
+      # among them. The cache is content-addressed, so an older one is a
+      # safe start: only a file it lacks is fetched.
       - uses: actions/cache@v6
         with:
           path: .cache/models
           key: models-${{ hashFiles('models.json') }}
+          restore-keys: models-
+
+      - name: Fetch and check the model files
+        run: npm run fetch:models
 
       - name: Format
         run: npm run format:check

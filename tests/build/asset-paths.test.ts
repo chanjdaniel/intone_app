@@ -31,8 +31,9 @@ describe('asset paths', () => {
     const tracked = run('git', ['ls-files', '-z'])
       .stdout.split('\0')
       .filter(Boolean)
-    const sizes = new Set(models.map(model => model.bytes))
-    const hashes = new Set(models.map(model => model.sha256))
+    const listed = models.flatMap(model => model.files)
+    const sizes = new Set(listed.map(file => file.bytes))
+    const hashes = new Set(listed.map(file => file.sha256))
 
     const isModelFile = (file: string): boolean => {
       const path = join(root, file)

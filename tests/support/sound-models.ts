@@ -10,27 +10,34 @@ import { root } from './run.ts'
 // at a pinned revision, checked by size and SHA-256 and cached in
 // .cache/models/ as the build caches its own list.
 
-export type SoundModel = ModelFile &
-  Readonly<{
-    // The model's frames per second, and the width of each.
-    frameHz: number
-    dims: number
-    // The model's input: raw samples, or Whisper's log mel spectrogram.
-    input: 'samples' | 'whisper-mel'
-    // Raw samples scaled to mean 0 and variance 1 first, as the model's
-    // own feature extractor does (its preprocessor_config.json).
-    normalise: boolean
-  }>
+export type SoundModel = Readonly<{
+  id: string
+  name: string
+  licence: string
+  source: string
+  file: ModelFile
+  // The model's frames per second, and the width of each.
+  frameHz: number
+  dims: number
+  // The model's input: raw samples, or Whisper's log mel spectrogram.
+  input: 'samples' | 'whisper-mel'
+  // Raw samples scaled to mean 0 and variance 1 first, as the model's
+  // own feature extractor does (its preprocessor_config.json).
+  normalise: boolean
+}>
 
 export const soundModels: ReadonlyArray<SoundModel> = [
   {
     id: 'whisper-base-encoder',
     name: "Whisper-base's encoder (q4)",
-    file: 'encoder_model_q4.onnx',
-    url: 'https://huggingface.co/onnx-community/whisper-base/resolve/27a07b4b52b3a4c5886134bb4320e93e1a4bbc7c/onnx/encoder_model_q4.onnx',
-    bytes: 18_772_451,
-    sha256: '9d4e9c31e8559e71de3e0e49d60b830951484699ef53747a4a06261bbbc8cb88',
     licence: 'MIT',
+    file: {
+      path: 'onnx/encoder_model_q4.onnx',
+      url: 'https://huggingface.co/onnx-community/whisper-base/resolve/27a07b4b52b3a4c5886134bb4320e93e1a4bbc7c/onnx/encoder_model_q4.onnx',
+      bytes: 18_772_451,
+      sha256:
+        '9d4e9c31e8559e71de3e0e49d60b830951484699ef53747a4a06261bbbc8cb88',
+    },
     source:
       'https://github.com/openai/whisper/tree/86098128c0b4f24f0e2aa2994de830614b474227',
     frameHz: 50,
@@ -41,11 +48,14 @@ export const soundModels: ReadonlyArray<SoundModel> = [
   {
     id: 'wavlm-base-plus',
     name: 'WavLM-Base+ (int8)',
-    file: 'model_quantized.onnx',
-    url: 'https://huggingface.co/Xenova/wavlm-base-plus/resolve/27b8ee283bf6c3a5ae77d7e90d8e40a6925288e2/onnx/model_quantized.onnx',
-    bytes: 95_421_869,
-    sha256: '9629e437514e16880eacc868dde9db6f319fa0864fdbb95de61fd39af3dbfe89',
     licence: 'CC BY-SA 3.0',
+    file: {
+      path: 'onnx/model_quantized.onnx',
+      url: 'https://huggingface.co/Xenova/wavlm-base-plus/resolve/27b8ee283bf6c3a5ae77d7e90d8e40a6925288e2/onnx/model_quantized.onnx',
+      bytes: 95_421_869,
+      sha256:
+        '9629e437514e16880eacc868dde9db6f319fa0864fdbb95de61fd39af3dbfe89',
+    },
     source:
       'https://huggingface.co/microsoft/wavlm-base-plus/tree/4c66d4806a428f2e922ccfa1a962776e232d487b',
     frameHz: 50,
@@ -59,11 +69,14 @@ export const soundModels: ReadonlyArray<SoundModel> = [
     // tells the model from its quantisation.
     id: 'wavlm-base-plus-fp32',
     name: 'WavLM-Base+ (fp32)',
-    file: 'model.onnx',
-    url: 'https://huggingface.co/Xenova/wavlm-base-plus/resolve/27b8ee283bf6c3a5ae77d7e90d8e40a6925288e2/onnx/model.onnx',
-    bytes: 377_935_358,
-    sha256: '07789ad4d9e01cba75fce7fd923e7a5e9a0aaf0f43df25ba6ee6d3d6d7adaa1c',
     licence: 'CC BY-SA 3.0',
+    file: {
+      path: 'onnx/model.onnx',
+      url: 'https://huggingface.co/Xenova/wavlm-base-plus/resolve/27b8ee283bf6c3a5ae77d7e90d8e40a6925288e2/onnx/model.onnx',
+      bytes: 377_935_358,
+      sha256:
+        '07789ad4d9e01cba75fce7fd923e7a5e9a0aaf0f43df25ba6ee6d3d6d7adaa1c',
+    },
     source:
       'https://huggingface.co/microsoft/wavlm-base-plus/tree/4c66d4806a428f2e922ccfa1a962776e232d487b',
     frameHz: 50,
@@ -74,11 +87,14 @@ export const soundModels: ReadonlyArray<SoundModel> = [
   {
     id: 'wavlm-large',
     name: 'WavLM-Large (q4)',
-    file: 'model_q4.onnx',
-    url: 'https://huggingface.co/onnx-community/wavlm-large-ONNX/resolve/92825d31dba8dc62841133fb88845d4c7fa7cfc2/onnx/model_q4.onnx',
-    bytes: 326_680_448,
-    sha256: 'a151d512792a7401bb6594c661cbf03c2fad99fbc91c6d8723064d770446797e',
     licence: 'CC BY-SA 3.0',
+    file: {
+      path: 'onnx/model_q4.onnx',
+      url: 'https://huggingface.co/onnx-community/wavlm-large-ONNX/resolve/92825d31dba8dc62841133fb88845d4c7fa7cfc2/onnx/model_q4.onnx',
+      bytes: 326_680_448,
+      sha256:
+        'a151d512792a7401bb6594c661cbf03c2fad99fbc91c6d8723064d770446797e',
+    },
     source:
       'https://huggingface.co/microsoft/wavlm-large/tree/c1423ed94bb01d80a3f5ce5bc39f6026a0f4828c',
     frameHz: 50,
@@ -99,7 +115,9 @@ export const soundModel = (id: string): SoundModel => {
 export const loadSoundModel = async (
   model: SoundModel,
 ): Promise<Uint8Array<ArrayBuffer>> =>
-  readFileSync(await ensureCached(model, join(root, '.cache', 'models')))
+  readFileSync(
+    await ensureCached(model.id, model.file, join(root, '.cache', 'models')),
+  )
 
 // Whisper's log mel spectrogram (OpenAI's `whisper/audio.py`, which
 // Transformers.js's WhisperFeatureExtractor follows): the samples padded

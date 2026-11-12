@@ -14,11 +14,15 @@ import { root } from './run.ts'
 export const loadSwiftF0Model = async (): Promise<Uint8Array<ArrayBuffer>> => {
   const list = await readModelList(join(root, 'models.json'))
   const swiftF0 = list.find(entry => entry.id === 'swift-f0')
-  if (swiftF0 === undefined) {
-    throw new Error('models.json lists no swift-f0')
+  if (swiftF0 === undefined || swiftF0.files.length !== 1) {
+    throw new Error('models.json lists no swift-f0 of one file')
   }
   return readFileSync(
-    await ensureCached(swiftF0, join(root, '.cache', 'models')),
+    await ensureCached(
+      swiftF0.id,
+      swiftF0.files[0],
+      join(root, '.cache', 'models'),
+    ),
   )
 }
 
