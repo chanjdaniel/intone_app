@@ -18,6 +18,7 @@ import {
   type LineNow,
   type ShownTake,
 } from './history'
+import { pageFrame } from './historyView'
 import { scoreTrend } from './trend'
 
 // A line's history: its match over every take, and its first, best and
@@ -343,13 +344,5 @@ export const lineHistoryView = <ViewMessage>(
       ),
     ],
   })
-  return h.main(
-    [h.Class('min-h-screen bg-surface text-ink px-4 py-6 sm:px-6 sm:py-10')],
-    [
-      h.div(
-        [h.Class('mx-auto flex max-w-2xl flex-col gap-6')],
-        [back, ...body],
-      ),
-    ],
-  )
+  return pageFrame('History', [back, ...body], h)
 }

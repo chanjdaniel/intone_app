@@ -500,7 +500,7 @@ const homeView = (
   h: HtmlBuilder<Message>,
 ): Html =>
   h.main(
-    [h.Class('min-h-screen bg-surface text-ink px-4 py-10 sm:px-6 sm:py-16')],
+    [h.Class('min-h-screen bg-surface text-ink px-4 py-6 sm:px-6 sm:py-10')],
     [
       h.div(
         [h.Class('mx-auto flex max-w-2xl flex-col gap-10')],

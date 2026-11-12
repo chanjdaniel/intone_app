@@ -271,6 +271,23 @@ describe('a line’s history', () => {
     )
   })
 
+  test('keeps the app’s places at its top, as /history does, with History as the current one', () => {
+    scene(
+      { update, view },
+      given(withBlind([], Option.none())),
+      drawn,
+      expect(role('navigation', { name: 'Intone' })).toExist(),
+      expect(role('link', { name: 'History' })).toHaveAttr(
+        'aria-current',
+        'page',
+      ),
+      expect(role('link', { name: 'Your history' })).toHaveAttr(
+        'href',
+        '/history',
+      ),
+    )
+  })
+
   test('says a line with no blind take yet has none to chart', () => {
     scene(
       { update, view },

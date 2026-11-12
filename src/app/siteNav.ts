@@ -25,7 +25,7 @@ export const siteNav = <ViewMessage>(
     [h.AriaLabel('Intone'), h.Class('flex justify-end')],
     [
       h.ul(
-        [h.Class('flex flex-wrap gap-1')],
+        [h.Class('-mr-3 flex flex-wrap gap-1')],
         places.map(({ place, href }) =>
           h.li(
             [],
