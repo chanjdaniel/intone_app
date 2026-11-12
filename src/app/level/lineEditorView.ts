@@ -54,16 +54,16 @@ const focusRing =
 const buttonClass = `inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 text-base font-semibold text-ink hover:border-accent disabled:border-line disabled:text-muted ${focusRing}`
 
 // Seconds as a share of the window, for a CSS left or width.
-const percentIn = (window: Span, seconds: number): number =>
-  (100 * (seconds - window.from)) / Math.max(1e-6, window.to - window.from)
+const percentIn = (shown: Span, seconds: number): number =>
+  (100 * (seconds - shown.from)) / Math.max(1e-6, shown.to - shown.from)
 
 const percentText = (value: number): string => `${value.toFixed(3)}%`
 
 // The waveform's bars in the window, one per 10 ms, in a box of the
 // window's bars wide and 100 high.
-export const waveformPath = (peaks: Uint8Array, window: Span): string => {
-  const first = Math.max(0, Math.floor(window.from * peaksPerSecond))
-  const last = Math.min(peaks.length, Math.ceil(window.to * peaksPerSecond))
+export const waveformPath = (peaks: Uint8Array, shown: Span): string => {
+  const first = Math.max(0, Math.floor(shown.from * peaksPerSecond))
+  const last = Math.min(peaks.length, Math.ceil(shown.to * peaksPerSecond))
   return Array.makeBy(Math.max(0, last - first), k => {
     const half = Math.max(0.5, peakHeight(peaks[first + k] ?? 0) * 48)
     return `M${k + 0.5} ${(50 - half).toFixed(1)}V${(50 + half).toFixed(1)}`
@@ -87,7 +87,7 @@ const edgeSlider = <ViewMessage>(
   index: number,
   edge: Edge,
   seconds: number,
-  window: Span,
+  shown: Span,
   events: LineEditorEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
@@ -107,7 +107,7 @@ const edgeSlider = <ViewMessage>(
       ...(movable ? [] : [h.AriaDisabled(true)]),
       h.DataAttribute(edgeAttribute, edge),
       h.DataAttribute(lineIdAttribute, line.id),
-      h.Style({ left: percentText(percentIn(window, seconds)) }),
+      h.Style({ left: percentText(percentIn(shown, seconds)) }),
       h.OnKeyDownPreventDefault((key, modifiers) =>
         movable
           ? Option.map(keyStep(key, modifiers), step =>
@@ -139,11 +139,11 @@ const edgeSlider = <ViewMessage>(
 const playheadSlider = <ViewMessage>(
   clip: LevelClip,
   editor: LineEditor,
-  window: Span,
+  shown: Span,
   events: LineEditorEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
-  const shown = editor.playhead >= window.from && editor.playhead <= window.to
+  const inView = editor.playhead >= shown.from && editor.playhead <= shown.to
   return h.div(
     [
       h.Role('slider'),
@@ -156,14 +156,14 @@ const playheadSlider = <ViewMessage>(
       h.AriaValuetext(preciseClockText(editor.playhead)),
       h.Style({
         left: percentText(
-          Math.min(100, Math.max(0, percentIn(window, editor.playhead))),
+          Math.min(100, Math.max(0, percentIn(shown, editor.playhead))),
         ),
       }),
       h.OnKeyDownPreventDefault((key, modifiers) =>
         Option.map(keyStep(key, modifiers), step => events.stepPlayhead(step)),
       ),
       h.Class(
-        `absolute inset-y-0 z-10 w-6 -translate-x-1/2 ${shown ? '' : 'opacity-0'} rounded-sm ${focusRing}`,
+        `absolute inset-y-0 z-10 w-6 -translate-x-1/2 ${inView ? '' : 'opacity-0'} rounded-sm ${focusRing}`,
       ),
     ],
     [
@@ -185,11 +185,11 @@ const lineBand = <ViewMessage>(
   line: LevelLine,
   span: Span,
   selected: boolean,
-  window: Span,
+  shown: Span,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
-  const left = Math.max(0, percentIn(window, span.from))
-  const right = Math.min(100, percentIn(window, span.to))
+  const left = Math.max(0, percentIn(shown, span.from))
+  const right = Math.min(100, percentIn(shown, span.to))
   return h.keyed('div')(
     line.id,
     [
@@ -223,15 +223,15 @@ const waveformFrame = <ViewMessage>(
   events: LineEditorEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
-  const window = editorWindow(clip, editor)
+  const shown = editorWindow(clip, editor)
   const spans = draftedSpans(clip, editor)
   const index = selectedIndexOf(clip, editor)
   const selected = clip.lines[index]
   const shownSpan = spans[index]
   const bands = clip.lines.flatMap((line, k) => {
     const span = spans[k] ?? line
-    return span.to > window.from && span.from < window.to
-      ? [lineBand(line, span, k === index, window, h)]
+    return span.to > shown.from && span.from < shown.to
+      ? [lineBand(line, span, k === index, shown, h)]
       : []
   })
   return h.div(
@@ -239,8 +239,8 @@ const waveformFrame = <ViewMessage>(
     [
       h.div(
         [
-          h.DataAttribute(windowFromAttribute, window.from.toFixed(4)),
-          h.DataAttribute(windowToAttribute, window.to.toFixed(4)),
+          h.DataAttribute(windowFromAttribute, shown.from.toFixed(4)),
+          h.DataAttribute(windowToAttribute, shown.to.toFixed(4)),
           h.OnMount(events.follow),
           h.Class(
             'relative h-36 w-full touch-pan-y overflow-hidden rounded-md border border-line bg-surface select-none',
@@ -253,7 +253,7 @@ const waveformFrame = <ViewMessage>(
                 [
                   h.AriaHidden(true),
                   h.ViewBox(
-                    `0 0 ${Math.max(1, Math.round((window.to - window.from) * peaksPerSecond))} 100`,
+                    `0 0 ${Math.max(1, Math.round((shown.to - shown.from) * peaksPerSecond))} 100`,
                   ),
                   h.PreserveAspectRatio('none'),
                   h.Class(
@@ -262,7 +262,7 @@ const waveformFrame = <ViewMessage>(
                 ],
                 [
                   h.path([
-                    h.D(waveformPath(editor.waveform.peaks, window)),
+                    h.D(waveformPath(editor.waveform.peaks, shown)),
                     h.Stroke('currentColor'),
                     h.StrokeWidth('0.7'),
                     h.Fill('none'),
@@ -281,7 +281,7 @@ const waveformFrame = <ViewMessage>(
                     : 'The waveform could not be drawn.',
                 ],
               ),
-          playheadSlider(clip, editor, window, events, h),
+          playheadSlider(clip, editor, shown, events, h),
           ...(selected === undefined || shownSpan === undefined
             ? []
             : [
@@ -292,7 +292,7 @@ const waveformFrame = <ViewMessage>(
                   index,
                   'from',
                   shownSpan.from,
-                  window,
+                  shown,
                   events,
                   h,
                 ),
@@ -303,7 +303,7 @@ const waveformFrame = <ViewMessage>(
                   index,
                   'to',
                   shownSpan.to,
-                  window,
+                  shown,
                   events,
                   h,
                 ),
@@ -316,8 +316,8 @@ const waveformFrame = <ViewMessage>(
           h.Class('flex justify-between text-xs text-muted tabular-nums'),
         ],
         [
-          h.span([], [clockText(window.from, true)]),
-          h.span([], [clockText(window.to, true)]),
+          h.span([], [clockText(shown.from, true)]),
+          h.span([], [clockText(shown.to, true)]),
         ],
       ),
     ],

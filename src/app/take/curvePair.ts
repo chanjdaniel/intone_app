@@ -106,6 +106,8 @@ const startDrawing = (
             nativeWindow,
             learnerIn(nativeWindow),
             () => pairColoursFrom(element),
+            // NOTE: these attributes exist only for the end-to-end tests
+            // (above, `drawnFramesAttribute`): nothing in the app reads them.
             painted => {
               canvases.learner.setAttribute(
                 `data-${drawnFramesAttribute}`,
@@ -219,12 +221,12 @@ export const DrawCurvePair = defineDrawCurvePair(
 export const describeCurve = (
   curve: TakeCurve,
 ): Readonly<{ seconds: number; medianHz: number }> => {
-  const window = finishedWindow(plainOf(curve))
-  return window === null
+  const finished = finishedWindow(plainOf(curve))
+  return finished === null
     ? { seconds: 0, medianHz: medianVoicedHz(new Float32Array(0)) }
     : {
-        seconds: (window.lastFrame - window.firstFrame) / curve.frameHz,
-        medianHz: window.medianHz,
+        seconds: (finished.lastFrame - finished.firstFrame) / curve.frameHz,
+        medianHz: finished.medianHz,
       }
 }
 
