@@ -4,7 +4,7 @@ import { modifyFields } from 'foldkit/struct'
 
 import { FileDrop } from '@foldkit/ui'
 
-import { ClipsPage } from '../level/level'
+import { ClipsPage, LevelPage } from '../level/level'
 import { Message } from '../message'
 import type { Model } from '../model'
 import type { AppResourceServices } from '../resources'
@@ -119,8 +119,8 @@ export const progressedUpload = (
       }
     : unchanged(model)
 
-// The clip is kept: its lines open, and the home screen's list will be
-// read again.
+// The clip is kept: its lines open with the line editor, to fix the cut,
+// and the home screen's list will be read again.
 export const succeededUpload = (
   model: Model,
   jobNumber: number,
@@ -130,6 +130,7 @@ export const succeededUpload = (
     ? {
         model: modifyFields(withJob(model, UploadJob.Idle()), {
           clips: () => ClipsPage.NotLoaded(),
+          level: () => LevelPage.Loading({ clipId, opensEditor: true }),
         }),
         commands: [OpenLevel({ clipId })],
       }

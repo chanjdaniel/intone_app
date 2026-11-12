@@ -179,7 +179,9 @@ export type LevelStars = typeof LevelStars.Type
 
 export const LevelPage = defineTaggedUnion({
   NotLoaded: {},
-  Loading: { clipId: Schema.String },
+  // `opensEditor`: the level is reached from its upload, so its line
+  // editor opens with it, since fixing the cut is the likeliest next step.
+  Loading: { clipId: Schema.String, opensEditor: Schema.Boolean },
   Ready: {
     clip: LevelClip,
     stars: LevelStars,

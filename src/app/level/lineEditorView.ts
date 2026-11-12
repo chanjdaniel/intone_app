@@ -374,8 +374,8 @@ const alertText = (editor: LineEditor): string =>
       ? `The clip could not be opened to change its lines. ${editor.waveform.reason} Its lines can still be copied.`
       : ''
 
-// The editor shut, as a level opens: opening it decodes the whole clip,
-// which a level opened to practise never needs.
+// The editor shut, as a level opens to practise: opening it decodes the
+// whole clip, which practising never needs.
 const closedEditorView = <ViewMessage>(
   events: LineEditorEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,

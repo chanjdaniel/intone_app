@@ -119,12 +119,14 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         await page.goto('/upload')
         await page.locator('#upload-file').setInputFiles(clip)
         await page.waitForURL(/\/level\//, { timeout: 120_000 })
-        // The level opens with its editor shut: nothing decodes the clip
-        // until the learner asks to fix a line.
+        // Reached from its upload, the level opens with its editor open,
+        // since fixing the cut is the likeliest next step.
+        await expect(waveform(page).locator('svg path')).toBeVisible({
+          timeout: 30_000,
+        })
         await expect(
           page.getByRole('button', { name: 'Open the line editor' }),
-        ).toBeVisible()
-        await expect(waveform(page)).toHaveCount(0)
+        ).toHaveCount(0)
         const lines = await lineRows(page).count()
 
         // Line 3's end, dragged 0.3 s earlier by the mouse.
@@ -264,9 +266,12 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
           splitAt,
         })
 
-        // All kept across a reload.
+        // All kept across a reload, which opens the level to practise, with
+        // its editor shut: nothing decodes the clip until the learner asks
+        // to fix a line.
         await page.reload()
         await expect(lineRows(page)).toHaveCount(lines + 1)
+        await expect(waveform(page)).toHaveCount(0)
         await page.getByRole('button', { name: 'Open the line editor' }).click()
         await expect(waveform(page).locator('svg path')).toBeVisible({
           timeout: 30_000,

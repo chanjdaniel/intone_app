@@ -66,12 +66,20 @@ const isLevelOf = (page: LevelPage, clipId: string): boolean =>
 
 // A level open already reads its stars again, since a take kept since
 // may have moved them; its lines and the line editor stay as they are.
+// A level its upload is opening keeps its editor open.
 export const openedLevel = (model: Model, clipId: string): LevelUpdate =>
   model.level._tag === 'Ready' && model.level.clip.id === clipId
     ? { model, commands: [LoadLevelStars({ clipId })] }
     : {
         model: modifyFields(model, {
-          level: () => LevelPage.Loading({ clipId }),
+          level: page =>
+            LevelPage.Loading({
+              clipId,
+              opensEditor:
+                page._tag === 'Loading' &&
+                page.clipId === clipId &&
+                page.opensEditor,
+            }),
         }),
         commands: [LoadLevel({ clipId })],
       }
@@ -81,8 +89,9 @@ export const succeededLoadLevel = (
   model: Model,
   clipId: string,
   maybeClip: Option.Option<LevelClip>,
-): LevelUpdate =>
-  model.level._tag === 'Loading' && isLevelOf(model.level, clipId)
+): LevelUpdate => {
+  const page = model.level
+  return page._tag === 'Loading' && isLevelOf(page, clipId)
     ? Option.match(maybeClip, {
         onNone: () => ({
           model: modifyFields(model, {
@@ -97,13 +106,14 @@ export const succeededLoadLevel = (
                 stars: LevelStars.Loading(),
                 shownRows: levelRowsPerPage,
                 deleting: DeleteState.Idle(),
-                editor: initialEditor(clip),
+                editor: initialEditor(clip, page.opensEditor),
               }),
           }),
           commands: [LoadLevelStars({ clipId })],
         }),
       })
     : unchanged(model)
+}
 
 export const succeededLoadLevelStars = (
   model: Model,

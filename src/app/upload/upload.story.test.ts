@@ -5,8 +5,10 @@ import { describe, expect, test } from 'vitest'
 
 import { FileDrop } from '@foldkit/ui'
 
-import { LoadClips } from '../level/commands'
+import { LoadClips, LoadLevel, LoadLevelStars } from '../level/commands'
+import { ClipWaveform } from '../level/editor'
 import { ClipsPage } from '../level/level'
+import { sampleClip } from '../level/testClips'
 import { AppRoute, Message, type Model, initialModel, update } from '../main'
 import { LoadDueLines } from '../returns/commands'
 import { FocusUploadStatus, OpenLevel } from './commands'
@@ -198,6 +200,34 @@ describe('the cut', () => {
         expect(current.upload.job).toStrictEqual(UploadJob.Idle())
         expect(current.clips).toStrictEqual(ClipsPage.NotLoaded())
       }),
+    )
+  })
+
+  test('the clip’s level opens with its line editor open, the cut’s likeliest next step', () => {
+    const clip = sampleClip(3)
+    story(
+      update,
+      given(working()),
+      message(Message.SucceededUpload({ jobNumber: 1, clipId: 'c1' })),
+      Command.resolve(OpenLevel, Message.CompletedOpenLevel()),
+      message(Message.ChangedUrl({ url: url('/level/c1') })),
+      Command.expectExact(LoadLevel({ clipId: 'c1' })),
+      Command.resolve(
+        LoadLevel,
+        Message.SucceededLoadLevel({
+          clipId: 'c1',
+          maybeClip: Option.some(clip),
+        }),
+      ),
+      Command.resolve(
+        LoadLevelStars,
+        Message.SucceededLoadLevelStars({ clipId: 'c1', lines: [] }),
+      ),
+      model(current =>
+        expect(current.level).toMatchObject({
+          editor: { waveform: ClipWaveform.Opening() },
+        }),
+      ),
     )
   })
 

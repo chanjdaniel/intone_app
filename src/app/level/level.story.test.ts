@@ -54,7 +54,9 @@ const onLevel = (clip = sampleClip(120)): Model => ({
 describe('a clip’s lines', () => {
   test('are read from the device when the level opens', () => {
     const start = init(url('/level/c1'))
-    expect(start.model.level).toStrictEqual(LevelPage.Loading({ clipId: 'c1' }))
+    expect(start.model.level).toStrictEqual(
+      LevelPage.Loading({ clipId: 'c1', opensEditor: false }),
+    )
     expect(start.commands).toMatchObject([
       { name: LoadLevel.name, args: { clipId: 'c1' } },
     ])
@@ -68,7 +70,7 @@ describe('a clip’s lines', () => {
         ...initialModel(
           AppRoute.Level({ clipId: 'c1', maybeFind: Option.none() }),
         ),
-        level: LevelPage.Loading({ clipId: 'c1' }),
+        level: LevelPage.Loading({ clipId: 'c1', opensEditor: false }),
       }),
       message(
         Message.SucceededLoadLevel({
@@ -109,7 +111,7 @@ describe('a clip’s lines', () => {
         ...initialModel(
           AppRoute.Level({ clipId: 'c1', maybeFind: Option.none() }),
         ),
-        level: LevelPage.Loading({ clipId: 'c1' }),
+        level: LevelPage.Loading({ clipId: 'c1', opensEditor: false }),
       }),
       message(
         Message.SucceededLoadLevel({ clipId: 'c1', maybeClip: Option.none() }),

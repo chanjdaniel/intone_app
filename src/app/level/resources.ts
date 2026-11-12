@@ -11,12 +11,13 @@ import { HistoryStore } from '../../services/history-store'
 import { Message } from '../message'
 import type { Model } from '../model'
 
-// The line editor's resource: the clip Worker holding the level's clip,
-// decoded once from its kept file, from when the learner opens the editor
-// on a level with its audio on the device until the level is left. Foldkit releases it the moment
-// the Model leaves that state, and the Worker closes with the clip's
-// audio. While held, it gives the waveform and tracks the lines a change
-// moves (../../services/clip-analyser.ts, `edit`).
+// The line editor's resource: the clip Worker holding the level's clip, decoded
+// once from its kept file, from when the editor opens on a level with its audio
+// on the device (the learner opens it, or the level is reached from its upload)
+// until the level is left. Foldkit releases it the moment the Model leaves that
+// state, and the Worker closes with the clip's audio. While held, it gives the
+// waveform and tracks the lines a change moves
+// (../../services/clip-analyser.ts, `edit`).
 
 export type ClipEditorSession = Readonly<{ clipId: string }> & ClipEditing
 
@@ -34,7 +35,7 @@ const reasonOf = (error: unknown): string =>
       : String(error)
 
 // The clip a level needs held: the level's, when it is an upload open
-// with its audio on this device and the learner has opened its editor.
+// with its audio on this device and its editor open.
 const clipNeedingEditor = (model: Model): Option.Option<string> =>
   model.route._tag === 'Level' &&
   model.level._tag === 'Ready' &&
