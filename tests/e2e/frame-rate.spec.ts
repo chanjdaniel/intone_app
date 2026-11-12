@@ -73,24 +73,26 @@ test('holds 60 frames a second through a 20 s take at 6x CPU throttle', async ({
 
       const gaps = times.slice(1).map((t, i) => t - (times[i] ?? t))
       const seconds = ((times.at(-1) ?? 0) - (times[0] ?? 0)) / 1000
-      // A frame that missed one vsync lasts 33.3 ms; a long frame is one
-      // that missed more. Frames that missed one are bounded by the frame
-      // rate below: at 58 a second, about 40 in the 1,200 at most
-      // (docs/latency.md).
-      const longFrames = gaps.filter(gap => gap > 34)
+      // A long frame is one that missed a refresh: from 25 ms, one and a
+      // half refreshes, clear of the timer's jitter on either side of
+      // 16.7 ms and of 33.3 ms (docs/latency.md).
+      const longFrames = gaps.filter(gap => gap >= 25)
       const framesPerSecond = gaps.length / seconds
-      await report(testInfo, 'frame-rate.json', {
+      const measured = {
         seconds,
         frames: gaps.length,
         framesPerSecond,
         longFrames,
         largestGapMs: Math.max(...gaps),
         drawnFrames,
-      })
+      }
+      await report(testInfo, 'frame-rate.json', measured)
+      // In the run's log as well, where CI keeps a passing run's numbers.
+      process.stdout.write(`frame-rate.json ${JSON.stringify(measured)}\n`)
 
       expect(seconds).toBeGreaterThan(18)
       expect(framesPerSecond).toBeGreaterThan(58)
-      // At most 5 frames of the 1,200 over 34 ms.
+      // At most 5 frames of the 1,200 at 25 ms or longer.
       expect(longFrames.length).toBeLessThanOrEqual(5)
       // The curve kept up all through: by the 20th second it had drawn
       // the take's frames to within half a second of the voice.

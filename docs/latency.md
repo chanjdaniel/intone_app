@@ -58,8 +58,9 @@ The test fails above 2 s.
 
 ## The frame rate
 
-`tests/e2e/frame-rate.spec.ts` records a 20 s take with the CPU slowed six times (`Emulation.setCPUThrottlingRate`) and times every animation frame: it must hold 58 frames a second or more, with at most 5 frames longer than 34 ms, and the curve must keep drawing to the end.
-A long frame is one that misses more than one refresh; a frame that misses a single refresh lasts 33.3 ms and is not counted as long, but the 58 frames a second floor bounds those too, to about 40 in the 1,200.
+`tests/e2e/frame-rate.spec.ts` records a 20 s take with the CPU slowed six times (`Emulation.setCPUThrottlingRate`) and times every animation frame: it must hold 58 frames a second or more, with at most 5 long frames in the 1,200, and the curve must keep drawing to the end.
+A long frame is one that misses a refresh: 25 ms or longer, one and a half refreshes, so a frame that misses one refresh (33.3 ms) counts, and the timer's jitter around 16.7 ms does not.
+The test attaches its numbers as `frame-rate.json` (every long frame and the largest gap) and prints them to the run's log, where CI keeps them for a run that passes.
 Measured alone on the machine above, four runs held 60.00 frames a second with no frame over 16.8 ms, while the take kept the slowed main thread about 16% busy (4% of it script).
-With five copies of the test running at once on the same machine, it dropped to 56 frames a second, so it runs in a Playwright project of its own, `frame-rate`, after every other end-to-end test.
+With five copies of the test running at once on the same machine, it dropped to 56 frames a second, so it runs in the Playwright project `timing`, with `live-curve.spec.ts`, after every other end-to-end test and one test at a time.
 `docs/upgrading.md` names it as the check every Foldkit upgrade runs.
