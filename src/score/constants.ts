@@ -46,6 +46,10 @@ export const speechSpanReachSeconds = 0.3
 export const speechOverNoiseDb = 10
 export const speechSpanLevelDb = 30
 
+// The recording's noise floor is its level at this quantile, its quietest
+// tenth: a choice, not measured (docs/score.md, "The speech").
+export const noiseFloorQuantile = 0.1
+
 // One gain per take, fitted to the native's pitch and clamped to this
 // band, takes the take's pitch range out (report section 3); the band's
 // edges are provisional (docs/score.md, "Pitch range").
@@ -66,6 +70,10 @@ export const lengthRatioBand = { least: 0.5, most: 2 } as const
 // too-quiet peak (src/engine/pitch/take.ts, `tooQuietPeakDb`).
 export const tooQuietLevelDb = -50
 
+// The take's loud end is its level at this quantile: a choice, not
+// measured, past the loudest few frames a click could make.
+export const loudEndQuantile = 0.95
+
 // The aligner's band either side of the stretched diagonal: this share of
 // the longer recording, and at least this many seconds (docs/score.md,
 // "The aligner").
@@ -80,6 +88,16 @@ export const dtwFailDistance = 6
 // The timing part reads the take's local tempo over this much of the
 // native (docs/score.md, "Timing").
 export const timingWindowSeconds = 0.2
+
+// A window's local tempo under the take's own by more than this many
+// octaves, or over it, counts as that much: a pause or a skip. A choice,
+// not measured.
+export const localTempoOctaves = 2
+
+// A stretch's local pitch skill counts only where at least one frame in
+// this many is voiced in both voices; fewer, and it is left out. A
+// choice, not measured.
+export const localPitchOneIn = 3
 
 // The worst stretch's length (spec, Glossary).
 export const worstStretchSeconds = 0.4

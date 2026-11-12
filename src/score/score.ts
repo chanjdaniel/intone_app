@@ -14,6 +14,7 @@ import {
   dtwFailDistance,
   leastVoicedShare,
   lengthRatioBand,
+  loudEndQuantile,
   partWeights,
   pitchSkillTop,
   timingDeviationTop,
@@ -72,7 +73,8 @@ const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
 const loudLevelDb = (curve: Curve): number => {
   const sorted = curve.levelDb.slice().sort()
   return (
-    sorted[Math.floor(0.95 * (sorted.length - 1))] ?? Number.NEGATIVE_INFINITY
+    sorted[Math.floor(loudEndQuantile * (sorted.length - 1))] ??
+    Number.NEGATIVE_INFINITY
   )
 }
 

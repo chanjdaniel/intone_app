@@ -1,6 +1,7 @@
 import {
   confidenceGate,
   levelGateDb,
+  noiseFloorQuantile,
   octaveFilterFrames,
   speechOverNoiseDb,
   speechSpanLevelDb,
@@ -143,7 +144,9 @@ export const pitchTrack = (curve: Curve): PitchTrack => {
     if (trusted[f] === 1) levels.push(curve.levelDb[f] ?? 0)
   }
   const sortedLevels = Array.from(curve.levelDb).sort((a, b) => a - b)
-  const noiseDb = sortedLevels[Math.floor(0.1 * (sortedLevels.length - 1))] ?? 0
+  const noiseDb =
+    sortedLevels[Math.floor(noiseFloorQuantile * (sortedLevels.length - 1))] ??
+    0
   const floor = Math.max(
     noiseDb + speechOverNoiseDb,
     median(levels) - speechSpanLevelDb,

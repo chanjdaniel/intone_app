@@ -1,5 +1,10 @@
 import type { AlignmentPath } from './align'
-import { gainBand, timingWindowSeconds } from './constants'
+import {
+  gainBand,
+  localPitchOneIn,
+  localTempoOctaves,
+  timingWindowSeconds,
+} from './constants'
 import type { PitchTrack } from './track'
 
 // The two parts' raw measures, on two pitch tracks lined up by a path
@@ -129,7 +134,7 @@ export const localSkill = (
     const b = (paired.take[i] ?? 0) - fit.takeMean
     errors += (a - fit.gain * b) ** 2
   }
-  return frames * 3 < to - from || fit.nativeRms <= 1e-9
+  return frames * localPitchOneIn < to - from || fit.nativeRms <= 1e-9
     ? null
     : 1 - Math.sqrt(errors / frames) / fit.nativeRms
 }
@@ -174,7 +179,7 @@ export const tempoDeviation = (
   )
   // A local tempo under a quarter of the take's, or over four times it,
   // counts as that: a pause or a skip, by two octaves of tempo.
-  const most = 2
+  const most = localTempoOctaves
   let sum = 0
   let windows = 0
   for (let i = 0; i + window < nativeFrames; i++) {
