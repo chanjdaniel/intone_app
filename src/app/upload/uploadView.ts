@@ -49,14 +49,7 @@ const dropZone = <ViewMessage>(
             ),
           ],
           [
-            h.span(
-              [
-                h.Class(
-                  'inline-flex min-h-11 items-center rounded-md bg-accent px-5 text-base font-semibold text-on-accent',
-                ),
-              ],
-              ['Choose an audio file'],
-            ),
+            h.span([h.Class('button-primary')], ['Choose an audio file']),
             h.span([h.Class('text-base text-ink')], ['or drop one here']),
             h.span(
               [h.Class('text-sm text-muted')],
@@ -99,9 +92,7 @@ const working = <ViewMessage>(
           ...(job.step._tag === 'Keeping'
             ? [h.Disabled(true)]
             : [h.OnClick(events.cancel)]),
-          h.Class(
-            `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink disabled:text-muted focus-ring`,
-          ),
+          h.Class('button-secondary self-start disabled:text-muted'),
         ],
         ['Stop'],
       ),

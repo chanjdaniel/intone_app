@@ -446,6 +446,10 @@ export const tagline =
 
 // The learner's own clips on the home screen, newest first, and the way to
 // bring another.
+// The home page's secondary buttons, in the accent's colour.
+const secondaryButton =
+  'button border border-line bg-surface text-accent hover:border-accent'
+
 const clipsSection = (clips: ClipsPage, h: HtmlBuilder<Message>): Html =>
   h.section(
     [h.AriaLabelledBy('clips-heading'), h.Class('flex flex-col gap-4')],
@@ -481,19 +485,11 @@ const clipsSection = (clips: ClipsPage, h: HtmlBuilder<Message>): Html =>
           }),
       }),
       h.a(
-        [
-          h.Href(uploadRouter()),
-          h.Class(
-            `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-accent hover:border-accent focus-ring`,
-          ),
-        ],
+        [h.Href(uploadRouter()), h.Class(`${secondaryButton} self-start`)],
         ['Bring your own audio'],
       ),
     ],
   )
-
-const secondaryButton =
-  'button border border-line bg-surface text-accent hover:border-accent'
 
 const homeView = (
   lines: ReadonlyArray<BundledLine>,

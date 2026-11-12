@@ -93,7 +93,7 @@ const folderButton = <ViewMessage>(
           [
             ...attributes.root,
             h.Class(
-              `inline-flex min-h-11 cursor-pointer items-center justify-center self-start rounded-md bg-accent px-5 text-base font-semibold text-on-accent has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60`,
+              `button-primary cursor-pointer self-start has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60`,
             ),
           ],
           [
@@ -126,9 +126,7 @@ const working = <ViewMessage>(
       ...(job.step._tag === 'Keeping'
         ? [h.Disabled(true)]
         : [h.OnClick(events.cancelPack)]),
-      h.Class(
-        `inline-flex min-h-11 items-center justify-center self-start rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink disabled:text-muted focus-ring`,
-      ),
+      h.Class('button-secondary self-start disabled:text-muted'),
     ],
     ['Stop'],
   ),

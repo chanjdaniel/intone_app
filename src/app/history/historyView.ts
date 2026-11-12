@@ -58,9 +58,7 @@ const rescoreBox = <ViewMessage>(
             [
               h.Type('button'),
               h.OnClick(rescore),
-              h.Class(
-                `inline-flex min-h-11 items-center justify-center self-start rounded-md bg-accent px-5 text-base font-semibold text-on-accent focus-ring`,
-              ),
+              h.Class('button-primary self-start'),
             ],
             [`Score ${countText(outdated, 'take')} again`],
           ),

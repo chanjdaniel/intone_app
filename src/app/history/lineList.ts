@@ -114,7 +114,7 @@ export const lineList = <ViewMessage>(
       countLine: countLine(found.length, list.lines.length, list.words),
       changedWords: list.changedWords,
       showMore: list.showMore,
-      moreButtonClass: `inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-surface px-5 text-base font-semibold text-ink focus-ring`,
+      moreButtonClass: 'button-secondary',
       row: (line, index) => lineRow(line, index, h),
     },
     h,

@@ -231,9 +231,7 @@ const nativePending = <ViewMessage>(
             [
               h.Type('button'),
               h.OnClick(events.retryNative),
-              h.Class(
-                `inline-flex min-h-11 items-center rounded-md bg-accent px-5 text-base font-semibold text-on-accent focus-ring`,
-              ),
+              h.Class('button-primary'),
             ],
             ['Try again'],
           ),
