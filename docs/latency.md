@@ -2,7 +2,7 @@
 
 During a take the learner's curve draws as they speak, a moment behind their voice.
 This page says how long that moment is, stage by stage, measured in a desktop browser against the latency budget in T226's report (section 4, "The latency budget"), and how it is measured.
-`tests/e2e/live-curve.spec.ts` measures it on every CI run and fails when it passes 260 ms.
+`tests/e2e/live-curve.spec.ts` measures it on every CI run and fails when it passes 260 ms; it runs in Playwright's `timing` project, after every other test and one test at a time, since the tracking and paint stages it sums are scheduling time a busy machine stretches.
 
 ## The numbers
 
@@ -45,7 +45,7 @@ The total runs from the voice's end on the audio thread to the paint that shows 
 It leaves out what a page cannot see: the microphone and the operating system before the audio thread, and the compositor after the paint.
 The test also checks that the live frames are the finished curve's frames, to 0.01 Hz, and that the canvas painted while the take recorded.
 
-Run it with `npm run build`, then `npx playwright test tests/e2e/live-curve.spec.ts`; each take attaches its stages as `<voice>-delays.json`.
+Run it with `npm run build`, then `npx playwright test tests/e2e/live-curve.spec.ts --project timing --no-deps`; each take attaches its stages as `<voice>-delays.json`.
 
 ## From the take's end to its score
 

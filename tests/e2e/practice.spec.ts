@@ -382,11 +382,19 @@ test('the line plays again slowed with its pitch kept, and the take plays from m
             seconds: Number.NaN,
           }
           played.push(heard)
-          const startedAt = performance.now()
+          // From the moment it sounds, so the wait to start, which a busy
+          // machine stretches, is not counted.
           this.addEventListener(
-            'ended',
+            'playing',
             () => {
-              heard.seconds = (performance.now() - startedAt) / 1000
+              const startedAt = performance.now()
+              this.addEventListener(
+                'ended',
+                () => {
+                  heard.seconds = (performance.now() - startedAt) / 1000
+                },
+                { once: true },
+              )
             },
             { once: true },
           )
@@ -447,13 +455,15 @@ test('the line plays again slowed with its pitch kept, and the take plays from m
         { rate: 0.5, pitchKept: true },
         { rate: 1, pitchKept: true },
       ])
-      // The line is 1.27 s long, and at half speed lasts 1.27 s longer:
-      // each play also waits a moment to start, the same both times.
+      // The line is 1.27 s long, and at half speed lasts 1.27 s longer,
+      // each timed from when it sounds. A busy machine reports `ended` up
+      // to 0.3 s late (0.23 s seen at a load of 18), so the difference is
+      // held within 0.3 s, still far from three-quarter speed's 0.42 s.
       const [own, half] = played.map(({ seconds }) => seconds)
       expect(own).toBeGreaterThan(1.2)
       expect(own).toBeLessThan(1.6)
-      expect((half ?? 0) - (own ?? 0)).toBeGreaterThan(1.15)
-      expect((half ?? 0) - (own ?? 0)).toBeLessThan(1.4)
+      expect((half ?? 0) - (own ?? 0)).toBeGreaterThan(1.27 - 0.3)
+      expect((half ?? 0) - (own ?? 0)).toBeLessThan(1.27 + 0.3)
       // The take was recorded for about 2 s.
       expect(takeSeconds).toBeGreaterThan(1.5)
       expect(takeSeconds).toBeLessThan(4)
@@ -579,12 +589,14 @@ test('the worst stretch plays from the line by keyboard and from the take by tou
           ...heard,
         })
         // The line before the take, whole, then its worst stretch: from
-        // the stretch's start, for about its 0.4 s.
+        // the stretch's start, for about its 0.4 s. The play stops on a
+        // timer (src/services/playback.ts), which a busy main thread fires
+        // late, so it may run up to 0.4 s over.
         expect(heard.lines).toHaveLength(2)
         const stretch = heard.lines[1]
         expect(stretch.from).toBeCloseTo(nativeFrom, 1)
         expect(stretch.seconds).toBeGreaterThan(0.35)
-        expect(stretch.seconds).toBeLessThan(0.6)
+        expect(stretch.seconds).toBeLessThan(0.8)
         // The take's part paired with it: a stretch of the take, not all
         // of its 2 s.
         expect(heard.takes).toHaveLength(1)
