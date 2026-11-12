@@ -1,4 +1,7 @@
 import { Schema } from 'effect'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import type { Plugin } from 'vite'
 
 import type { Model } from './models.ts'
 
@@ -88,3 +91,24 @@ export const notices = (
     ),
     '',
   ].join('\n')
+
+// The production build carries NOTICES.md beside the app, at /NOTICES.md,
+// so every copy of the app names the packages and model files it ships
+// and their licences.
+export const noticesFile = (): Plugin => {
+  let root = process.cwd()
+  return {
+    name: 'intone:notices',
+    apply: 'build',
+    configResolved(config) {
+      root = config.root
+    },
+    async generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'NOTICES.md',
+        source: await readFile(join(root, 'NOTICES.md'), 'utf8'),
+      })
+    },
+  }
+}

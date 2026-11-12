@@ -203,6 +203,12 @@ describe('the production build', () => {
   // The app claims only what it compared (report section 3): no text it
   // ships says "accuracy", or that a take is correct. Every text file the
   // build writes is read, libraries and ONNX Runtime's loader included.
+  test('ships the notices of every package and model file it carries, as NOTICES.md', () => {
+    expect(readFileSync(join(dist, 'NOTICES.md'), 'utf8')).toBe(
+      readFileSync(join(root, 'NOTICES.md'), 'utf8'),
+    )
+  })
+
   test('ships no text that says "accuracy" or that a take is correct', () => {
     const texts = files().filter(file => /\.(js|mjs|html|css)$/.test(file))
     expect(texts.length).toBeGreaterThan(3)

@@ -80,7 +80,7 @@ When a folder's rule changes, change its fixtures with it.
   `vite.config.ts` resolves the package with its `onnxruntime-web-use-extern-wasm` condition, so the bundle loads those files rather than inlining the loader and emitting the 15 MB binary again under `assets/`.
 - **Bundle budget:** `bundle-budget.json` caps the gzip size of the entry chunk and the chunks it imports statically, what the page loads before it starts, and gives every other chunk a line of its own (each Worker, the worklet, each lazy chunk, ONNX Runtime's `.wasm` and `.mjs`); `npm run check:budget` reads a build's `dist/` against it in CI and fails above a line, on a chunk with no line, or on a line with no chunk; `docs/bundle-budget.md` says how it was set and how a raise is justified.
 - **The local pack:** `build/local-pack-guard.ts` fails a production build that holds a module or asset from `local/`, or any output file whose bytes are a file of it (`docs/local-pack.md`).
-- **Notices:** `NOTICES.md` names every package a production install keeps, with its version and licence, and every model's licence; `npm run generate` writes it from the lockfile and `models.json`.
+- **Notices:** `NOTICES.md` names every package a production install keeps, with its version and licence, and every model's licence; `npm run generate` writes it from the lockfile and `models.json`, and the production build copies it to `/NOTICES.md` (`build/notices.ts`), so every copy of the app carries it.
 
 ## The dev library
 

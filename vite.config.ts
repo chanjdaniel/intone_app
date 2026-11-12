@@ -8,6 +8,7 @@ import { devLibraryGuard } from './build/dev-library-guard.ts'
 import { servingHeaders } from './build/headers.ts'
 import { localPackGuard } from './build/local-pack-guard.ts'
 import { models } from './build/models.ts'
+import { noticesFile } from './build/notices.ts'
 import { onnxRuntime } from './build/onnx-runtime.ts'
 
 export default defineConfig({
@@ -18,6 +19,7 @@ export default defineConfig({
     servingHeaders(),
     models(),
     onnxRuntime(),
+    noticesFile(),
     devLibraryGuard(),
     localPackGuard(),
   ],
