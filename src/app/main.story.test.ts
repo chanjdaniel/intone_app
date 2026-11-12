@@ -254,11 +254,12 @@ describe('opening a line', () => {
     )
   })
 
-  test('leaving a line drops its take, finished or not, and forgets its audio', () => {
+  test('leaving a line drops its take, finished or not, and what would not play there, and forgets its audio', () => {
     story(
       update,
       given({
         ...on(line),
+        maybePlaybackFailure: Option.some('NotAllowedError'),
         take: Take.ShowingResult({
           mode: 'Guided',
           maybeOutcome: Option.none(),
@@ -275,7 +276,10 @@ describe('opening a line', () => {
       Command.resolve(ForgetTakeAudio, Message.CompletedForgetTakeAudio()),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
       noneDue,
-      model(current => expect(current.take).toStrictEqual(Take.Idle())),
+      model(current => {
+        expect(current.take).toStrictEqual(Take.Idle())
+        expect(current.maybePlaybackFailure).toStrictEqual(Option.none())
+      }),
     )
   })
 })

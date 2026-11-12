@@ -441,6 +441,10 @@ export const failedPlayback = (model: Model, reason: string): TakeUpdate => {
 }
 
 // Leaving the line abandons its take, finished or not, which releases
-// its microphone and tracker; its audio is forgotten by the caller.
+// its microphone and tracker, and what would not play there; its audio is
+// forgotten by the caller.
 export const leftLine = (model: Model): Model =>
-  modifyFields(model, { take: () => Take.Idle() })
+  modifyFields(model, {
+    take: () => Take.Idle(),
+    maybePlaybackFailure: () => Option.none(),
+  })
