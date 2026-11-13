@@ -17,7 +17,7 @@ import { textSampleRate } from './text-protocol'
 
 // Whisper through Transformers.js 4.3.2, held in a scope that disposes
 // its sessions, and their memory, on close. Remote models are off and
-// local models on, below the app's own `/models/`, each loaded by
+// local models on, below the app's own models root, each loaded by
 // `<id>/<version>`, with Transformers.js's browser cache kept on
 // (./text-model-cache.ts fills it first). On a GPU that WebGPU reaches
 // the encoder runs there and the decoder on the CPU: the int8 decoder
@@ -40,6 +40,15 @@ export type Whisper = Readonly<{
   ) => Effect.Effect<ReadonlyArray<TextPiece>, WhisperError>
 }>
 
+// What a failure of Transformers.js says on screen: the app's own words,
+// since the library's own messages are written for a developer (one says
+// "Incorrect state encountered during generation"); those go to the
+// Worker's console, where a developer reads them.
+const failureOf = (what: string, error: unknown): string => {
+  console.error(`Transformers.js: ${reasonOf(error)}`)
+  return `The text model ${what}. Reload the page and try again; if it fails again, this browser may not have the memory it needs.`
+}
+
 // The quantisations T226's spike ran and docs/transcription.md measured;
 // models.json lists exactly these files.
 const dtype = { encoder_model: 'q4', decoder_model_merged: 'int8' } as const
@@ -57,7 +66,7 @@ export const configureTransformers = (
   // `blob:` URL, which the Content Security Policy refuses; off, ONNX
   // Runtime fetches both files from `wasmPaths`, kept by the HTTP cache.
   env.useWasmCache = false
-  const onnx = env.backends.onnx
+  const { onnx } = env.backends
   if (onnx.wasm !== undefined) {
     onnx.wasm.wasmPaths = { wasm: wasmPaths.wasm, mjs: wasmPaths.mjs }
     onnx.wasm.numThreads = 1
@@ -106,7 +115,7 @@ export const openWhisper = (
         try: () => opened(model),
         catch: error =>
           new WhisperError({
-            reason: `The text model could not be opened: ${reasonOf(error)}`,
+            reason: failureOf('could not be opened', error),
           }),
       }),
       ({ asr }) => Effect.promise(() => asr.dispose()).pipe(Effect.ignore),
@@ -180,7 +189,7 @@ export const openWhisper = (
         },
         catch: error =>
           new WhisperError({
-            reason: `The text model stopped: ${reasonOf(error)}`,
+            reason: failureOf('stopped while it read the clip', error),
           }),
       })
 

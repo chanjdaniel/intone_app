@@ -248,11 +248,24 @@ describe('the production build', () => {
     )
   })
 
+  // Transformers.js's own words to a developer, in the text Worker: two
+  // warnings to the console, of its tokenizer and its timestamps, and one
+  // error, which the Worker writes to the console and says in its own
+  // words on screen (src/workers/whisper-session.ts).
+  const libraryWarnings = [
+    'you may experience slightly inaccurate results',
+    'This may lead to inaccurate token-level timestamps',
+    'Incorrect state encountered during generation.',
+  ]
+
   test('ships no text that says "accuracy" or that a take is correct', () => {
     const texts = files().filter(file => /\.(js|mjs|html|css)$/.test(file))
     expect(texts.length).toBeGreaterThan(3)
     for (const file of texts) {
-      const code = readFileSync(join(dist, file), 'utf8')
+      const code = libraryWarnings.reduce(
+        (read, warning) => read.replaceAll(warning, ''),
+        readFileSync(join(dist, file), 'utf8'),
+      )
       expect(code, file).not.toMatch(/accura/i)
       expect(code, file).not.toMatch(/\b(in)?correct/i)
     }

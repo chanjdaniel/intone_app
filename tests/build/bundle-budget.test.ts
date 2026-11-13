@@ -102,7 +102,7 @@ describe('the bundle budget', () => {
     expect(size.gzipBytes).toBeLessThanOrEqual(budget.entry.gzipBytes)
   })
 
-  test('measures every other chunk on its own: the Workers, the worklet, the lazy chunks and ONNX Runtime', async () => {
+  test('measures every other chunk on its own: the Workers, the worklet, the lazy chunks and both ONNX Runtimes', async () => {
     const chunks = await lazyChunkSizes(dist)
     expect(chunks.map(chunk => chunk.name).sort()).toStrictEqual([
       'backup',
@@ -110,8 +110,11 @@ describe('the bundle budget', () => {
       'clip-store.worker',
       'clip.worker',
       'compare-take',
+      'ort-wasm-simd-threaded.asyncify.mjs',
+      'ort-wasm-simd-threaded.asyncify.wasm',
       'ort-wasm-simd-threaded.mjs',
       'ort-wasm-simd-threaded.wasm',
+      'text.worker',
       'tracker.worker',
     ])
     for (const chunk of chunks) {

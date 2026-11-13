@@ -19,9 +19,9 @@ This file says how it works, what was chosen and why, and what it measured; `doc
 
 ## The models
 
-| Model | Files from | Revision | Download |
-| - | - | - | - |
-| `whisper-base` | `onnx-community/whisper-base_timestamped` | `608c49e61301901684bc36cac8f74b95ff6b5a8e` | 75,253,316 B |
+| Model           | Files from                                 | Revision                                   | Download      |
+| --------------- | ------------------------------------------ | ------------------------------------------ | ------------- |
+| `whisper-base`  | `onnx-community/whisper-base_timestamped`  | `608c49e61301901684bc36cac8f74b95ff6b5a8e` | 75,253,316 B  |
 | `whisper-small` | `onnx-community/whisper-small_timestamped` | `65caa70f294b46e1c33ff820aae6b16d048ab818` | 225,743,849 B |
 
 Each is seven files: `config.json`, `generation_config.json`, `preprocessor_config.json`, `tokenizer.json`, `tokenizer_config.json`, `onnx/encoder_model_q4.onnx` and `onnx/decoder_model_merged_int8.onnx`, the quantisations T226's spike ran.
@@ -57,12 +57,12 @@ The transcript is kept with the clip as pieces (`ClipEntry.transcript`) and matc
 
 ## WebGPU and the CPU
 
-| Run on the 29 s clip, `whisper-base`, T226's spike page | Reading |
-| - | - |
-| Both sessions on the CPU (WebAssembly, one thread) | 17 s |
-| Both on WebGPU, the q4 encoder and int8 decoder | 56 to 65 s |
-| Both on WebGPU, the q4 encoder and a q4 decoder (124 MB more) | 5.7 s |
-| The q4 encoder on WebGPU, the int8 decoder on the CPU | 4.9 s |
+| Run on the 29 s clip, `whisper-base`, T226's spike page       | Reading    |
+| ------------------------------------------------------------- | ---------- |
+| Both sessions on the CPU (WebAssembly, one thread)            | 17 s       |
+| Both on WebGPU, the q4 encoder and int8 decoder               | 56 to 65 s |
+| Both on WebGPU, the q4 encoder and a q4 decoder (124 MB more) | 5.7 s      |
+| The q4 encoder on WebGPU, the int8 decoder on the CPU         | 4.9 s      |
 
 Measured on 2026-11-13 on Daniel's machine, an NVIDIA GeForce RTX 3070 (Ampere) through Chromium's Vulkan WebGPU, in a headed window: headless Chromium reaches only SwiftShader, a software adapter, whatever the flags.
 The int8 decoder is slower on WebGPU than on the CPU, so the app runs the encoder on WebGPU and the decoder on the CPU, from the same files: the download is the same either way, and the text came out the same as on the CPU.

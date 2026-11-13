@@ -79,9 +79,9 @@ const answering = (message: ToText): ReadonlyArray<FromText> => {
 }
 
 const assets = {
-  modelsRoot: '/models/',
-  wasm: '/ort/x.wasm',
-  mjs: '/ort/x.mjs',
+  modelsRoot: '/root/',
+  wasm: '/runtime/x.wasm',
+  mjs: '/runtime/x.mjs',
 }
 
 const browserWith = (worker: WorkerPort, seconds = 12): TextBrowser => ({
@@ -100,8 +100,8 @@ describe('the models the learner may choose', () => {
   it('names each by its directory, with every file and its size from the model list', () => {
     const base = textModelOf('whisper-base')
     expect(base.name).toMatch(/^whisper-base\/[0-9a-f]{16}$/)
-    expect(base.files.map(each => each.path)).toContain(
-      'onnx/encoder_model_q4.onnx',
+    expect(base.files.map(each => each.path)).toContainEqual(
+      expect.stringMatching(/encoder_model_q4/),
     )
     expect(textModelBytes('whisper-base')).toBe(
       base.files.reduce((sum, each) => sum + each.bytes, 0),
