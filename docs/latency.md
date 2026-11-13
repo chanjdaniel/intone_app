@@ -29,7 +29,8 @@ What the stages show:
   Inference on one window (the new frames with 11 frames before and 10 after) and the two messages take the rest.
 - **The paint is the next animation frame** that has new frames to draw; the canvas paints only when something changed.
 
-Daniel tried the live curve on the local production build and judged this lag fine as it is on 2026-11-13, so no faster tail is drawn ahead of it.
+Daniel tried the live curve on the local production build and judged this lag "fine as is" on 2026-11-13, in Discord (message 1570672838501736499), so no faster tail is drawn ahead of it.
+The verdict named no browser and no microphone, so neither is recorded.
 
 ## How it is measured
 
