@@ -11,6 +11,7 @@ import { ClipsPage } from '../level/level'
 import { sampleClip } from '../level/testClips'
 import { AppRoute, Message, type Model, initialModel, update } from '../main'
 import { LoadDueLines } from '../returns/commands'
+import { LoadTextChoice } from '../text/commands'
 import { FocusUploadStatus, OpenLevel } from './commands'
 import { uploadJobOf } from './subscriptions'
 import { UploadJob, UploadStep, progressOf } from './upload'
@@ -211,7 +212,11 @@ describe('the cut', () => {
       message(Message.SucceededUpload({ jobNumber: 1, clipId: 'c1' })),
       Command.resolve(OpenLevel, Message.CompletedOpenLevel()),
       message(Message.ChangedUrl({ url: url('/level/c1') })),
-      Command.expectExact(LoadLevel({ clipId: 'c1' })),
+      Command.expectExact(LoadLevel({ clipId: 'c1' }), LoadTextChoice()),
+      Command.resolve(
+        LoadTextChoice,
+        Message.SucceededLoadTextChoice({ maybeChoice: Option.none() }),
+      ),
       Command.resolve(
         LoadLevel,
         Message.SucceededLoadLevel({

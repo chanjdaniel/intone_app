@@ -5,6 +5,7 @@ import { describe, expect, test } from 'vitest'
 
 import { LoadClips } from '../level/commands'
 import { AppRoute, Message, type Model, initialModel, update } from '../main'
+import { LoadTextChoice } from '../text/commands'
 import { FocusDueRow, LoadDueLines, ReplaceDueFind } from './commands'
 import { type DueLine, DuePage, dueRowsPerPage } from './returns'
 
@@ -72,11 +73,19 @@ describe('the lines due back', () => {
       update,
       given(onHome(ready(linesOf(120), 2 * dueRowsPerPage))),
       message(Message.ChangedUrl({ url: url('/upload') })),
+      Command.resolve(
+        LoadTextChoice,
+        Message.SucceededLoadTextChoice({ maybeChoice: Option.none() }),
+      ),
       message(Message.ChangedUrl({ url: url('/') })),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
       Command.resolve(LoadDueLines, loaded(linesOf(120))),
       model(state => expect(shownOf(state)).toBe(2 * dueRowsPerPage)),
       message(Message.ChangedUrl({ url: url('/upload') })),
+      Command.resolve(
+        LoadTextChoice,
+        Message.SucceededLoadTextChoice({ maybeChoice: Option.none() }),
+      ),
       message(Message.ChangedUrl({ url: url('/') })),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
       Command.resolve(LoadDueLines, loaded(linesOf(119))),

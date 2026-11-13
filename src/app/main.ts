@@ -109,6 +109,14 @@ export const initialModel = (route: AppRoute): Model => ({
 
 type UpdateReturn = Update.Return<Model, Message, AppResourceServices>
 
+// The learner's answer to the text model's download, read where it is
+// used: on /upload, whose cut opens a level that may offer the download,
+// on a level and on the settings.
+const readTextChoice = (model: Model): UpdateReturn => ({
+  model,
+  commands: [LoadTextChoice()],
+})
+
 // What a screen reads when it opens: a line its native curve, unless the
 // Model has it, and the history and settings screens what the device
 // keeps.
@@ -118,15 +126,20 @@ const opened = (model: Model, route: AppRoute): UpdateReturn =>
     History: () => HistoryUpdate.openedHistory(model),
     LineHistory: ({ clipId, lineId }) =>
       HistoryUpdate.openedLineHistory(model, clipId, lineId),
-    Settings: () => SettingsUpdate.openedSettings(model),
+    Settings: () =>
+      Update.combine(model, [SettingsUpdate.openedSettings, readTextChoice]),
     Home: () =>
       Update.combine(model, [
         LevelUpdate.openedHome,
         ReturnsUpdate.openedDueLines,
       ]),
-    Upload: () => ({ model }),
+    Upload: () => readTextChoice(model),
     Credits: () => ({ model }),
-    Level: ({ clipId }) => LevelUpdate.openedLevel(model, clipId),
+    Level: ({ clipId }) =>
+      Update.combine(model, [
+        stepModel => LevelUpdate.openedLevel(stepModel, clipId),
+        readTextChoice,
+      ]),
     DevLibrary: () => ({ model }),
     DevEntry: () => ({ model }),
     NotFound: () => ({ model }),
@@ -141,11 +154,7 @@ export const init: Runtime.RoutingApplicationInit<
   AppResourceServices
 > = (url: Url) => {
   const model = initialModel(urlToAppRoute(url))
-  const opening = opened(model, model.route)
-  return {
-    model: opening.model,
-    commands: [...(opening.commands ?? []), LoadTextChoice()],
-  }
+  return opened(model, model.route)
 }
 
 // COMMAND

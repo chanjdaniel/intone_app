@@ -50,6 +50,10 @@ describe('/settings', () => {
         LoadSettings,
         Message.FailedLoadSettings({ reason: 'x' }),
       ),
+      Command.resolve(
+        LoadTextChoice,
+        Message.SucceededLoadTextChoice({ maybeChoice: Option.none() }),
+      ),
       model(current => {
         expect(current.maybeSettingsNotice).toStrictEqual(Option.none())
       }),

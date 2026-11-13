@@ -12,7 +12,6 @@ import {
   initialModel,
   update,
 } from '../main'
-import { LoadTextChoice } from '../text/commands'
 import {
   FocusLineRow,
   LoadHistory,
@@ -74,7 +73,7 @@ describe('/history', () => {
   test('reads the history when it opens, and shows the month of the latest day practised', () => {
     const start = init(url('/history'))
     expect(start.model.history).toStrictEqual(HistoryPage.Loading())
-    expect(start.commands).toStrictEqual([LoadHistory(), LoadTextChoice()])
+    expect(start.commands).toStrictEqual([LoadHistory()])
     story(
       update,
       given(start.model),
@@ -246,7 +245,6 @@ describe('a line’s history', () => {
         name: LoadLineHistory.name,
         args: { clipId: 'ame-ga-suki', lineId: '1' },
       },
-      { name: LoadTextChoice.name },
     ])
   })
 
