@@ -7,6 +7,7 @@ import { Url, toString as urlToString } from 'foldkit/url'
 
 import { Dialog } from '@foldkit/ui'
 
+import { creditsView } from './credits/creditsView'
 import { MountDevLibrary } from './devLibrary'
 import { HistoryPage, LineHistoryPage } from './history/history'
 import { historyView } from './history/historyView'
@@ -124,6 +125,7 @@ const opened = (model: Model, route: AppRoute): UpdateReturn =>
         ReturnsUpdate.openedDueLines,
       ]),
     Upload: () => ({ model }),
+    Credits: () => ({ model }),
     Level: ({ clipId }) => LevelUpdate.openedLevel(model, clipId),
     DevLibrary: () => ({ model }),
     DevEntry: () => ({ model }),
@@ -836,6 +838,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
         },
         h,
       ),
+    Credits: () => creditsView(h),
     NotFound: ({ path }) => notFoundView(path, h),
   }),
 })

@@ -5,6 +5,7 @@ import { Dialog } from '@foldkit/ui'
 
 import { bytesText, countText } from '../history/format'
 import { pageFrame } from '../pageFrame'
+import { creditsRouter } from '../route'
 import type { TextChoiceState, TextJob, TextOffer } from '../text/text'
 import {
   type TextEvents,
@@ -509,6 +510,20 @@ export const settingsView = <ViewMessage>(
       backupSection(ready, events, h),
       clearSection(events, h),
       clearDialogView(dialog, ready.clearing, events, h),
+      h.p(
+        [h.Class('text-base text-ink')],
+        [
+          h.a(
+            [
+              h.Href(creditsRouter()),
+              h.Class(
+                'inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring',
+              ),
+            ],
+            ['Credits for the models and recordings'],
+          ),
+        ],
+      ),
     ],
   })
   return pageFrame(

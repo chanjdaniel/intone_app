@@ -14,6 +14,8 @@ export const AppRoute = defineRouteUnion({
   History: { maybeFind: Schema.Option(Schema.String) },
   LineHistory: { clipId: Schema.String, lineId: Schema.String },
   Settings: {},
+  // Who made the models and recordings the app brings.
+  Credits: {},
   DevLibrary: {},
   DevEntry: { entry: Schema.String },
   NotFound: { path: Schema.String },
@@ -69,6 +71,11 @@ export const settingsRouter = pipe(
   Route.mapTo(AppRoute.Settings),
 )
 
+export const creditsRouter = pipe(
+  literal('credits'),
+  Route.mapTo(AppRoute.Credits),
+)
+
 const devLibraryRouter = pipe(literal('dev'), Route.mapTo(AppRoute.DevLibrary))
 
 const devEntryRouter = pipe(
@@ -84,6 +91,7 @@ const appRouters = [
   lineHistoryRouter,
   historyRouter,
   settingsRouter,
+  creditsRouter,
   homeRouter,
 ] as const
 

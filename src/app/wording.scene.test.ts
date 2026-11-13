@@ -2,6 +2,9 @@ import { Option } from 'effect'
 import { Mount, expect, given, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
+import { Dialog } from '@foldkit/ui'
+
+import type { TextChoice } from '../services/history-records'
 import {
   ClipWaveform,
   EditSaving,
@@ -48,6 +51,14 @@ import {
   sampleLine,
   sampleScore,
 } from './take/testCurves'
+import {
+  LineTextEdit,
+  TextChoiceState,
+  TextFormStatus,
+  TextJob,
+  TextPurpose,
+  TextStep,
+} from './text/text'
 import { PackJob, PackStep, UploadJob, UploadStep } from './upload/upload'
 
 // The app claims only what it compared (report section 3): no screen
@@ -168,6 +179,20 @@ const ready = NativeCurve.Ready({
   line: sampleLine,
   curve: sampleCurve,
   features: sampleFeatures,
+})
+
+const textLevel = (clip: LevelClip): Model => ({
+  ...initialModel(
+    AppRoute.Level({ clipId: clip.id, maybeFind: Option.none() }),
+  ),
+  textChoice: TextChoiceState.Read({ maybeChoice: Option.none() }),
+  level: LevelPage.Ready({
+    stars: LevelStars.Ready({ lines: [] }),
+    clip,
+    shownRows: 50,
+    deleting: DeleteState.Idle(),
+    editor: initialEditor(clip),
+  }),
 })
 
 const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
@@ -298,6 +323,74 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
     false,
   ],
   ['not found', initialModel(AppRoute.NotFound({ path: '/nope' })), false],
+  ['credits', initialModel(AppRoute.Credits()), false],
+  // The text: the consent dialog open, each step of the job, a failure,
+  // a written-out level, a line's own text and a pasted one, the settings.
+  ...[
+    ...[
+      TextStep.Decoding(),
+      TextStep.Downloading({ done: 1, total: 2 }),
+      TextStep.Preparing(),
+      TextStep.Transcribing({ done: 1, total: 2 }),
+      TextStep.Keeping(),
+    ].map(step => ({
+      ...textLevel(sampleClip(3)),
+      textJob: TextJob.Working({
+        jobNumber: 1,
+        purpose: TextPurpose.Transcribe({ clipId: 'c1' }),
+        model: 'whisper-base' as const,
+        step,
+      }),
+    })),
+    {
+      ...textLevel(sampleClip(3)),
+      textJob: TextJob.Failed({
+        purpose: TextPurpose.Transcribe({ clipId: 'c1' }),
+        model: 'whisper-base',
+        reason: 'gone',
+      }),
+    },
+    {
+      ...textLevel({
+        ...sampleClip(3),
+        maybeWrittenBy: Option.some('whisper-small' as const),
+      }),
+      lineText: LineTextEdit.OneLine({
+        clipId: 'c1',
+        lineId: '1',
+        draft: '雨',
+        status: TextFormStatus.Refused({ reason: 'gone' }),
+      }),
+    },
+    {
+      ...textLevel(sampleClip(3)),
+      lineText: LineTextEdit.WholeClip({
+        clipId: 'c1',
+        draft: '雨',
+        status: TextFormStatus.Saving(),
+      }),
+    },
+  ].map((model, k) => [`level, text ${k}`, model, false] as const),
+  ...[
+    Option.none(),
+    Option.some<TextChoice>({ _tag: 'Declined' }),
+    Option.some<TextChoice>({ _tag: 'Agreed', model: 'whisper-base' }),
+  ].map(
+    maybeChoice =>
+      [
+        `settings, text ${Option.match(maybeChoice, { onNone: () => 'unasked', onSome: choice => choice._tag })}`,
+        {
+          ...initialModel(AppRoute.Settings()),
+          textChoice: TextChoiceState.Read({ maybeChoice }),
+          textJob: TextJob.Failed({
+            purpose: TextPurpose.Download(),
+            model: 'whisper-base',
+            reason: 'gone',
+          }),
+        },
+        false,
+      ] as const,
+  ),
   [
     'line loading',
     {
@@ -372,6 +465,23 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
 const drawn = Mount.resolve(DrawCurvePair, Message.CompletedDrawCurvePair())
 
 describe('the wording', () => {
+  test('never says "accuracy" or that a take is correct: the text model’s consent dialog', () => {
+    scene(
+      { update, view },
+      given(
+        update(textLevel(sampleClip(3)), Message.ClickedWriteOutText()).model,
+      ),
+      Mount.resolve(
+        Dialog.AcquireResources,
+        Dialog.Message.SucceededAcquireResources(),
+      ),
+      expect(text(/Download the text model\?/)).toExist(),
+      expect(text(/accura/i)).toBeAbsent(),
+      expect(text(/\b(in)?correct/i)).toBeAbsent(),
+      expect(text(gamified)).toBeAbsent(),
+    )
+  })
+
   test.each(screens)(
     'never says "accuracy" or that a take is correct: %s',
     (_name, model, drawsCurves) => {
