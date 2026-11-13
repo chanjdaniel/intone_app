@@ -5,6 +5,7 @@ import { type Page, expect, test } from '@playwright/test'
 
 import { encodeWav } from '../../src/engine/audio/wav.ts'
 import { type Session, launch, report, withPage } from './take-session.ts'
+import { declineTextModel } from './text-offer.ts'
 
 // Bringing a clip, in the built app: a LibriVox CC0 clip chosen or dropped
 // is cut into lines on the device, kept across a reload, and a line of it
@@ -78,16 +79,19 @@ const onDevice = (page: Page) =>
 const chooseFile = (page: Page, path: string) =>
   page.locator('#upload-file').setInputFiles(path)
 
-// Cuts `path` on /upload and waits for its lines.
+// Cuts `path` on /upload and waits for its lines, saying "Not now" to the
+// text model's download, which a browser's first cut offers.
 const cut = async (page: Page, path: string): Promise<number> => {
   await page.goto('/upload')
   const started = Date.now()
   await chooseFile(page, path)
   await page.waitForURL(/\/level\//, { timeout: 120_000 })
+  const milliseconds = Date.now() - started
+  await declineTextModel(page)
   await expect(
     page.getByRole('heading', { name: 'Lines to copy' }),
   ).toBeVisible()
-  return Date.now() - started
+  return milliseconds
 }
 
 const lineRows = (page: Page) => page.getByRole('link', { name: /^Line \d+/ })
@@ -160,6 +164,13 @@ test('a CC0 clip is cut into lines, kept, and one practised with a scored take, 
       ).toBeVisible({ timeout: 30_000 })
 
       expectNothingSent(session, baseURL ?? '')
+      // "Not now" to the text model left practice whole, and downloaded
+      // nothing of it.
+      expect(
+        session.requests.filter(request =>
+          new URL(request.url).pathname.startsWith('/models/whisper-'),
+        ),
+      ).toStrictEqual([])
       expect(session.problems).toStrictEqual([])
     })
   } finally {
@@ -213,6 +224,7 @@ test('a clip dropped on the page is cut as one chosen', async ({ browser }) => {
     await zone.dispatchEvent('dragenter', { dataTransfer: transfer })
     await zone.dispatchEvent('drop', { dataTransfer: transfer })
     await page.waitForURL(/\/level\//, { timeout: 120_000 })
+    await declineTextModel(page)
     await expect(
       page.getByRole('heading', { name: 'dropped.wav', level: 1 }),
     ).toBeVisible()
@@ -320,6 +332,7 @@ test('each format is cut or refused by name, as docs/uploads.md says', async ({
   const results: Array<{ file: string; what: string; lines: number | string }> =
     []
   await withPage(browser, async ({ page }) => {
+    const offer = { declined: false }
     for (const { file, what } of formats.formats) {
       await page.goto('/upload')
       await chooseFile(page, join(root, 'fixtures', 'formats', file))
@@ -331,6 +344,11 @@ test('each format is cut or refused by name, as docs/uploads.md says', async ({
           .then(() => 'refused'),
       ])
       if (outcome === 'cut') {
+        // The download is offered once; "Not now" is kept after that.
+        if (!offer.declined) {
+          await declineTextModel(page)
+          offer.declined = true
+        }
         await expect(
           page.getByRole('heading', { name: 'Lines to copy' }),
         ).toBeVisible()

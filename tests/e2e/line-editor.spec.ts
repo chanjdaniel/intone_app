@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { type Locator, type Page, expect, test } from '@playwright/test'
 
 import { type Session, launch, report, withPage } from './take-session.ts'
+import { declineTextModel } from './text-offer.ts'
 
 // Fixing a clip's lines, in the built app: a LibriVox CC0 clip cut into
 // lines, one line's end dragged by the mouse and undone, its start dragged
@@ -136,6 +137,7 @@ test('a CC0 clip’s lines are dragged, stepped, split and undone, kept across a
         await page.goto('/upload')
         await page.locator('#upload-file').setInputFiles(clip)
         await page.waitForURL(/\/level\//, { timeout: 120_000 })
+        await declineTextModel(page)
         // Reached from its upload, the level opens with its editor open,
         // since fixing the cut is the likeliest next step.
         await expect(waveform(page).locator('svg path')).toBeVisible({
