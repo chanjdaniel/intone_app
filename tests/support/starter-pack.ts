@@ -1,11 +1,15 @@
 // What scripts/starter-pack.ts makes from the source list, as plain
 // functions it and the tests share: each word's flag from what UniDic and
 // Wiktionary give, the kana VOICEVOX is asked to say, a recording's
-// credit, the key of what a file is made from, the pack line, CREDITS.md
-// and the review's verdicts written into the list (docs/starter-set.md).
+// credit, the key of what a file is made from, a downloaded recording
+// made the pack's file, the pack line, CREDITS.md and the review's
+// verdicts written into the list (docs/starter-set.md).
 
+import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 
+import { decodeWav, encodeWav } from '../../src/engine/audio/wav.ts'
+import { resample } from '../../src/engine/pitch/resample.ts'
 import { moraeOf } from '../../src/engine/text/morae.ts'
 import {
   type ReviewExport,
@@ -19,10 +23,63 @@ import {
   isShareAlike,
   reviewNote,
 } from '../../src/services/starter-records.ts'
+import { toMono } from './fixture-audio.ts'
 
 // The rate every bundled file is written at: VOICEVOX's own, and half
 // the 48 kHz of the Lingua Libre files, well above what a voice needs.
 export const packSampleRate = 24000
+
+// A downloaded recording's audio as WAV bytes: a WAV as it is, and any
+// other format the list's sources serve (Commons' OGG and FLAC,
+// LibriVox's MP3) decoded to 32-bit float by ffmpeg, which must then be
+// on the PATH, as for `npm run fixtures:voices`.
+const wavOf = (bytes: Uint8Array): Uint8Array => {
+  const head = new TextDecoder('ascii').decode(bytes.subarray(0, 12))
+  if (head.startsWith('RIFF') && head.endsWith('WAVE')) {
+    return bytes
+  }
+  const result = spawnSync(
+    'ffmpeg',
+    ['-v', 'error', '-i', 'pipe:0', '-f', 'wav', '-c:a', 'pcm_f32le', 'pipe:1'],
+    { input: bytes, maxBuffer: 1 << 30 },
+  )
+  if (result.error !== undefined) {
+    throw new Error(
+      `A recording that is not WAV needs ffmpeg to decode it: ${result.error.message}`,
+    )
+  }
+  if (result.status !== 0) {
+    throw new Error(`ffmpeg could not decode a recording: ${result.stderr}`)
+  }
+  return new Uint8Array(result.stdout)
+}
+
+// A pack file: 16-bit PCM at the pack's rate, one channel.
+export const packWav = (samples: Float32Array): Uint8Array =>
+  encodeWav({
+    sampleRate: packSampleRate,
+    encoding: 'pcm16',
+    channels: [samples],
+  })
+
+// A downloaded recording made the pack's file: mixed to mono, cut to the
+// stretch `from` to `to` in seconds when given, and resampled.
+export const convertRecording = (
+  bytes: Uint8Array,
+  from?: number,
+  to?: number,
+): Uint8Array => {
+  const wav = decodeWav(wavOf(bytes))
+  const mono = toMono(wav.channels)
+  const cut =
+    from === undefined || to === undefined
+      ? mono
+      : mono.subarray(
+          Math.round(from * wav.sampleRate),
+          Math.round(to * wav.sampleRate),
+        )
+  return packWav(resample(cut, wav.sampleRate, packSampleRate))
+}
 
 // Bumped when the way a file is made changes, so every file is remade.
 export const makerVersion = 1

@@ -1,5 +1,9 @@
+import { spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+import { decodeWav } from '../../src/engine/audio/wav.ts'
 import type {
   StarterList,
   StarterListLine,
@@ -7,9 +11,11 @@ import type {
 } from '../../src/services/starter-records.ts'
 import {
   applyReview,
+  convertRecording,
   creditOf,
   lineFlag,
   listProblems,
+  packSampleRate,
   recipeOf,
   unidicAccents,
   unidicFeatures,
@@ -391,4 +397,46 @@ describe('applyReview', () => {
       }),
     ).toThrow('no accent type')
   })
+})
+
+describe('a downloaded recording made the pack’s file', () => {
+  const formats = join(import.meta.dirname, '..', '..', 'fixtures', 'formats')
+  const made = (file: string, from?: number, to?: number) =>
+    decodeWav(convertRecording(readFileSync(join(formats, file)), from, to))
+  const hasFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0
+
+  it('makes a WAV one channel of 16-bit PCM at the pack’s rate, cut to its stretch when given', () => {
+    const whole = made('pcm16.wav')
+    expect(whole.sampleRate).toBe(packSampleRate)
+    expect(whole.channels).toHaveLength(1)
+    expect(whole.channels[0]?.length).toBe(4 * packSampleRate)
+    expect(made('pcm16.wav', 1, 2.5).channels[0]?.length).toBe(
+      1.5 * packSampleRate,
+    )
+  })
+
+  // Commons serves OGG and FLAC as often as WAV, and LibriVox MP3.
+  it.runIf(hasFfmpeg)(
+    'decodes any other format the sources serve, OGG, FLAC and MP3, to the same audio',
+    () => {
+      const wav = made('pcm16.wav').channels[0] ?? new Float32Array()
+      for (const file of ['vorbis.ogg', 'flac.flac', 'mp3.mp3']) {
+        const other = made(file)
+        expect(other.sampleRate).toBe(packSampleRate)
+        expect(other.channels).toHaveLength(1)
+        const samples = other.channels[0] ?? new Float32Array()
+        // An MP3 decoder's padding may add a frame or so at the end.
+        expect(Math.abs(samples.length - wav.length)).toBeLessThan(
+          0.06 * packSampleRate,
+        )
+        const energy = (values: Float32Array) =>
+          values.reduce((sum, value) => sum + value * value, 0)
+        // A lossy coder drops the highest band, a tenth of the energy
+        // at most here.
+        const ratio = energy(samples) / energy(wav)
+        expect(ratio).toBeGreaterThan(0.85)
+        expect(ratio).toBeLessThan(1.1)
+      }
+    },
+  )
 })

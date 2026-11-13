@@ -39,8 +39,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { parseArgs } from 'node:util'
 
-import { decodeWav, encodeWav } from '../src/engine/audio/wav.ts'
-import { resample } from '../src/engine/pitch/resample.ts'
+import { decodeWav } from '../src/engine/audio/wav.ts'
 import {
   ReviewExport,
   StarterList,
@@ -51,11 +50,13 @@ import { toMono } from '../tests/support/fixture-audio.ts'
 import {
   applyReview,
   audioPathOf,
+  convertRecording,
   creditsMarkdown,
   lineFlag,
   listProblems,
   packOf,
   packSampleRate,
+  packWav,
   recipeOf,
   unidicAccents,
   unidicFeatures,
@@ -180,28 +181,6 @@ const cachedDownload = async (
   return bytes
 }
 
-const asWav = (samples: Float32Array): Uint8Array =>
-  encodeWav({
-    sampleRate: packSampleRate,
-    encoding: 'pcm16',
-    channels: [samples],
-  })
-
-// A downloaded recording, mixed to mono, resampled to the pack's rate
-// and written as 16-bit PCM.
-const convert = (bytes: Uint8Array, from?: number, to?: number): Uint8Array => {
-  const wav = decodeWav(bytes)
-  const mono = toMono(wav.channels)
-  const cut =
-    from === undefined || to === undefined
-      ? mono
-      : mono.subarray(
-          Math.round(from * wav.sampleRate),
-          Math.round(to * wav.sampleRate),
-        )
-  return asWav(resample(cut, wav.sampleRate, packSampleRate))
-}
-
 type Request =
   | Readonly<{ query: string; style: number; model: string }>
   | Readonly<{
@@ -289,7 +268,7 @@ const synthesise = (
       const wav = decodeWav(readFileSync(out))
       if (wav.sampleRate !== packSampleRate)
         throw new Error(`${line.id}: ${wav.sampleRate} Hz`)
-      made.set(line.id, asWav(toMono(wav.channels)))
+      made.set(line.id, packWav(toMono(wav.channels)))
     }
   } finally {
     rmSync(scratch, { recursive: true, force: true })
@@ -355,11 +334,14 @@ const packFiles = async (
     if (recording.kind === 'Voicevox') {
       toSynthesise.push(line)
     } else if (recording.kind === 'Commons') {
-      files.set(path, convert(await cachedDownload(recording, offline)))
+      files.set(
+        path,
+        convertRecording(await cachedDownload(recording, offline)),
+      )
     } else {
       files.set(
         path,
-        convert(
+        convertRecording(
           await cachedDownload(recording, offline),
           recording.from,
           recording.to,

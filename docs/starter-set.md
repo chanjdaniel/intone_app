@@ -32,6 +32,7 @@ The source each recording may come from, in the order the plan prefers them: Lin
 - **LibriVox** is not used: its readings are literary sentences of several seconds by one reader, too long for a starter line, and the cut study (`docs/cut-study.md`) shows them already in the tests.
 
 Each recording is mixed to mono and written as 16-bit PCM at 24 kHz: VOICEVOX's own rate, and half the 48 kHz of the Lingua Libre files.
+A downloaded file that is not WAV, as Commons often serves OGG or FLAC and LibriVox MP3, is decoded by ffmpeg first (`convertRecording` in `tests/support/starter-pack.ts`), which must then be on the PATH, as for `npm run fixtures:voices`; the Lingua Libre files are WAV and need none.
 A CC BY-SA recording, resampled, stays under CC BY-SA; the set holds none today, and the credit says so of any that joins it.
 
 ## The accent types
