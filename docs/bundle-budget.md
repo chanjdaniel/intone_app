@@ -9,7 +9,7 @@ Ticket 12 of T242 met this (a second lazy chunk moved 47 kB of Effect out of the
 
 ## Every other chunk
 
-Every chunk the page does not load at start has a line of its own in `bundle-budget.json`, by its name without Vite's content hash: each Worker, the capture worklet, each chunk the app loads lazily, and ONNX Runtime's WebAssembly and its loader under `ort/<version>/`.
+Every chunk the page does not load at start has a line of its own in `bundle-budget.json`, by its name without Vite's content hash: each Worker, the capture worklet, each chunk the app loads lazily, the WebAssembly the bundler emits under `assets/` beside a package's module (Lindera's), and ONNX Runtime's WebAssembly and its loader under `ort/<version>/`.
 The check fails on a chunk over its line, on a chunk the build makes that has no line, and on a line naming a chunk the build no longer makes, so a new Worker or lazy chunk comes with its line.
 No model file is in any of them: models are served whole from `/models/` (`docs/deploying.md`).
 
@@ -28,9 +28,12 @@ Each line is the chunk's gzip size, measured through Vite's production build, pl
 | `text.worker` (Transformers.js, its ONNX Runtime's JavaScript, the text Worker) | 174,641 B   | 193,000 B   |
 | `ort-wasm-simd-threaded.asyncify.mjs` (Transformers.js's ONNX Runtime)          | 19,394 B    | 22,000 B    |
 | `ort-wasm-simd-threaded.asyncify.wasm` (Transformers.js's ONNX Runtime)         | 6,625,019 B | 7,288,000 B |
+| `readings.worker` (the readings Worker, Lindera's module and `fflate`'s unzip)  | 40,277 B    | 45,000 B    |
+| `lindera_wasm_bg` (Lindera's WebAssembly)                                       | 707,439 B   | 779,000 B   |
 
 ONNX Runtime's files are its release's own and change only when it is upgraded (`docs/upgrading.md`); Transformers.js's two come with its own pinned ONNX Runtime, so they move only when Transformers.js does.
 The text Worker's chunk and Transformers.js's ONNX Runtime are fetched only once the learner agrees to the text model's download (`docs/transcription.md`).
+The readings Worker's chunk and Lindera's WebAssembly are fetched only once the learner shows a line's readings (`docs/readings.md`).
 
 ## How the cap was set
 
@@ -41,6 +44,7 @@ The cap is the entry chunk's size, measured through Vite's production build in a
 | `1e21a2b5` (ticket 03 of T242) | 100,804 B         | 130,000 B |
 | ticket 12 of T242              | 153,950 B         | 180,000 B |
 | ticket 15 of T242              | 186,599 B         | 210,000 B |
+| ticket 17 of T242              | 210,875 B         | 240,000 B |
 
 The base it was measured against, `3997c12d`, built the same way, gives 98,217 B: ticket 03 added 2,587 B with its routes, its not-found screen and the bridge to the dev library, whose own modules stay out of the build.
 
@@ -78,6 +82,23 @@ By the minified bytes each part adds, from the build's source map:
 
 Loading `src/services/local-pack.ts` lazily was tried, and the page loaded more: its own chunk is 4,002 B gzip, but a second lazy chunk sharing the entry's modules with the backup's made the bundler split 47 kB of Effect and the history's records out of the entry into a chunk it imports statically, and the page then loaded 187,050 B before starting, against 186,689 B with the import in the entry.
 The screens' parts cannot be loaded lazily in a single Foldkit program.
+
+Ticket 17 raised it again, measured against its base `1d58abd6` built the same way: 205,038 B to 210,875 B, 5,837 B more, all in the entry chunk (it imports no chunk statically).
+Ticket 16 had added its screens under the cap ticket 15 set; ticket 17's readings took it over, by 875 B.
+By the minified bytes each part adds, from the build's source map:
+
+| What grew                                                                                         | Minified |
+| ------------------------------------------------------------------------------------------------- | -------- |
+| `src/app/readings/` (the update, the view with its ruby and edit form, Commands, Model, resource) | 14,490 B |
+| `src/app/main.ts`, `src/app/message.ts` (the Messages and their handling)                         | 2,720 B  |
+| `src/engine/text/readings.ts` (the words over the text, the kana split over the kanji)            | 1,775 B  |
+| `src/services/readings.ts`, `src/workers/readings-protocol.ts` (opening the Worker)               | 1,630 B  |
+| Effect (Schema)                                                                                   | 550 B    |
+| `src/services/history-clips.ts`, `history-records.ts` (a line's kept edits)                       | 565 B    |
+| `src/app/credits/creditsView.ts`, `src/app/line/` (the tokeniser's credit, the heading's ruby)    | 810 B    |
+
+The readings' tokeniser and dictionary stay out of it: the Worker's chunk and Lindera's WebAssembly load only when the learner shows readings.
+The readings' view, update and Messages cannot be loaded lazily in a single Foldkit program.
 
 A clean tree, so that nothing local (a git-ignored `.env` inlines `VITE_` values) moves the size:
 

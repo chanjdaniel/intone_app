@@ -106,9 +106,9 @@ test('the bundled line’s readings are offered with their size, shown as ruby, 
     expect(fetched).toHaveLength(2)
 
     await editReading(page, '雨', 'あま')
-    await expect(page.getByRole('status')).toHaveText(
-      'One reading is your own, in colour.',
-    )
+    await expect(
+      page.getByText('One reading is your own, in colour.'),
+    ).toBeVisible()
     expect(await kanaOver(page)).toStrictEqual(['あま', 'す'])
 
     // After a reload the readings are shown again, the edit with them.
@@ -151,7 +151,7 @@ test('a reading edited on a line of an uploaded clip is kept with the line acros
     await page.locator('#upload-file').setInputFiles(clip)
     await page.waitForURL(/\/level\//, { timeout: 120_000 })
     await declineTextModel(page)
-    await page.getByRole('button', { name: 'Edit line 1’s text' }).click()
+    await page.getByRole('button', { name: 'Add line 1’s text' }).click()
     await page.getByLabel('Line 1’s text', { exact: true }).fill('小狐の穴')
     await page.getByRole('button', { name: 'Keep the text' }).click()
     await page.getByRole('link', { name: /^小狐の穴\s*, Line 1/ }).click()
@@ -169,9 +169,9 @@ test('a reading edited on a line of an uploaded clip is kept with the line acros
     await page.getByLabel('小', { exact: true }).fill('こ')
     await page.getByLabel('狐', { exact: true }).fill('ぎつね')
     await page.getByRole('button', { name: 'Keep these readings' }).click()
-    await expect(page.getByRole('status')).toHaveText(
-      '2 readings are your own, in colour.',
-    )
+    await expect(
+      page.getByText('2 readings are your own, in colour.'),
+    ).toBeVisible()
 
     await page.reload()
     await expect

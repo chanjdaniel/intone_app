@@ -151,7 +151,7 @@ describe('a line’s readings', () => {
     )
   })
 
-  test('corrected, keep the learner’s kana for the word, and are read again with it', () => {
+  test('edited, keep the learner’s kana for the word, shown at once', () => {
     story(
       update,
       given(shownAndLoaded()),
@@ -197,46 +197,25 @@ describe('a line’s readings', () => {
           lineId: '1',
         }),
       ),
-      Command.expectExact(
-        FocusReadings({ id: editReadingsButtonId }),
-        ReadLineReadings(target),
-      ),
+      // The words take the kept edits at once, so the button the focus
+      // goes back to stays on the screen; nothing is read again.
+      Command.expectExact(FocusReadings({ id: editReadingsButtonId })),
       Command.resolve(FocusReadings, Message.CompletedFocusReadings()),
       model(current => {
         expect(current.readingFix).toStrictEqual(ReadingFixForm.Closed())
         expect(current.readings).toStrictEqual(
-          LineReadingsState.Reading(target),
+          LineReadingsState.Ready({
+            ...target,
+            words: shownWordsOf(
+              target.text,
+              dictionaryWords,
+              Option.some({
+                text: target.text,
+                fixes: [{ from: 0, to: 1, kana: 'あま' }],
+              }),
+            ),
+          }),
         )
-      }),
-      Command.resolve(
-        ReadLineReadings,
-        Message.SucceededReadLineReadings({
-          ...target,
-          words: shownWordsOf(
-            target.text,
-            dictionaryWords,
-            Option.some({
-              text: target.text,
-              fixes: [{ from: 0, to: 1, kana: 'あま' }],
-            }),
-          ),
-        }),
-      ),
-      model(current => {
-        expect(current.readings._tag).toBe('Ready')
-        if (current.readings._tag === 'Ready') {
-          expect(
-            current.readings.words.map(word => [
-              word.surface,
-              Option.getOrNull(word.maybeKana),
-              word.fixed,
-            ]),
-          ).toStrictEqual([
-            ['雨', 'あま', true],
-            ['が', null, false],
-            ['好き', 'すき', false],
-          ])
-        }
       }),
     )
   })

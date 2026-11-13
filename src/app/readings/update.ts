@@ -15,6 +15,7 @@ import {
 } from './commands'
 import {
   LineReadingsState,
+  type ReadingDraft,
   ReadingFixForm,
   ReadingsChoice,
   type ReadingsShown,
@@ -182,6 +183,17 @@ export const changedDraft = (
     : { model }
 }
 
+// The edits the drafts make: a field left empty, or holding the
+// dictionary's reading, makes none.
+const fixesOf = (drafts: ReadonlyArray<ReadingDraft>) =>
+  drafts.flatMap(draft => {
+    const kana = draft.draft.trim()
+    return kana === '' ||
+      kana === Option.getOrUndefined(draft.maybeDictionaryKana)
+      ? []
+      : [{ from: draft.from, to: draft.to, kana }]
+  })
+
 export const submitted = (model: Model): ReadingsUpdate => {
   const form = model.readingFix
   if (form._tag !== 'Open' || form.status._tag === 'Saving') {
@@ -205,13 +217,7 @@ export const submitted = (model: Model): ReadingsUpdate => {
       commands: [FocusReadings({ id: readingFieldId(unwritten.from) })],
     }
   }
-  const fixes = form.drafts.flatMap(draft => {
-    const kana = draft.draft.trim()
-    return kana === '' ||
-      kana === Option.getOrUndefined(draft.maybeDictionaryKana)
-      ? []
-      : [{ from: draft.from, to: draft.to, kana }]
-  })
+  const fixes = fixesOf(form.drafts)
   return {
     model: modifyFields(model, {
       readingFix: () =>
@@ -238,21 +244,45 @@ const isFormFor = (model: Model, clipId: string, lineId: string): boolean =>
   model.readingFix.clipId === clipId &&
   model.readingFix.lineId === lineId
 
-// Kept: the line's words are read again, with the corrections over them.
+// Kept: the line's words take the edits at once, the dictionary's reading
+// back on a word with none, so the button the focus returns to stays on
+// the screen; words not in the Model for that text are read again.
 export const keptFixes = (
   model: Model,
   clipId: string,
   lineId: string,
-): ReadingsUpdate =>
-  isFormFor(model, clipId, lineId)
-    ? {
-        model: modifyFields(model, {
-          readingFix: () => ReadingFixForm.Closed(),
-          readings: () => LineReadingsState.Idle(),
-        }),
-        commands: [FocusReadings({ id: editReadingsButtonId })],
-      }
-    : { model }
+): ReadingsUpdate => {
+  const form = model.readingFix
+  if (form._tag !== 'Open' || !isFormFor(model, clipId, lineId)) {
+    return { model }
+  }
+  const fixes = fixesOf(form.drafts)
+  const current = model.readings
+  return {
+    model: modifyFields(model, {
+      readingFix: () => ReadingFixForm.Closed(),
+      readings: () =>
+        current._tag === 'Ready' && isReadingsFor(current, form)
+          ? LineReadingsState.Ready({
+              ...current,
+              words: current.words.map(word => {
+                const fix = fixes.find(
+                  each => each.from === word.from && each.to === word.to,
+                )
+                return fix === undefined
+                  ? {
+                      ...word,
+                      maybeKana: word.maybeDictionaryKana,
+                      fixed: false,
+                    }
+                  : { ...word, maybeKana: Option.some(fix.kana), fixed: true }
+              }),
+            })
+          : LineReadingsState.Idle(),
+    }),
+    commands: [FocusReadings({ id: editReadingsButtonId })],
+  }
+}
 
 export const failedKeepFixes = (
   model: Model,
