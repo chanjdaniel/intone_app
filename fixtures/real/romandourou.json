@@ -1,0 +1,19 @@
+{
+  "id": "romandourou",
+  "item": "romandourou_1212_librivox",
+  "file": "romandourou_01_dazai_64kb.mp3",
+  "sha1": "e5c760b78449af3120e7f8090e9ae87fa03bfd8d",
+  "title": "ろまん燈籠 (Roman Dourou), part 1",
+  "author": "太宰治 (Osamu Dazai)",
+  "reader": "ekzemplaro",
+  "licence": "CC0 1.0",
+  "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "url": "https://archive.org/download/romandourou_1212_librivox/romandourou_01_dazai_64kb.mp3",
+  "itemUrl": "https://archive.org/details/romandourou_1212_librivox",
+  "sampleRate": 22050,
+  "samples": 1312416,
+  "durationSeconds": 59.52,
+  "fromSample": 667674,
+  "toSample": 1980090,
+  "decoder": "ffmpeg version n9.0.2"
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "shikoku-metan",
+    "name": "四国めたん",
+    "medianHz": 269.81,
+    "lowHz": 239.32,
+    "highHz": 330.22,
+    "spanSemitones": 5.57,
+    "credit": "VOICEVOX:四国めたん",
+    "termsUrl": "https://zunko.jp/con_ongen_kiyaku.html"
+  },
+  {
+    "id": "zundamon",
+    "name": "ずんだもん",
+    "medianHz": 311.18,
+    "lowHz": 273.9,
+    "highHz": 401.59,
+    "spanSemitones": 6.63,
+    "credit": "VOICEVOX:ずんだもん",
+    "termsUrl": "https://zunko.jp/con_ongen_kiyaku.html"
+  },
+  {
+    "id": "kyushu-sora",
+    "name": "九州そら",
+    "medianHz": 232.96,
+    "lowHz": 185.8,
+    "highHz": 350.42,
+    "spanSemitones": 10.98,
+    "credit": "VOICEVOX:九州そら",
+    "termsUrl": "https://zunko.jp/con_ongen_kiyaku.html"
+  },
+  {
+    "id": "meimei-himari",
+    "name": "冥鳴ひまり",
+    "medianHz": 223.13,
+    "lowHz": 191.12,
+    "highHz": 288.84,
+    "spanSemitones": 7.15,
+    "credit": "VOICEVOX:冥鳴ひまり",
+    "termsUrl": "https://www.meimeihimari.com/terms-of-use"
+  },
+  {
+    "id": "chugoku-usagi",
+    "name": "中国うさぎ",
+    "medianHz": 218.96,
+    "lowHz": 194.84,
+    "highHz": 264.03,
+    "spanSemitones": 5.26,
+    "credit": "VOICEVOX:中国うさぎ",
+    "termsUrl": "https://zunko.jp/con_ongen_kiyaku.html"
+  },
+  {
+    "id": "kurono-takehiro",
+    "name": "玄野武宏",
+    "medianHz": 118.7,
+    "lowHz": 103.55,
+    "highHz": 167.92,
+    "spanSemitones": 8.37,
+    "credit": "VOICEVOX:玄野武宏",
+    "termsUrl": "https://www.virvoxproject.com/voicevoxの利用規約"
+  },
+  {
+    "id": "kenzaki-mesuo",
+    "name": "剣崎雌雄",
+    "medianHz": 125.82,
+    "lowHz": 98.22,
+    "highHz": 186.75,
+    "spanSemitones": 11.12,
+    "credit": "VOICEVOX:剣崎雌雄",
+    "termsUrl": "https://frontier.creatia.cc/fanclubs/413/posts/4507"
+  },
+  {
+    "id": "shirakami-kotaro",
+    "name": "白上虎太郎",
+    "medianHz": 168.14,
+    "lowHz": 117.86,
+    "highHz": 228.41,
+    "spanSemitones": 11.45,
+    "credit": "VOICEVOX:白上虎太郎",
+    "termsUrl": "https://www.virvoxproject.com/voicevoxの利用規約"
+  }
+]

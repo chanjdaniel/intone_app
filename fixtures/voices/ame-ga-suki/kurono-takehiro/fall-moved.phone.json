@@ -1,0 +1,117 @@
+{
+  "id": "ame-ga-suki/kurono-takehiro/fall-moved.phone",
+  "phrase": {
+    "id": "ame-ga-suki",
+    "text": "雨が好き",
+    "reading": "あめがすき",
+    "morae": 5
+  },
+  "voice": {
+    "id": "kurono-takehiro",
+    "name": "玄野武宏",
+    "styleId": 11,
+    "credit": "VOICEVOX:玄野武宏"
+  },
+  "variant": "fall-moved",
+  "condition": "phone",
+  "wrong": "あめが falls after め instead of after あ",
+  "kana": "アメ'ガ/_スキ'",
+  "speedScale": 1,
+  "sampleRate": 24000,
+  "samples": 29184,
+  "durationSeconds": 1.216,
+  "frameRate": 93.75,
+  "speechStartSample": 7168,
+  "speechEndSample": 22016,
+  "accentPhrases": [
+    {
+      "kana": "アメ'ガ",
+      "morae": 3,
+      "accent": 2,
+      "fallAfter": 2,
+      "rightFallAfter": 1,
+      "pauseAfter": false
+    },
+    {
+      "kana": "_スキ'",
+      "morae": 2,
+      "accent": 2,
+      "fallAfter": null,
+      "rightFallAfter": null,
+      "pauseAfter": false
+    }
+  ],
+  "morae": [
+    {
+      "text": "ア",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 7168,
+      "vowelSample": 7168,
+      "endSample": 9216,
+      "startSeconds": 0.298667,
+      "endSeconds": 0.384,
+      "targetHz": 132.96
+    },
+    {
+      "text": "メ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 9216,
+      "vowelSample": 10496,
+      "endSample": 12544,
+      "startSeconds": 0.384,
+      "endSeconds": 0.522667,
+      "targetHz": 165.16
+    },
+    {
+      "text": "ガ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 12544,
+      "vowelSample": 13568,
+      "endSample": 15104,
+      "startSeconds": 0.522667,
+      "endSeconds": 0.629333,
+      "targetHz": 103.87
+    },
+    {
+      "text": "ス",
+      "phrase": 1,
+      "devoiced": true,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 15104,
+      "vowelSample": 16640,
+      "endSample": 17920,
+      "startSeconds": 0.629333,
+      "endSeconds": 0.746667,
+      "targetHz": null
+    },
+    {
+      "text": "キ",
+      "phrase": 1,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 17920,
+      "vowelSample": 18944,
+      "endSample": 22016,
+      "startSeconds": 0.746667,
+      "endSeconds": 0.917333,
+      "targetHz": 139.88
+    }
+  ],
+  "noise": null,
+  "band": {
+    "lowHz": 300,
+    "highHz": 3400,
+    "order": 4
+  }
+}

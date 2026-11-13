@@ -1,0 +1,14 @@
+{
+  "id": "classroom",
+  "title": "Geräusche aus einem Chemie-Lehrsaal 20240827 C1003.wav",
+  "page": "https://commons.wikimedia.org/wiki/File:Ger%C3%A4usche_aus_einem_Chemie-Lehrsaal_20240827_C1003.wav",
+  "url": "https://upload.wikimedia.org/wikipedia/commons/f/f8/Ger%C3%A4usche_aus_einem_Chemie-Lehrsaal_20240827_C1003.wav",
+  "sha1": "e1233ff29bd8b8fa4c342016744e10c5a0c949b6",
+  "author": "PantheraLeo1359531",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "description": "A chemistry classroom: a noisy ceiling light and, probably, the ventilation.",
+  "changes": "Mixed from stereo to mono and resampled from 48 kHz to 24 kHz; mixed under the VOICEVOX fixtures at 20 dB below their speech.",
+  "sampleRate": 24000,
+  "samples": 528528
+}

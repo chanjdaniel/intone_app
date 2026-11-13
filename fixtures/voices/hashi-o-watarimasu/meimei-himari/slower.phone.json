@@ -1,0 +1,156 @@
+{
+  "id": "hashi-o-watarimasu/meimei-himari/slower.phone",
+  "phrase": {
+    "id": "hashi-o-watarimasu",
+    "text": "橋を渡ります",
+    "reading": "はしをわたります",
+    "morae": 8
+  },
+  "voice": {
+    "id": "meimei-himari",
+    "name": "冥鳴ひまり",
+    "styleId": 14,
+    "credit": "VOICEVOX:冥鳴ひまり"
+  },
+  "variant": "slower",
+  "condition": "phone",
+  "wrong": null,
+  "kana": "ハシ'オ/ワタリマ'_ス",
+  "speedScale": 0.800000011920929,
+  "sampleRate": 24000,
+  "samples": 49408,
+  "durationSeconds": 2.058667,
+  "frameRate": 93.75,
+  "speechStartSample": 8960,
+  "speechEndSample": 40448,
+  "accentPhrases": [
+    {
+      "kana": "ハシ'オ",
+      "morae": 3,
+      "accent": 2,
+      "fallAfter": 2,
+      "rightFallAfter": 2,
+      "pauseAfter": false
+    },
+    {
+      "kana": "ワタリマ'_ス",
+      "morae": 5,
+      "accent": 4,
+      "fallAfter": 4,
+      "rightFallAfter": 4,
+      "pauseAfter": false
+    }
+  ],
+  "morae": [
+    {
+      "text": "ハ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 8960,
+      "vowelSample": 11520,
+      "endSample": 12800,
+      "startSeconds": 0.373333,
+      "endSeconds": 0.533333,
+      "targetHz": 248.77
+    },
+    {
+      "text": "シ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 12800,
+      "vowelSample": 16640,
+      "endSample": 18688,
+      "startSeconds": 0.533333,
+      "endSeconds": 0.778667,
+      "targetHz": 289.13
+    },
+    {
+      "text": "オ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 18688,
+      "vowelSample": 18688,
+      "endSample": 21248,
+      "startSeconds": 0.778667,
+      "endSeconds": 0.885333,
+      "targetHz": 207.72
+    },
+    {
+      "text": "ワ",
+      "phrase": 1,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 21248,
+      "vowelSample": 23296,
+      "endSample": 25600,
+      "startSeconds": 0.885333,
+      "endSeconds": 1.066667,
+      "targetHz": 230.08
+    },
+    {
+      "text": "タ",
+      "phrase": 1,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 25600,
+      "vowelSample": 27904,
+      "endSample": 29184,
+      "startSeconds": 1.066667,
+      "endSeconds": 1.216,
+      "targetHz": 254.85
+    },
+    {
+      "text": "リ",
+      "phrase": 1,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 29184,
+      "vowelSample": 30464,
+      "endSample": 32000,
+      "startSeconds": 1.216,
+      "endSeconds": 1.333333,
+      "targetHz": 252.31
+    },
+    {
+      "text": "マ",
+      "phrase": 1,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 32000,
+      "vowelSample": 34304,
+      "endSample": 35840,
+      "startSeconds": 1.333333,
+      "endSeconds": 1.493333,
+      "targetHz": 249.8
+    },
+    {
+      "text": "ス",
+      "phrase": 1,
+      "devoiced": true,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 35840,
+      "vowelSample": 39424,
+      "endSample": 40448,
+      "startSeconds": 1.493333,
+      "endSeconds": 1.685333,
+      "targetHz": null
+    }
+  ],
+  "noise": null,
+  "band": {
+    "lowHz": 300,
+    "highHz": 3400,
+    "order": 4
+  }
+}

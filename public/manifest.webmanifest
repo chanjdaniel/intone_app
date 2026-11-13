@@ -1,0 +1,11 @@
+{
+  "name": "Intone",
+  "short_name": "Intone",
+  "description": "Practise Japanese pitch accent by copying native speakers, on your own device.",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff"
+}

@@ -1,0 +1,187 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": ["./node_modules/@foldkit/oxlint-plugin/recommended.json"],
+  "plugins": ["typescript"],
+  "categories": {
+    "correctness": "off"
+  },
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "destructuredArrayIgnorePattern": "^_"
+      }
+    ],
+    "typescript/no-explicit-any": "error",
+    "typescript/consistent-type-assertions": [
+      "error",
+      { "assertionStyle": "never" }
+    ],
+    "sort-imports": [
+      "error",
+      { "ignoreDeclarationSort": true, "ignoreCase": false }
+    ]
+  },
+  // The folder line (AGENTS.md). A later override replaces a rule's options,
+  // so each lists every pattern its folder refuses. The globs start with
+  // `**/` so that the fixtures under tests/lint/fixtures/src/ match too, and
+  // the folder patterns match relative imports that climb out to a sibling
+  // folder (`../app`, `../../services/x`), never a package path.
+  "overrides": [
+    {
+      // Only src/app imports Foldkit, and nothing below it imports src/app.
+      "files": ["**/src/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["foldkit", "foldkit/*", "@foldkit/*"],
+                "message": "Only src/app imports Foldkit (AGENTS.md, the folder line)."
+              },
+              {
+                "regex": "^(\\.\\./)+app(/|$)",
+                "message": "Nothing below src/app imports it (AGENTS.md, the folder line)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // src/app imports Foldkit, Effect and every folder below it, but never
+      // the dev-only component library, by any path (`./dev`, `../dev/x`,
+      // `../../app/dev/x`, `/src/app/dev/x`), statically or not: only the
+      // dynamic import in src/app/devLibrary.ts reaches it, inside a
+      // development-only branch.
+      "files": ["**/src/app/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^((\\.{1,2}/)+|/)(.+/)?dev(/|$)",
+                "message": "Only src/app/devLibrary.ts opens the dev library, by a dynamic import (AGENTS.md, the dev library)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // The dev library's own files import each other and the app, and the
+      // bridge opens it.
+      "files": ["**/src/app/dev/**", "**/src/app/devLibrary.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      // The engine runs per audio block and per frame, so it imports nothing
+      // from Effect or Foldkit, nor from the folders that do.
+      "files": ["**/src/engine/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "effect",
+                  "effect/*",
+                  "@effect/*",
+                  "foldkit",
+                  "foldkit/*",
+                  "@foldkit/*"
+                ],
+                "message": "src/engine imports nothing from Effect or Foldkit (AGENTS.md, the folder line)."
+              },
+              {
+                "regex": "^(\\.\\./)+(app|services|workers)(/|$)",
+                "message": "src/engine imports only itself and src/score (AGENTS.md, the folder line)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // An audio worklet processor's module is loaded on its own, on the
+      // audio thread, so it imports nothing at all: not even the rest of the
+      // engine. The node that loads it, beside it, may.
+      "files": ["**/src/engine/worklet/*-processor.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": ".",
+                "message": "An audio worklet processor imports nothing; its module is loaded on its own (AGENTS.md, the folder line)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // The score runs anywhere, Node included. It imports nothing from
+      // Effect, Foldkit or another src folder, and only the language's own
+      // built-ins are defined there, so any browser or host global (window,
+      // document, navigator, AudioContext, fetch, console, process, ...) is
+      // refused, and globalThis with them.
+      "files": ["**/src/score/**"],
+      "env": {
+        "builtin": true
+      },
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "effect",
+                  "effect/*",
+                  "@effect/*",
+                  "foldkit",
+                  "foldkit/*",
+                  "@foldkit/*"
+                ],
+                "message": "src/score imports nothing from Effect or Foldkit (AGENTS.md, the folder line)."
+              },
+              {
+                "regex": "^(\\.\\./)+(app|services|workers|engine)(/|$)",
+                "message": "src/score imports only itself (AGENTS.md, the folder line)."
+              }
+            ]
+          }
+        ],
+        "no-undef": "error",
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "globalThis",
+            "message": "src/score touches no host global (AGENTS.md, the folder line)."
+          }
+        ]
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "dist/",
+    "node_modules/",
+    "repos/",
+    "**/*.d.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "**/*.config.js",
+    "**/*.config.mjs"
+  ]
+}

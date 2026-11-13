@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM"],
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "exactOptionalPropertyTypes": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "types": ["vite/client"],
+    // build/ runs under Node's own type stripping, which needs the
+    // extension on every relative import, and the end-to-end tests import
+    // its readers.
+    "allowImportingTsExtensions": true,
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        // Unstable Effect modules are refused; the spec bans them.
+        "diagnosticSeverity": {
+          "unstableApiUsage": "error"
+        },
+        // Except @effect/vitest, which marks its whole module unstable: the
+        // spec names it as the test runner for Effect code, and only tests
+        // import it.
+        "allowedUnstableApis": ["@effect/vitest"]
+      }
+    ]
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  // The tooling tests and their support run in Node (tsconfig.node.json),
+  // as does the probe page's Vite config, and the lint fixtures are
+  // deliberately wrong code only the lint test reads.
+  "exclude": [
+    "tests/lint",
+    "tests/build",
+    "tests/scripts",
+    "tests/support",
+    "tests/tracker",
+    "tests/e2e/probe/vite.config.ts"
+  ]
+}

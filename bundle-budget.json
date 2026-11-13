@@ -1,0 +1,13 @@
+{
+  "entry": { "gzipBytes": 210000 },
+  "chunks": {
+    "backup": { "gzipBytes": 9000 },
+    "capture-processor": { "gzipBytes": 1000 },
+    "clip-store.worker": { "gzipBytes": 28000 },
+    "clip.worker": { "gzipBytes": 58000 },
+    "compare-take": { "gzipBytes": 4000 },
+    "ort-wasm-simd-threaded.mjs": { "gzipBytes": 11000 },
+    "ort-wasm-simd-threaded.wasm": { "gzipBytes": 4180000 },
+    "tracker.worker": { "gzipBytes": 56000 }
+  }
+}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Intone's mark: a pitch contour, low, high, then down, in the app's
+       accent colour (src/app/styles.css). XML allows no double hyphen
+       inside a comment, so the token is not named here. -->
+  <rect width="32" height="32" rx="7" fill="#3346c4" />
+  <path
+    d="M7 21 L12.5 11 H19.5 L25 21"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

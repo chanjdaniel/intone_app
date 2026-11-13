@@ -1,0 +1,51 @@
+{
+ "source": "fixtures/real/gongitsune.wav (LibriVox, CC0 1.0)",
+ "seconds": 4,
+ "ffmpeg": "ffmpeg version n9.0.2",
+ "formats": [
+  {
+   "file": "pcm16.wav",
+   "what": "WAV, 16-bit PCM"
+  },
+  {
+   "file": "pcm24.wav",
+   "what": "WAV, 24-bit PCM"
+  },
+  {
+   "file": "float32.wav",
+   "what": "WAV, 32-bit float"
+  },
+  {
+   "file": "mp3.mp3",
+   "what": "MP3, 128 kbit/s"
+  },
+  {
+   "file": "aac.m4a",
+   "what": "M4A, AAC-LC"
+  },
+  {
+   "file": "alac.m4a",
+   "what": "M4A, Apple Lossless"
+  },
+  {
+   "file": "flac.flac",
+   "what": "FLAC"
+  },
+  {
+   "file": "vorbis.ogg",
+   "what": "Ogg Vorbis"
+  },
+  {
+   "file": "opus.ogg",
+   "what": "Ogg Opus (48 kHz)"
+  },
+  {
+   "file": "opus.webm",
+   "what": "WebM Opus (48 kHz)"
+  },
+  {
+   "file": "aiff.aiff",
+   "what": "AIFF, 16-bit PCM"
+  }
+ ]
+}

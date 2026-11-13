@@ -1,0 +1,113 @@
+{
+  "id": "ame-ga-suki/meimei-himari/mora-changed",
+  "phrase": {
+    "id": "ame-ga-suki",
+    "text": "雨が好き",
+    "reading": "あめがすき",
+    "morae": 5
+  },
+  "voice": {
+    "id": "meimei-himari",
+    "name": "冥鳴ひまり",
+    "styleId": 14,
+    "credit": "VOICEVOX:冥鳴ひまり"
+  },
+  "variant": "mora-changed",
+  "condition": "clean",
+  "wrong": "め is said ね, the accent kept",
+  "kana": "ア'ネガ/_スキ'",
+  "speedScale": 1,
+  "sampleRate": 24000,
+  "samples": 30464,
+  "durationSeconds": 1.269333,
+  "frameRate": 93.75,
+  "speechStartSample": 7168,
+  "speechEndSample": 23296,
+  "accentPhrases": [
+    {
+      "kana": "ア'ネガ",
+      "morae": 3,
+      "accent": 1,
+      "fallAfter": 1,
+      "rightFallAfter": 1,
+      "pauseAfter": false
+    },
+    {
+      "kana": "_スキ'",
+      "morae": 2,
+      "accent": 2,
+      "fallAfter": null,
+      "rightFallAfter": null,
+      "pauseAfter": false
+    }
+  ],
+  "morae": [
+    {
+      "text": "ア",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 7168,
+      "vowelSample": 7168,
+      "endSample": 8448,
+      "startSeconds": 0.298667,
+      "endSeconds": 0.352,
+      "targetHz": 292.03
+    },
+    {
+      "text": "ネ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": true,
+      "vowelLengthScale": 1,
+      "startSample": 8448,
+      "vowelSample": 10240,
+      "endSample": 12032,
+      "startSeconds": 0.352,
+      "endSeconds": 0.501333,
+      "targetHz": 209.81
+    },
+    {
+      "text": "ガ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 12032,
+      "vowelSample": 13568,
+      "endSample": 15104,
+      "startSeconds": 0.501333,
+      "endSeconds": 0.629333,
+      "targetHz": 207.72
+    },
+    {
+      "text": "ス",
+      "phrase": 1,
+      "devoiced": true,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 15104,
+      "vowelSample": 17152,
+      "endSample": 17920,
+      "startSeconds": 0.629333,
+      "endSeconds": 0.746667,
+      "targetHz": null
+    },
+    {
+      "text": "キ",
+      "phrase": 1,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 17920,
+      "vowelSample": 20480,
+      "endSample": 23296,
+      "startSeconds": 0.746667,
+      "endSeconds": 0.970667,
+      "targetHz": 254.85
+    }
+  ],
+  "noise": null,
+  "band": null
+}

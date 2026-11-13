@@ -1,0 +1,113 @@
+{
+  "id": "ame-ga-suki/chugoku-usagi/faster",
+  "phrase": {
+    "id": "ame-ga-suki",
+    "text": "雨が好き",
+    "reading": "あめがすき",
+    "morae": 5
+  },
+  "voice": {
+    "id": "chugoku-usagi",
+    "name": "中国うさぎ",
+    "styleId": 61,
+    "credit": "VOICEVOX:中国うさぎ"
+  },
+  "variant": "faster",
+  "condition": "clean",
+  "wrong": null,
+  "kana": "ア'メガ/_スキ'",
+  "speedScale": 1.25,
+  "sampleRate": 24000,
+  "samples": 28416,
+  "durationSeconds": 1.184,
+  "frameRate": 93.75,
+  "speechStartSample": 5632,
+  "speechEndSample": 22784,
+  "accentPhrases": [
+    {
+      "kana": "ア'メガ",
+      "morae": 3,
+      "accent": 1,
+      "fallAfter": 1,
+      "rightFallAfter": 1,
+      "pauseAfter": false
+    },
+    {
+      "kana": "_スキ'",
+      "morae": 2,
+      "accent": 2,
+      "fallAfter": null,
+      "rightFallAfter": null,
+      "pauseAfter": false
+    }
+  ],
+  "morae": [
+    {
+      "text": "ア",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 5632,
+      "vowelSample": 5632,
+      "endSample": 7168,
+      "startSeconds": 0.234667,
+      "endSeconds": 0.298667,
+      "targetHz": 265.42
+    },
+    {
+      "text": "メ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 7168,
+      "vowelSample": 8704,
+      "endSample": 10496,
+      "startSeconds": 0.298667,
+      "endSeconds": 0.437333,
+      "targetHz": 211.61
+    },
+    {
+      "text": "ガ",
+      "phrase": 0,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 10496,
+      "vowelSample": 12032,
+      "endSample": 13568,
+      "startSeconds": 0.437333,
+      "endSeconds": 0.565333,
+      "targetHz": 209.5
+    },
+    {
+      "text": "ス",
+      "phrase": 1,
+      "devoiced": true,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 13568,
+      "vowelSample": 16128,
+      "endSample": 16896,
+      "startSeconds": 0.565333,
+      "endSeconds": 0.704,
+      "targetHz": null
+    },
+    {
+      "text": "キ",
+      "phrase": 1,
+      "devoiced": false,
+      "changed": false,
+      "vowelLengthScale": 1,
+      "startSample": 16896,
+      "vowelSample": 19968,
+      "endSample": 22784,
+      "startSeconds": 0.704,
+      "endSeconds": 0.949333,
+      "targetHz": 238.97
+    }
+  ],
+  "noise": null,
+  "band": null
+}
