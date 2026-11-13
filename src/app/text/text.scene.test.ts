@@ -289,6 +289,20 @@ describe('a level’s text', () => {
     )
   })
 
+  test('a clip given its own text and never written out says the text is the learner’s, not that it has none', () => {
+    scene(
+      { update, view },
+      given(onLevel({ ...written, maybeWrittenBy: Option.none() })),
+      expect(
+        text(
+          'Its lines have the text you gave them, which stands over anything Intone writes out. Intone can still write it out on this device, or you can paste yours again.',
+        ),
+      ).toExist(),
+      expect(text(/no text yet/)).toBeAbsent(),
+      expect(role('button', { name: 'Write out the text' })).toExist(),
+    )
+  })
+
   test('a clip whose audio is not here can still be given text, but not written out', () => {
     scene(
       { update, view },

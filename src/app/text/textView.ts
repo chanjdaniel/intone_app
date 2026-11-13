@@ -269,10 +269,14 @@ export const lineTextControls = <ViewMessage>(
   ]
 }
 
+// A clip never written out may still have text: the learner's own, typed
+// or pasted, which stands over a transcript (`clipLineTexts`).
 const writtenByText = (clip: LevelClip): string =>
   Option.match(clip.maybeWrittenBy, {
     onNone: () =>
-      'Its lines have no text yet. Intone can write it out on this device, or you can paste your own.',
+      clip.lines.some(line => Option.isSome(line.maybeText))
+        ? 'Its lines have the text you gave them, which stands over anything Intone writes out. Intone can still write it out on this device, or you can paste yours again.'
+        : 'Its lines have no text yet. Intone can write it out on this device, or you can paste your own.',
     onSome: model =>
       `Written out on this device by ${modelTitle(model)}. It gets some words wrong, names most of all: edit a line’s text under its row, or paste your own.`,
   })
