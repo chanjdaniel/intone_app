@@ -97,6 +97,34 @@ describe('the starter pack', () => {
     expect(result.output).toContain('its words make')
   })
 
+  test('a reviewer’s name with a pipe in it stays in its own cell of CREDITS.md', () => {
+    const list: RawList = JSON.parse(readFileSync(listPath(), 'utf8'))
+    const accepted = list.lines.find(line => line.recording.kind === 'Commons')
+    if (accepted === undefined) {
+      throw new Error('no Commons line')
+    }
+    const review = join(copy, 'review.json')
+    writeFileSync(
+      review,
+      JSON.stringify({
+        reviewedOn: '2026-12-01',
+        reviewer: '山田 | 花子',
+        verdicts: [{ lineId: accepted.id, verdict: 'accept' }],
+      }),
+    )
+    const result = script(['--root', copy, '--apply', review])
+    expect(result.status, result.output).toBe(0)
+
+    const row = readFileSync(join(copy, 'CREDITS.md'), 'utf8')
+      .split('\n')
+      .find(line => line.startsWith(`| ${accepted.text} (`))
+    expect(row).toContain(
+      'Checked by 山田 \\| 花子, a native speaker, on 2026-12-01',
+    )
+    // Seven unescaped pipes bound the table's six cells.
+    expect(row?.match(/(?<!\\)\|/g)).toHaveLength(7)
+  })
+
   test('takes the review page’s export into the list, and leaves a rejected line out of the pack', () => {
     const list: RawList = JSON.parse(readFileSync(listPath(), 'utf8'))
     const [accepted, rejected] = list.lines.filter(

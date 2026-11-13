@@ -604,7 +604,7 @@ export const creditsMarkdown = (pack: StarterPack): string =>
       '| - | - | - | - | - | - |',
       ...level.lines.map(
         line =>
-          `| ${cell(line.text)} (${cell(line.kana)}) | ${cell(line.credit.author)} | [${line.credit.source}](${line.credit.page}) | [${cell(line.credit.licence)}](${line.credit.licenceUrl}) | ${cell(line.credit.changes)} | ${reviewNote(line.review)} |`,
+          `| ${cell(line.text)} (${cell(line.kana)}) | ${cell(line.credit.author)} | [${line.credit.source}](${line.credit.page}) | [${cell(line.credit.licence)}](${line.credit.licenceUrl}) | ${cell(line.credit.changes)} | ${cell(reviewNote(line.review))} |`,
       ),
       '',
     ]),
