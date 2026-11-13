@@ -101,6 +101,14 @@ Another 513 B the source map gives no module.
 The readings' tokeniser and dictionary stay out of it: the Worker's chunk and Lindera's WebAssembly load only when the learner shows readings.
 The readings' view, update and Messages cannot be loaded lazily in a single Foldkit program.
 
+Ticket 24 added its starter set under that cap, raising nothing: measured against its base `944ff5b0`, 211,082 B to 227,359 B, 16,277 B more, all in the entry chunk.
+Most of it is the pack's JSON (39 kB minified, 7.1 kB gzip on its own), `src/app/review/` (16.4 kB minified), and smaller parts of `src/app/line/`, `src/app/level/` and `src/services/starter-records.ts`.
+The review of that pull request found two ways to win some back, and both were measured with `npm run check:budget`, from 227,596 B at its head `055b7619`:
+
+- The pack carried each file's SHA-256 and recipe key (`sha256`, `made`), which only `scripts/starter-pack.ts` reads; they now live in `starter/pack/files.json`, which the app never imports, and the page loads 224,690 B before starting, 2,906 B less.
+- `/review` was built as a program of its own, loaded only when the page opens, the way `/dev` is: its own chunk came to 6,300 B gzip, but a second lazy chunk beside the backup's made the bundler split 47 kB of the entry's shared modules (Effect, the history's records) into a chunk the entry imports statically, and the page then loaded 225,152 B before starting, 462 B more than with the page in the entry.
+  It was left out for that; the review page stays in the entry chunk.
+
 A clean tree, so that nothing local (a git-ignored `.env` inlines `VITE_` values) moves the size:
 
 ```bash
