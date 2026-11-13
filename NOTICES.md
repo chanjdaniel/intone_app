@@ -72,6 +72,7 @@ The app ships these third-party packages and model files, each under its own lic
 | gopd | 1.2.0 | MIT |
 | guid-typescript | 1.0.9 | ISC |
 | has-property-descriptors | 1.0.2 | MIT |
+| lindera-wasm | 6.2.0 | MIT |
 | long | 5.3.2 | Apache-2.0 |
 | matcher | 4.0.0 | MIT |
 | object-keys | 1.1.1 | MIT |
@@ -99,3 +100,4 @@ The app ships these third-party packages and model files, each under its own lic
 | Silero VAD 6.2.3 | silero-vad/silero_vad.onnx | MIT | https://github.com/snakers4/silero-vad/tree/v6.2.3 |
 | Whisper base, timestamped ONNX export by onnx-community | whisper-base/config.json, whisper-base/generation_config.json, whisper-base/preprocessor_config.json, whisper-base/tokenizer.json, whisper-base/tokenizer_config.json, whisper-base/onnx/encoder_model_q4.onnx, whisper-base/onnx/decoder_model_merged_int8.onnx | MIT | https://github.com/openai/whisper/tree/86098128c0b4f24f0e2aa2994de830614b474227 |
 | Whisper small, timestamped ONNX export by onnx-community | whisper-small/config.json, whisper-small/generation_config.json, whisper-small/preprocessor_config.json, whisper-small/tokenizer.json, whisper-small/tokenizer_config.json, whisper-small/onnx/encoder_model_q4.onnx, whisper-small/onnx/decoder_model_merged_int8.onnx | MIT | https://github.com/openai/whisper/tree/86098128c0b4f24f0e2aa2994de830614b474227 |
+| IPADIC 2.7.0, built for Lindera 6.2.0 | lindera-ipadic/lindera-ipadic-6.2.0.zip | mecab-ipadic's own notice (NAIST, and ICOT Free Software), in the zip's NOTICE.txt | https://github.com/lindera/lindera/tree/0482efcc46b5ec518b7238efae55e9fed9bba0c0/lindera-ipadic |

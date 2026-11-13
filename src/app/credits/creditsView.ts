@@ -6,7 +6,7 @@ import { pageFrame } from '../pageFrame'
 
 // /credits: every model the app ships, read from the build's own model
 // list, so a model added there is credited here, with its licence and
-// its source; the recordings the app brings, credited as their terms
+// its source, and the tokeniser that reads the reading dictionary; the recordings the app brings, credited as their terms
 // ask; and the software's notices, which every copy of the app carries
 // at /NOTICES.md. Each model runs on this device, served by the app
 // itself; the links to their sources are opened in a new tab, never
@@ -52,7 +52,37 @@ const usedFor: Readonly<Record<ModelId, string>> = {
   'whisper-base':
     'Writes out the text of a clip you bring, once you agree to its download.',
   'whisper-small': 'The larger model for the text, if you choose it instead.',
+  'lindera-ipadic':
+    'The dictionary that gives a line’s kanji their readings in kana, once you turn readings on.',
 }
+
+// The tokeniser that reads the dictionary, a package the app ships (its
+// version is the one package.json pins).
+const tokeniser = {
+  name: 'Lindera 6.2.0',
+  licence: 'MIT',
+  source: 'https://github.com/lindera/lindera/tree/v6.2.0',
+}
+
+const credit = <ViewMessage>(
+  key: string,
+  entry: Readonly<{ name: string; licence: string; source: string }>,
+  usedFor: string,
+  h: HtmlBuilder<ViewMessage>,
+): Html =>
+  h.keyed('li')(
+    key,
+    [h.Class('flex flex-col gap-1')],
+    [
+      h.h3([h.Class('text-lg font-semibold')], [entry.name]),
+      h.p([h.Class('text-base text-ink')], [usedFor]),
+      h.p([h.Class('text-sm text-muted')], [`Licence: ${entry.licence}`]),
+      h.div(
+        [h.Class('flex')],
+        [externalLink(entry.source, `Source of ${entry.name}`, h)],
+      ),
+    ],
+  )
 
 export const creditsView = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
   pageFrame(
@@ -61,7 +91,7 @@ export const creditsView = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
       h.h1([h.Class('text-3xl font-bold sm:text-5xl')], ['Credits']),
       section(
         'credits-models-heading',
-        'Models',
+        'Models and the tokeniser',
         [
           h.p(
             [h.Class('text-base text-ink')],
@@ -71,24 +101,17 @@ export const creditsView = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
           ),
           h.ul(
             [h.Class('flex flex-col gap-4')],
-            modelCredits.map(model =>
-              h.keyed('li')(
-                model.id,
-                [h.Class('flex flex-col gap-1')],
-                [
-                  h.h3([h.Class('text-lg font-semibold')], [model.name]),
-                  h.p([h.Class('text-base text-ink')], [usedFor[model.id]]),
-                  h.p(
-                    [h.Class('text-sm text-muted')],
-                    [`Licence: ${model.licence}`],
-                  ),
-                  h.div(
-                    [h.Class('flex')],
-                    [externalLink(model.source, `Source of ${model.name}`, h)],
-                  ),
-                ],
+            [
+              ...modelCredits.map(model =>
+                credit(model.id, model, usedFor[model.id], h),
               ),
-            ),
+              credit(
+                'lindera',
+                tokeniser,
+                'Reads a line’s text into words, so the dictionary can give each its reading.',
+                h,
+              ),
+            ],
           ),
         ],
         h,

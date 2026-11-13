@@ -20,7 +20,13 @@ describe('/credits', () => {
       { update, view },
       given(initialModel(AppRoute.Credits())),
       expect(role('heading', { name: 'Credits', level: 1 })).toExist(),
-      ...['SwiftF0', 'Silero VAD', 'Whisper base', 'Whisper small'].map(name =>
+      ...[
+        'SwiftF0',
+        'Silero VAD',
+        'Whisper base',
+        'Whisper small',
+        'IPADIC',
+      ].map(name =>
         expect(role('heading', { name: new RegExp(`^${name}`) })).toExist(),
       ),
       ...modelCredits.map(model =>
@@ -34,6 +40,12 @@ describe('/credits', () => {
         'noopener noreferrer',
       ),
       expect(text(/voice VOICEVOX:冥鳴ひまり, made with VOICEVOX/)).toExist(),
+      expect(role('heading', { name: 'Lindera 6.2.0' })).toExist(),
+      expect(text('Licence: MIT')).toExist(),
+      expect(role('link', { name: 'Source of Lindera 6.2.0' })).toHaveAttr(
+        'href',
+        'https://github.com/lindera/lindera/tree/v6.2.0',
+      ),
       expect(role('link', { name: 'The notices' })).toHaveAttr(
         'href',
         '/NOTICES.md',

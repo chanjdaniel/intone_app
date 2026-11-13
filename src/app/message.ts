@@ -22,6 +22,7 @@ import { LineProgress } from './level/progress'
 import { PracticeLine } from './line/lines'
 import { ListenSpeed, NativeFailure } from './line/native'
 import { NextLine } from './line/place'
+import { ReadingsShown, ShownWord } from './readings/readings'
 import { LineReturn } from './returns/lineReturn'
 import { DueLine } from './returns/returns'
 import { SettingsFacts, StorageFacts } from './settings/settings'
@@ -288,5 +289,39 @@ export const Message = defineMessageUnion({
   SucceededSetLineTexts: { clipId: Schema.String, clip: LevelClip },
   FailedSetLineTexts: { clipId: Schema.String, reason: Schema.String },
   CompletedFocusLineText: {},
+
+  // A line's readings.
+  SucceededLoadReadingsChoice: { maybeShown: Schema.Option(ReadingsShown) },
+  FailedLoadReadingsChoice: { reason: Schema.String },
+  ClickedShowReadings: {},
+  ClickedHideReadings: {},
+  SucceededSetReadingsChoice: {},
+  FailedSetReadingsChoice: { reason: Schema.String },
+  AcquiredReadings: {},
+  ReleasedReadings: {},
+  FailedAcquireReadings: { reason: Schema.String },
+  SucceededReadLineReadings: {
+    clipId: Schema.String,
+    lineId: Schema.String,
+    text: Schema.String,
+    words: Schema.Array(ShownWord),
+  },
+  FailedReadLineReadings: {
+    clipId: Schema.String,
+    lineId: Schema.String,
+    text: Schema.String,
+    reason: Schema.String,
+  },
+  ClickedEditReadings: {},
+  ChangedReadingDraft: { from: Schema.Finite, text: Schema.String },
+  SubmittedReadings: {},
+  ClickedCancelReadings: {},
+  SucceededSetLineReadings: { clipId: Schema.String, lineId: Schema.String },
+  FailedSetLineReadings: {
+    clipId: Schema.String,
+    lineId: Schema.String,
+    reason: Schema.String,
+  },
+  CompletedFocusReadings: {},
 })
 export type Message = typeof Message.Type

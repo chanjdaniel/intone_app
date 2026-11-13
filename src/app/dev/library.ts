@@ -42,6 +42,7 @@ export const libraryEntries: ReadonlyArray<
   { name: 'line-editor', title: 'Line editor' },
   { name: 'local-pack', title: 'Local pack: importing and its lines' },
   { name: 'text-for-lines', title: 'Text for the lines' },
+  { name: 'readings', title: 'Readings: kana over a line’s kanji' },
   { name: 'practice-calendar', title: 'Practice calendar' },
   { name: 'score-trend', title: 'Score trend' },
   { name: 'blind-chart', title: 'Blind-take chart' },

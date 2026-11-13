@@ -110,6 +110,40 @@ describe('models.json', () => {
     },
   )
 
+  // Lindera publishes its built dictionaries only as release assets, which
+  // name a tag, not a commit; the size and SHA-256 pin the bytes
+  // (docs/readings.md).
+  test("lists the reading dictionary, Lindera's IPADIC build from its v6.2.0 release, with IPADIC's own notice", async () => {
+    const dictionary = (await readModelList(join(root, 'models.json'))).find(
+      model => model.id === 'lindera-ipadic',
+    )
+
+    expect(dictionary).toMatchObject({
+      licence: expect.stringContaining('NAIST'),
+      files: [
+        {
+          path: 'lindera-ipadic-6.2.0.zip',
+          url: 'https://github.com/lindera/lindera/releases/download/v6.2.0/lindera-ipadic-6.2.0.zip',
+          bytes: 10_519_550,
+          sha256:
+            '5ed4bba6b429030b0387df67d40d5751d35dedef0306f4bac6d957cad5f04b72',
+        },
+      ],
+    })
+  })
+
+  test('takes a GitHub release asset at a version tag', async () => {
+    const swiftF0 = await listed()
+    const url =
+      'https://github.com/lindera/lindera/releases/download/v6.2.0/lindera-ipadic-6.2.0.zip'
+    const path = plantList([
+      { ...swiftF0, files: [{ ...swiftF0.files[0], url }] },
+    ])
+
+    const [model] = await readModelList(path)
+    expect(model?.files[0].url).toBe(url)
+  })
+
   test("keeps whisper-small's 149.5 MiB merged decoder, the largest file served", async () => {
     const files = (await readModelList(join(root, 'models.json'))).flatMap(
       model => model.files,
@@ -139,6 +173,18 @@ describe('models.json', () => {
       'a branch instead of a pinned commit',
       {
         url: 'https://raw.githubusercontent.com/lars76/swift-f0/main/swift_f0/model.onnx',
+      },
+    ],
+    [
+      'the latest release instead of one tag',
+      {
+        url: 'https://github.com/lindera/lindera/releases/latest/download/lindera-ipadic.zip',
+      },
+    ],
+    [
+      'a release tag that is not a version',
+      {
+        url: 'https://github.com/lindera/lindera/releases/download/nightly/lindera-ipadic.zip',
       },
     ],
     ['a short hash', { sha256: 'abc' }],

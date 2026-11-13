@@ -5,8 +5,8 @@
 // `<id>/<version>` (Transformers.js), the root, each model's version and
 // its files with their sizes; and each model's credit, from the build.
 declare module 'virtual:intone/models' {
-  export type ModelId = 'swift-f0' | 'silero-vad' | 'whisper-base' | 'whisper-small'
-  export type SingleFileModelId = 'swift-f0' | 'silero-vad'
+  export type ModelId = 'swift-f0' | 'silero-vad' | 'whisper-base' | 'whisper-small' | 'lindera-ipadic'
+  export type SingleFileModelId = 'swift-f0' | 'silero-vad' | 'lindera-ipadic'
   export const modelDirectories: Readonly<Record<ModelId, string>>
   export const modelUrls: Readonly<Record<SingleFileModelId, string>>
   export const modelsRoot: string

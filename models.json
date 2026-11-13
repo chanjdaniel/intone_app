@@ -127,6 +127,20 @@
           "sha256": "c831996a6d5a535cf17447b0d7ecc36da6b72696e6fb906852ba6136b9199abb"
         }
       ]
+    },
+    {
+      "id": "lindera-ipadic",
+      "name": "IPADIC 2.7.0, built for Lindera 6.2.0",
+      "licence": "mecab-ipadic's own notice (NAIST, and ICOT Free Software), in the zip's NOTICE.txt",
+      "source": "https://github.com/lindera/lindera/tree/0482efcc46b5ec518b7238efae55e9fed9bba0c0/lindera-ipadic",
+      "files": [
+        {
+          "path": "lindera-ipadic-6.2.0.zip",
+          "url": "https://github.com/lindera/lindera/releases/download/v6.2.0/lindera-ipadic-6.2.0.zip",
+          "bytes": 10519550,
+          "sha256": "5ed4bba6b429030b0387df67d40d5751d35dedef0306f4bac6d957cad5f04b72"
+        }
+      ]
     }
   ]
 }

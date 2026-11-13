@@ -126,6 +126,23 @@ describe.each(['dev', 'preview'] as const)('the %s server', server => {
     expect(sha256(body)).toBe(decoder.sha256)
   })
 
+  test('serves the reading dictionary as a zip, kept for good', async () => {
+    const found = servedModelFiles(models).find(
+      each => each.model.id === 'lindera-ipadic',
+    )
+    expect(found?.path).toMatch(
+      /^models\/lindera-ipadic\/[0-9a-f]{16}\/lindera-ipadic-6\.2\.0\.zip$/,
+    )
+
+    const response = await fetch(`${origins[server]}/${found?.path}`, {
+      method: 'HEAD',
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('application/zip')
+    expect(response.headers.get('cache-control')).toBe(keptForGood)
+  })
+
   test('serves every file of every model, by its model directory', async () => {
     for (const { path, file } of servedModelFiles(models)) {
       const response = await fetch(`${origins[server]}/${path}`, {

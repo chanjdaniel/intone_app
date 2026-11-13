@@ -21,19 +21,22 @@ import { levelView } from './level/levelView'
 import { levelSubscriptions } from './level/subscriptions'
 import * as LevelUpdate from './level/update'
 import { lineRow } from './line/lineRow'
-import {
-  type BundledLine,
-  bundledLines,
-  lineOf,
-  practiceLineOfBundled,
-} from './line/lines'
-import { NativeCurve } from './line/native'
+import { type BundledLine, bundledLines } from './line/lines'
+import { NativeCurve, shownLineOf } from './line/native'
 import { LinePlace } from './line/place'
 import { practiceView } from './line/practiceView'
 import * as LineUpdate from './line/update'
 import { Message } from './message'
 import { type Model } from './model'
 import { pageFrame } from './pageFrame'
+import {
+  LineReadingsState,
+  ReadingFixForm,
+  ReadingsChoice,
+  ReadingsTool,
+} from './readings/readings'
+import type { ReadingsEvents } from './readings/readingsView'
+import * as ReadingsUpdate from './readings/update'
 import type { AppResourceServices } from './resources'
 import { dueSection } from './returns/dueList'
 import { DuePage } from './returns/returns'
@@ -105,6 +108,10 @@ export const initialModel = (route: AppRoute): Model => ({
   textJob: TextJob.Idle(),
   textJobsStarted: 0,
   lineText: LineTextEdit.Idle(),
+  readingsChoice: ReadingsChoice.NotRead(),
+  readingsTool: ReadingsTool.Released(),
+  readings: LineReadingsState.Idle(),
+  readingFix: ReadingFixForm.Closed(),
 })
 
 type UpdateReturn = Update.Return<Model, Message, AppResourceServices>
@@ -122,7 +129,11 @@ const readTextChoice = (model: Model): UpdateReturn => ({
 // keeps.
 const opened = (model: Model, route: AppRoute): UpdateReturn =>
   AppRoute.match<UpdateReturn>(route, {
-    Line: ({ clipId, lineId }) => LineUpdate.openedLine(model, clipId, lineId),
+    Line: ({ clipId, lineId }) =>
+      Update.combine(model, [
+        stepModel => LineUpdate.openedLine(stepModel, clipId, lineId),
+        ReadingsUpdate.openedLine,
+      ]),
     History: () => HistoryUpdate.openedHistory(model),
     LineHistory: ({ clipId, lineId }) =>
       HistoryUpdate.openedLineHistory(model, clipId, lineId),
@@ -187,7 +198,12 @@ const findOf = (route: AppRoute): string =>
     ? Option.getOrElse(route.maybeFind, () => '')
     : ''
 
-export const update = (model: Model, message: Message) =>
+// Every update, then the open line's readings asked for when they are
+// wanted and missing (./readings/update.ts).
+export const update = (model: Model, message: Message): UpdateReturn =>
+  ReadingsUpdate.withReadings(updateMessage(model, message))
+
+const updateMessage = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     ClickedLink: ({ request }) =>
       UrlRequest.match<UpdateReturn>(request, {
@@ -469,7 +485,10 @@ export const update = (model: Model, message: Message) =>
       SettingsUpdate.failedSaveBackup(model, reason),
     ClickedRestoreBackup: () => SettingsUpdate.clickedRestoreBackup(model),
     SucceededRestoreBackup: ({ takes }) =>
-      SettingsUpdate.succeededRestoreBackup(model, takes),
+      SettingsUpdate.succeededRestoreBackup(
+        ReadingsUpdate.forgetChoice(model),
+        takes,
+      ),
     CompletedRestoreBackup: () => SettingsUpdate.completedRestoreBackup(model),
     FailedRestoreBackup: ({ reason }) =>
       SettingsUpdate.failedRestoreBackup(model, reason),
@@ -479,7 +498,9 @@ export const update = (model: Model, message: Message) =>
     ClickedKeepEverything: () => SettingsUpdate.clickedKeepEverything(model),
     SubmittedClearAll: () => SettingsUpdate.submittedClearAll(model),
     SucceededClearAllData: () =>
-      SettingsUpdate.succeededClearAllData(TextUpdate.clearedAllData(model)),
+      SettingsUpdate.succeededClearAllData(
+        ReadingsUpdate.forgetChoice(TextUpdate.clearedAllData(model)),
+      ),
     FailedClearAllData: ({ reason }) =>
       SettingsUpdate.failedClearAllData(model, reason),
     SucceededLoadTextChoice: ({ maybeChoice }) =>
@@ -514,6 +535,35 @@ export const update = (model: Model, message: Message) =>
     FailedSetLineTexts: ({ clipId, reason }) =>
       TextUpdate.failedSetLineTexts(model, clipId, reason),
     CompletedFocusLineText: () => ({ model }),
+
+    SucceededLoadReadingsChoice: ({ maybeShown }) =>
+      ReadingsUpdate.loadedChoice(model, maybeShown),
+    // Unread, readings are offered as if never turned on.
+    FailedLoadReadingsChoice: () =>
+      ReadingsUpdate.loadedChoice(model, Option.none()),
+    ClickedShowReadings: () => ReadingsUpdate.clickedShow(model),
+    ClickedHideReadings: () => ReadingsUpdate.clickedHide(model),
+    SucceededSetReadingsChoice: () => ({ model }),
+    // The choice holds until the app is opened again.
+    FailedSetReadingsChoice: () => ({ model }),
+    AcquiredReadings: () => ReadingsUpdate.acquired(model),
+    ReleasedReadings: () => ReadingsUpdate.released(model),
+    FailedAcquireReadings: ({ reason }) =>
+      ReadingsUpdate.failedAcquire(model, reason),
+    SucceededReadLineReadings: ({ clipId, lineId, text, words }) =>
+      ReadingsUpdate.readLine(model, { clipId, lineId, text }, words),
+    FailedReadLineReadings: ({ clipId, lineId, text, reason }) =>
+      ReadingsUpdate.failedReadLine(model, { clipId, lineId, text }, reason),
+    ClickedEditReadings: () => ReadingsUpdate.clickedEdit(model),
+    ChangedReadingDraft: ({ from, text }) =>
+      ReadingsUpdate.changedDraft(model, from, text),
+    SubmittedReadings: () => ReadingsUpdate.submitted(model),
+    ClickedCancelReadings: () => ReadingsUpdate.cancelled(model),
+    SucceededSetLineReadings: ({ clipId, lineId }) =>
+      ReadingsUpdate.keptFixes(model, clipId, lineId),
+    FailedSetLineReadings: ({ clipId, lineId, reason }) =>
+      ReadingsUpdate.failedKeepFixes(model, clipId, lineId, reason),
+    CompletedFocusReadings: () => ({ model }),
   })
 
 // The text's controls, the same on every screen that has them.
@@ -530,6 +580,16 @@ const textEvents: TextEvents<Message> = {
   selectModel: textModel => Message.SelectedTextModel({ model: textModel }),
   agree: Message.SubmittedTextDownload(),
   notNow: Message.ClickedNotNowText(),
+}
+
+// The readings' controls on a line's practice screen.
+const readingsEvents: ReadingsEvents<Message> = {
+  show: Message.ClickedShowReadings(),
+  hide: Message.ClickedHideReadings(),
+  edit: Message.ClickedEditReadings(),
+  changeDraft: (from, text) => Message.ChangedReadingDraft({ from, text }),
+  submit: Message.SubmittedReadings(),
+  cancel: Message.ClickedCancelReadings(),
 }
 
 // VIEW
@@ -655,11 +715,7 @@ const lineView = (
   practiceView(
     clipId,
     lineId,
-    model.native._tag === 'Ready' &&
-      model.native.clipId === clipId &&
-      model.native.lineId === lineId
-      ? Option.some(model.native.line)
-      : Option.map(lineOf(clipId, lineId), practiceLineOfBundled),
+    shownLineOf(model.native, clipId, lineId),
     {
       native: model.native,
       place: model.place,
@@ -668,6 +724,12 @@ const lineView = (
       canPlayLine: TakeUpdate.canListenTo(model, 'Line'),
       canPlayTake: TakeUpdate.canListenTo(model, 'Take'),
       maybePlaybackFailure: model.maybePlaybackFailure,
+      readings: {
+        choice: model.readingsChoice,
+        tool: model.readingsTool,
+        readings: model.readings,
+        form: model.readingFix,
+      },
     },
     {
       record: Message.ClickedRecord(),
@@ -675,6 +737,7 @@ const lineView = (
       stop: Message.ClickedStop(),
       cancel: Message.ClickedCancelTake(),
       retryNative: Message.ClickedRetryNativeCurve(),
+      readings: readingsEvents,
       listen: (voice, extent) => Message.ClickedListen({ voice, extent }),
       stopListening: Message.ClickedStopListening(),
       selectSpeed: speed => Message.SelectedListenSpeed({ speed }),

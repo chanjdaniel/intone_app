@@ -29,6 +29,8 @@ export const contentTypeOf = (path: string): string => {
       return 'application/wasm'
     case '.mjs':
       return 'text/javascript'
+    case '.zip':
+      return 'application/zip'
     default:
       return 'application/octet-stream'
   }

@@ -9,11 +9,12 @@ import { scoreTake } from '../score/score'
 import { syntheticTake } from '../score/synthetic-take'
 import { HistoryStore } from './history-store'
 
-// The text is display only (spec, user story 58): a line's text, the
-// learner's own or a wrong transcript, never changes what a take is
-// scored against, nor a kept take's score. The score reads two
-// recordings and nothing else; this holds that the text written beside a
-// line leaves its recording, and every score of it, as they were.
+// The text and its readings are display only (spec, user stories 57 and
+// 58): a line's text, the learner's own or a wrong transcript, and the
+// readings the learner corrects on it never change what a take is scored
+// against, nor a kept take's score. The score reads two recordings and
+// nothing else; this holds that the text written beside a line, and its
+// readings, leave its recording, and every score of it, as they were.
 
 const quality = {
   speechFrames: 40,
@@ -42,9 +43,9 @@ const comparisonOf = (native: Recording, take: Recording) => {
   }
 }
 
-describe('the text beside a line', () => {
+describe('the text beside a line, and its readings', () => {
   it.effect(
-    'never changes the recording a take is scored against, nor the score of a take kept before or after',
+    'never change the recording a take is scored against, nor the score of a take kept before or after',
     () =>
       Effect.gen(function* () {
         const history = yield* HistoryStore
@@ -101,9 +102,19 @@ describe('the text beside a line', () => {
           Option.getOrThrow(yield* history.clipLine(clip.id, '1')).maybeNative,
         )
 
+        // The learner corrects a reading of the line's text.
+        yield* history.setLineReadings(clip.id, '1', {
+          text: '方こそ',
+          fixes: [{ from: 0, to: 1, kana: 'ほう' }],
+        })
+        const readNative = Option.getOrThrow(
+          Option.getOrThrow(yield* history.clipLine(clip.id, '1')).maybeNative,
+        )
+
         expect(wrongNative).toStrictEqual(nativeBefore)
         expect(editedNative).toStrictEqual(nativeBefore)
-        expect(comparisonOf(editedNative, take)).toStrictEqual(scoreBefore)
+        expect(readNative).toStrictEqual(nativeBefore)
+        expect(comparisonOf(readNative, take)).toStrictEqual(scoreBefore)
         expect((yield* history.entries).entries).toStrictEqual(keptBefore)
       }).pipe(
         Effect.provide(HistoryStore.layerTest(new IDBFactory(), new Map())),

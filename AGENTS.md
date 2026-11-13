@@ -72,14 +72,14 @@ When a folder's rule changes, change its fixtures with it.
   The dev server runs without it.
 - **Serving:** `build/headers.ts` holds the one caching table both servers use (`public, max-age=31536000, immutable` on `/models/`, `/ort/<version>/` and `/assets/`, `no-cache` on every other path, and a `404` with `no-cache` for a missing file under those three) and the security headers (`nosniff` on both, the policy from `vite preview` only); no cross-origin isolation header is sent.
   `docs/deploying.md` says how the app is served today and what the shelved deploy will take; a later host's configuration is written from that table.
-- **Models:** `models.json` lists every model: id, name, licence, source page, and its files, each a relative `path` that may name a folder, its URL at a pinned commit, size and SHA-256.
+- **Models:** `models.json` lists every model: id, name, licence, source page, and its files, each a relative `path` that may name a folder, its URL at a pinned commit (or a GitHub release's asset at a version tag, for Lindera's dictionary), size and SHA-256.
   The build fetches each file into the git-ignored `.cache/models/` (`npm run fetch:models` does it alone), reuses a cached copy whose hash matches, fails naming the file on a size or hash mismatch, and copies it into the model's directory, `dist/models/<id>/<version>/<path>`, whose version is the first 16 hex of the SHA-256 of the model's sorted `<path> <sha256>` lines.
   `build/model-requests.ts` serves those paths in both servers, from the cache in the dev server and from `dist/` in `vite preview`, with the content type by extension and byte ranges.
   Code reads a model's place only from `virtual:intone/models`: `modelDirectories` (each model's directory, ending in `/`), `modelUrls` (the file of each model of one file), and, for Transformers.js, which loads a model by a root and `<id>/<version>`, `modelsRoot`, `modelVersions` and `modelFiles` (each file's path and size); `modelCredits` gives each model's name, licence and source to `/credits`; all are typed by the ids in the list; nothing hard-codes a model path, and no model file is committed.
 - **ONNX Runtime:** the build copies `onnxruntime-web`'s single-threaded CPU build (`ort-wasm-simd-threaded.wasm` and `.mjs`) to `dist/ort/<version>/`; code points `wasmPaths` at `onnxRuntimeWasmPaths` from `virtual:intone/onnx-runtime`.
   Transformers.js pins its own ONNX Runtime, installed beside it; the build copies its `asyncify` build, which runs WebGPU as well as the CPU, to `dist/ort/<its version>/`, and the text Worker points it at `textRuntimeWasmPaths`.
   `vite.config.ts` resolves the package with its `onnxruntime-web-use-extern-wasm` condition, so the bundle loads those files rather than inlining the loader and emitting the 15 MB binary again under `assets/`.
-- **Bundle budget:** `bundle-budget.json` caps the gzip size of the entry chunk and the chunks it imports statically, what the page loads before it starts, and gives every other chunk a line of its own (each Worker, the worklet, each lazy chunk, ONNX Runtime's `.wasm` and `.mjs`); `npm run check:budget` reads a build's `dist/` against it in CI and fails above a line, on a chunk with no line, or on a line with no chunk; `docs/bundle-budget.md` says how it was set and how a raise is justified.
+- **Bundle budget:** `bundle-budget.json` caps the gzip size of the entry chunk and the chunks it imports statically, what the page loads before it starts, and gives every other chunk a line of its own (each Worker, the worklet, each lazy chunk, ONNX Runtime's `.wasm` and `.mjs`, and the WebAssembly the bundler emits under `assets/`, Lindera's); `npm run check:budget` reads a build's `dist/` against it in CI and fails above a line, on a chunk with no line, or on a line with no chunk; `docs/bundle-budget.md` says how it was set and how a raise is justified.
 - **The local pack:** `build/local-pack-guard.ts` fails a production build that holds a module or asset from `local/`, or any output file whose bytes are a file of it (`docs/local-pack.md`).
 - **Notices:** `NOTICES.md` names every package a production install keeps, with its version and licence, and every model's licence; `npm run generate` writes it from the lockfile and `models.json`, and the production build copies it to `/NOTICES.md` (`build/notices.ts`), so every copy of the app carries it.
 
@@ -241,6 +241,16 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 - `/credits` (`src/app/credits/creditsView.ts`) names every model from `modelCredits` and the bundled recordings.
 - `tests/e2e/transcription.spec.ts` writes a CC0 clip out in the built app, each model file fetched once and none after a reload, and nothing sent; `npm run text:study` (`scripts/transcription-study.ts`) measures character error, the matching and the speed on WebAssembly and WebGPU into `docs/transcription-study.md`.
 
+## Readings
+
+- A line's readings, the kana over its kanji, are shown on its practice screen once the learner presses "Show readings", which says the download's size until they are first shown; the choice is kept in the settings (`Settings.readings`); `docs/readings.md` compares the tokenisers, names the choice and lists what it reads wrong.
+- `src/workers/readings.worker.ts` fetches the dictionary's zip (`lindera-ipadic` in `models.json`) and opens Lindera's WebAssembly with it (`src/workers/lindera-session.ts`), speaking `src/workers/readings-protocol.ts` (`Load`, `Read`, `Close` in; `Loaded`, `Tokens`, `Failed`, `Closed` out); `src/services/readings.ts` (`Readings`, with `layer` and `layerTest(tokens, error)`) opens it and makes each text's tokens into words by their place (`src/engine/text/readings.ts`, which also splits a word's kana over its kanji, `rubyParts`).
+- `src/app/readings/` holds it in the app: `ReadingsResource` holds the Worker while a line with Japanese text is open with readings shown; `withReadings`, run after every update in `src/app/main.ts`, asks for the open line's words once it is loaded; the view (`readingsView.ts`) draws the heading's ruby, the buttons and the edit form, and has a `/dev` entry, `readings`, whose tokens `tests/readings/lindera.test.ts` checks against the real tokeniser.
+- The learner's edits are kept with the text they were made on: a clip's or pack's line on its record (`ClipLine.readings`), a bundled line in the settings (`Settings.bundledReadings`); they apply only while the line's text is that text.
+- No score reads the readings: `src/services/text-and-score.test.ts` holds it, with the text's.
+- The screens' words never say "correct": a reading is edited.
+- `tests/e2e/readings.spec.ts` shows, edits and reloads readings in the built app, the dictionary and the WebAssembly fetched once, nothing sent; `tests/readings/` runs the tokeniser on the real dictionary under Node, in the `tooling` project.
+
 ## Audio in tests
 
 End-to-end tests drive the real audio path with Chromium's fake microphone playing a known WAV; `docs/fake-microphone.md` says how faithfully it arrives and what a test must allow for (a start 32 ms in or a few 10 ms buffers later, and now and then a 10 ms slip).
@@ -273,7 +283,7 @@ npm test
 
 `npm run check:effect` runs the `effect-tsgo` check on both tsconfigs, `npm run format:check` the formatter, `npm run generate:check` that the generated files are current, `npm run check:budget` the bundle budget against `dist/`, and `npm run test:e2e` builds and runs Playwright against the production build; CI runs all of them.
 The build and its tests fetch the listed model files once, about 300 MB, most of it the two Whisper models (`npm run fetch:models` fetches them alone, as CI does first), so they need the network until `.cache/models/` holds them.
-`npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, `tests/support`, `tests/tracker`, `tests/score`, in Node, type checked by `tsconfig.node.json`).
+`npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, `tests/support`, `tests/tracker`, `tests/score`, `tests/readings`, in Node, type checked by `tsconfig.node.json`).
 
 ## Content and privacy
 

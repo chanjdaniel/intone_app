@@ -773,3 +773,67 @@ describe('the text of a clip’s lines', () => {
       }),
   )
 })
+
+describe('the readings the learner corrected on a clip’s line', () => {
+  const readings = {
+    text: '入江の家',
+    fixes: [{ from: 0, to: 2, kana: 'いりえ' }],
+  }
+
+  it.effect(
+    'keeps them with the line, across a reopen, and forgets them when cleared',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        yield* run(store => store.setLineReadings(clip.id, '2', readings))
+
+        const again = Option.getOrThrow(
+          yield* run(store => store.clip(clip.id)),
+        )
+        expect(again.lines.map(line => line.readings)).toStrictEqual([
+          undefined,
+          readings,
+          undefined,
+        ])
+
+        const cleared = yield* run(store =>
+          store.setLineReadings(clip.id, '2', undefined),
+        )
+        expect(
+          Option.getOrThrow(cleared).lines.some(line => 'readings' in line),
+        ).toBe(false)
+        expect(
+          yield* run(store =>
+            store.setLineReadings('no-such-clip', '1', readings),
+          ),
+        ).toStrictEqual(Option.none())
+      }),
+  )
+
+  it.effect(
+    'keeps them on a moved line, and leaves them out of a merged one',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        yield* run(store => store.setLineReadings(clip.id, '1', readings))
+        const { track } = tracker()
+        const moved = yield* run(store =>
+          store.editClipLines(
+            clip.id,
+            { _tag: 'Move', lineId: '1', edge: 'to', seconds: 3 },
+            track,
+          ),
+        )
+        expect(Option.getOrThrow(moved).lines[0]?.readings).toStrictEqual(
+          readings,
+        )
+
+        const merged = yield* run(store =>
+          store.editClipLines(clip.id, { _tag: 'Merge', lineId: '1' }, track),
+        )
+        expect(Option.getOrThrow(merged).lines[0]?.readings).toBeUndefined()
+      }),
+  )
+})

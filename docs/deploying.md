@@ -51,6 +51,7 @@ Nothing in `src/` names a model path.
 ### Adding or updating a model
 
 1. Find the file at a pinned revision: on Hugging Face, `https://huggingface.co/<repo>/resolve/<commit>/<path>`.
+   A file published only as a GitHub release's asset (Lindera's dictionary, `docs/readings.md`) is taken at its version tag, `https://github.com/<owner>/<repo>/releases/download/<tag>/<file>`; a tag can move, so its size and SHA-256 are what pin it.
 2. Download it once and measure its size and SHA-256 (`sha256sum`); for a large file, Hugging Face's tree listing, `/api/models/<repo>/tree/<commit>/<folder>`, gives both to compare.
    Add the model, or its new file, to `models.json` with them.
 3. Run `npm run fetch:models`, which downloads every listed file into `.cache/models/` and checks it.

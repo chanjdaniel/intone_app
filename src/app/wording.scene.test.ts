@@ -4,6 +4,7 @@ import { describe, test } from 'vitest'
 
 import { Dialog } from '@foldkit/ui'
 
+import { wordsOf } from '../engine/text/readings'
 import type { TextChoice } from '../services/history-records'
 import {
   ClipWaveform,
@@ -33,6 +34,13 @@ import {
   update,
   view,
 } from './main'
+import {
+  LineReadingsState,
+  ReadingFixForm,
+  ReadingsChoice,
+  ReadingsTool,
+  shownWordsOf,
+} from './readings/readings'
 import { ReturnNote } from './returns/lineReturn'
 import { DuePage } from './returns/returns'
 import { DrawCurvePair } from './take/curvePair'
@@ -67,6 +75,8 @@ import { PackJob, PackStep, UploadJob, UploadStep } from './upload/upload'
 // built bundle's strings, labels included.
 
 const line = AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })
+const readingsLine = { clipId: 'ame-ga-suki', lineId: '1', text: '雨が好き' }
+const shownReadings = ReadingsChoice.Read({ maybeShown: Option.some('Shown') })
 
 const finishedWith = (score: TakeScore): FinishedTake => ({
   takeNumber: 1,
@@ -388,6 +398,60 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
             reason: 'gone',
           }),
         },
+        false,
+      ] as const,
+  ),
+  // A line's readings: offered with their size, loading, shown, one of
+  // them the learner's, failed, and the form that edits them.
+  ...[
+    { readingsChoice: ReadingsChoice.Read({ maybeShown: Option.none() }) },
+    { readingsChoice: shownReadings },
+    {
+      readingsChoice: shownReadings,
+      readingsTool: ReadingsTool.Failed({ reason: 'gone' }),
+    },
+    {
+      readingsChoice: shownReadings,
+      readingsTool: ReadingsTool.Acquired(),
+      readings: LineReadingsState.Failed({ ...readingsLine, reason: 'gone' }),
+    },
+    {
+      readingsChoice: shownReadings,
+      readingsTool: ReadingsTool.Acquired(),
+      readings: LineReadingsState.Ready({
+        ...readingsLine,
+        words: shownWordsOf(
+          '雨が好き',
+          wordsOf('雨が好き', [
+            { surface: '雨', reading: 'アメ' },
+            { surface: 'が', reading: 'ガ' },
+            { surface: '好き', reading: 'スキ' },
+          ]),
+          Option.some({
+            text: '雨が好き',
+            fixes: [{ from: 0, to: 1, kana: 'あま' }],
+          }),
+        ),
+      }),
+      readingFix: ReadingFixForm.Open({
+        ...readingsLine,
+        drafts: [
+          {
+            from: 0,
+            to: 1,
+            surface: '雨',
+            draft: 'x',
+            maybeDictionaryKana: Option.some('あめ'),
+          },
+        ],
+        status: TextFormStatus.Refused({ reason: 'gone' }),
+      }),
+    },
+  ].map(
+    (readings, k) =>
+      [
+        `line, readings ${k}`,
+        { ...initialModel(line), ...readings },
         false,
       ] as const,
   ),

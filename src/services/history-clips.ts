@@ -9,6 +9,7 @@ import {
   type ClipTranscript,
   type LineNative,
   type LineQuality,
+  type LineReadings,
   NativeEntry,
   TakeEntry,
   clipAudioFiles,
@@ -116,6 +117,13 @@ export type ClipOperations = Readonly<{
   readonly setLineTexts: (
     clipId: string,
     texts: ReadonlyArray<Readonly<{ lineId: string; text: string }>>,
+  ) => Effect.Effect<Option.Option<ClipEntry>, HistoryError>
+  // Keeps the learner's corrections to the readings of line `lineId`
+  // (none: forgets them), and gives the clip as it is then.
+  readonly setLineReadings: (
+    clipId: string,
+    lineId: string,
+    readings: LineReadings | undefined,
   ) => Effect.Effect<Option.Option<ClipEntry>, HistoryError>
   // Writes `next` over `before` (none: there must be no such clip yet),
   // unless the clip was changed meanwhile, with `natives` and the files
@@ -523,12 +531,18 @@ export const makeClipOperations = (
         })
       }
       const queue = [...tracked]
-      // A moved line keeps the text the learner gave it; a split or merge
-      // makes new words of a line, so it takes the transcript's.
-      const givenTexts = new Map(
+      // A moved line keeps the text the learner gave it, and their
+      // readings of it, which apply while its text stays as they were made
+      // on; a split or merge makes new words of a line, so it takes the
+      // transcript's.
+      const moved = new Map(
         edit._tag === 'Move'
-          ? before.lines.flatMap(line =>
-              line.text === undefined ? [] : [[line.id, line.text] as const],
+          ? before.lines.map(
+              line =>
+                [
+                  line.id,
+                  { text: line.text, readings: line.readings },
+                ] as const,
             )
           : [],
       )
@@ -542,8 +556,12 @@ export const makeClipOperations = (
           line,
           made?.native ?? { _tag: 'TooQuiet' },
         )
-        const text = givenTexts.get(line.id)
-        return text === undefined ? retracked : { ...retracked, text }
+        const { text, readings } = moved.get(line.id) ?? {}
+        return {
+          ...retracked,
+          ...(text === undefined ? {} : { text }),
+          ...(readings === undefined ? {} : { readings }),
+        }
       })
       const next: ClipEntry = {
         format: before.format,
@@ -633,6 +651,26 @@ export const makeClipOperations = (
     )
   }
 
+  const setLineReadings = (
+    clipId: string,
+    lineId: string,
+    readings: LineReadings | undefined,
+  ) =>
+    changeClip(
+      clipId,
+      before => ({
+        ...before,
+        lines: before.lines.map(line => {
+          if (line.id !== lineId) {
+            return line
+          }
+          const { readings: _readings, ...rest } = line
+          return readings === undefined ? rest : { ...rest, readings }
+        }),
+      }),
+      'The readings were not kept.',
+    )
+
   return {
     addClip,
     clips,
@@ -643,6 +681,7 @@ export const makeClipOperations = (
     undoClipEdit,
     setClipTranscript,
     setLineTexts,
+    setLineReadings,
     replaceClip: (before, next, natives, writes) =>
       replaceClip(before, next, natives, writes),
   }

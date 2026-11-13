@@ -6,6 +6,12 @@ import { HistoryPage, LineHistoryPage } from './history/history'
 import { ClipsPage, LevelPage } from './level/level'
 import { ListenSpeed, NativeCurve } from './line/native'
 import { LinePlace } from './line/place'
+import {
+  LineReadingsState,
+  ReadingFixForm,
+  ReadingsChoice,
+  ReadingsTool,
+} from './readings/readings'
 import { DuePage } from './returns/returns'
 import { AppRoute } from './route'
 import { SettingsPage } from './settings/settings'
@@ -52,5 +58,12 @@ export const Model = Schema.Struct({
   textJob: TextJob,
   textJobsStarted: Schema.Finite,
   lineText: LineTextEdit,
+  // A line's readings (./readings/readings.ts): whether the learner shows
+  // them, the readings Worker, the open line's words and the form that
+  // corrects them.
+  readingsChoice: ReadingsChoice,
+  readingsTool: ReadingsTool,
+  readings: LineReadingsState,
+  readingFix: ReadingFixForm,
 })
 export type Model = typeof Model.Type

@@ -205,6 +205,23 @@ export const LineSource = Schema.Struct({
 })
 export type LineSource = typeof LineSource.Type
 
+// The learner's corrections to a line's readings, the kana shown over its
+// kanji (../engine/text/readings.ts): each word they corrected, by its
+// place in the text, with its kana; for the text they were made on, so
+// they are left out once the line's text changes. Display only: no
+// score reads them.
+export const ReadingFix = Schema.Struct({
+  from: Schema.Finite,
+  to: Schema.Finite,
+  kana: Schema.String,
+})
+
+export const LineReadings = Schema.Struct({
+  text: Schema.String,
+  fixes: Schema.Array(ReadingFix),
+})
+export type LineReadings = typeof LineReadings.Type
+
 export const ClipLine = Schema.Struct({
   // Unique in its clip, and never used again once the line is gone, since
   // its takes keep it: the line's number when the clip was cut, or the
@@ -224,6 +241,7 @@ export const ClipLine = Schema.Struct({
   text: Schema.optionalKey(Schema.String),
   kana: Schema.optionalKey(Schema.String),
   source: Schema.optionalKey(LineSource),
+  readings: Schema.optionalKey(LineReadings),
 })
 export type ClipLine = typeof ClipLine.Type
 
@@ -409,6 +427,15 @@ export const Settings = Schema.Struct({
   // turns it on.
   keepTakeAudio: Schema.Boolean,
   textChoice: Schema.optionalKey(TextChoice),
+  // Whether a line's readings are shown; none until the learner first
+  // turns them on, which downloads the dictionary.
+  readings: Schema.optionalKey(Schema.Literals(['Shown', 'Hidden'])),
+  // The readings corrected on the lines the app brings, by line key
+  // (`<clipId>/<lineId>`), which have no record of their own; a clip's
+  // line keeps its own (`ClipLine.readings`).
+  bundledReadings: Schema.optionalKey(
+    Schema.Record(Schema.String, LineReadings),
+  ),
 })
 export type Settings = typeof Settings.Type
 
