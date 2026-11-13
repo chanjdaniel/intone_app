@@ -12,7 +12,7 @@ This file says how it works, what was chosen and why, and what it measured; `doc
   Declining leaves practice as it was: `tests/e2e/uploads.spec.ts` says "Not now" and then practises a line of the clip to a score, with no request for a model file.
 - Agreeing keeps the model chosen, and later uploads are written out at once with it.
   The job runs in the background, on any screen: the level shows its step ("Downloading the text model: 30 of 75 MB.", "Writing out the text: part 2 of 4.") with a bar and a Stop, and says "It runs in the background: practise any line meanwhile."
-- Each line of the level is then named by its text, with its number and times beside it, and its practice screen is titled by it.
+- Each line of the level is then named by its text, with its number and times under it, and its practice screen is titled by it.
   Under each row, "Edit the text" (or "Add its text") opens a field for that line; "Paste your own text" takes one line of text for each line of the clip, in order, and refuses a count that differs, saying both counts.
   The learner's own text stands over the transcript's, and survives writing the clip out again.
 - `/credits` names every model the app ships, with its licence and source, read from `models.json` through the build, and the bundled recording's voice; `NOTICES.md` lists the same models with their files.
@@ -65,11 +65,51 @@ The transcript is kept with the clip as pieces (`ClipEntry.transcript`) and matc
 | The q4 encoder on WebGPU, the int8 decoder on the CPU         | 4.9 s      |
 
 Measured on 2026-11-13 on Daniel's machine, an NVIDIA GeForce RTX 3070 (Ampere) through Chromium's Vulkan WebGPU, in a headed window: headless Chromium reaches only SwiftShader, a software adapter, whatever the flags.
-The int8 decoder is slower on WebGPU than on the CPU, so the app runs the encoder on WebGPU and the decoder on the CPU, from the same files: the download is the same either way, and the text came out the same as on the CPU.
+The int8 decoder is slower on WebGPU than on the CPU, so the app runs the encoder on WebGPU and the decoder on the CPU, from the same files: the download is the same either way.
+The GPU's arithmetic differs a little from the CPU's, so the text can differ by a word, and its character error stays within 2.3 points of the CPU's on every clip (below).
 The Worker uses WebGPU when a GPU answers that is not a software one, and falls back to the CPU when there is none or its sessions fail to open; the transcript records which ran.
 The tests run on the CPU, in headless Chromium; `npm run text:study -- --run` runs both, WebGPU in a headed window.
 
-STUDY-NUMBERS
+## What the study measured
+
+`npm run text:study` runs the app's own text Worker on the three LibriVox CC0 clips of `fixtures/real/` (59.5, 29.2 and 28.8 s, one reader), each cut into lines by the app's own code, with both models, on the CPU in headless Chromium and on the RTX 3070 in a headed window; `docs/transcription-study.md` has every number, and these are from 2026-11-13, with the machine's load average between 10 and 25 from other work, so the CPU's times are slower than on a quiet machine.
+
+### Speed
+
+| Model           | Encoder on | Reading, times real time | Opening the model |
+| --------------- | ---------- | ------------------------ | ----------------- |
+| `whisper-base`  | the CPU    | 3.3 to 3.6               | 1.1 s             |
+| `whisper-base`  | WebGPU     | 6.0 to 7.2               | 1.4 s             |
+| `whisper-small` | the CPU    | 0.72 to 0.76             | 3.3 to 3.6 s      |
+| `whisper-small` | WebGPU     | 1.75 to 2.3              | 2.5 to 3.5 s      |
+
+The model was already on the device for these; its first download, from localhost, is a few seconds more.
+A ten-minute clip on the CPU would take about three minutes with `whisper-base` and about fourteen with `whisper-small`, in the background.
+
+### Character error
+
+Edits from what the model wrote to the clip's book text (`fixtures/real/<clip>.txt`), over the text's length, spaces and punctuation left out:
+
+| Model           | Written form  | Kana         |
+| --------------- | ------------- | ------------ |
+| `whisper-base`  | 21.5 to 28.9% | 7.0 to 12.5% |
+| `whisper-small` | 15.4 to 27.2% | 1.9 to 7.5%  |
+
+The written form counts a word written in kana where the book has kanji, or the other way, as wrong: the books write むかし, ちかく and さま in kana where Whisper writes 昔, 近く and 様, and much of the error is that.
+On kana, OpenJTalk reads both the book and what Whisper wrote, and only how a word is said counts: `whisper-small`'s 1.9% on ごん狐 is a few kana, and both models get names wrong: 入江 is 医療 to `whisper-base` and 入れ to `whisper-small`, and ごん狐 is ゴンギスネ to `whisper-base`.
+OpenJTalk's own readings can be wrong, alike on both sides, and the book is not quite what the reader says, so neither figure is the model's alone.
+
+### Matching to lines
+
+At each edge between two lines, the study lines the two lines' matched text up with what the model writes reading each line alone, and counts the characters on the wrong side of the edge; an edge is wrong when two or more moved.
+
+| Model           | Edges | Wrong                   | Characters moved          |
+| --------------- | ----- | ----------------------- | ------------------------- |
+| `whisper-base`  | 37    | 3 (the CPU), 1 (WebGPU) | 10 (the CPU), 8 (WebGPU)  |
+| `whisper-small` | 35    | 3 (the CPU), 4 (WebGPU) | 25 (the CPU), 36 (WebGPU) |
+
+So `whisper-base` moves a word or more to the neighbouring line at 1 to 3 of its 37 edges and `whisper-small` at 3 or 4 of its 35, most of them in ろまん燈籠, the longest clip; no line was left empty that had words.
+The measure trusts each line read alone, which is worse than the whole clip read at once (report section 2), so it overstates the errors a little, and three clips by one reader are a small sample: the learner's own clips, with music, other voices or faster speech, will match worse.
 
 ## Nothing leaves the device
 

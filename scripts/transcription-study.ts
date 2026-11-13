@@ -6,7 +6,7 @@
 // how often the text matched to the lines goes wrong at a line's edge,
 // and how fast each runs.
 //
-//   npm run text:study -- --run [--device wasm|webgpu] [--model <id>]
+//   npm run text:study -- --run [--device wasm|webgpu] [--model <id>] [--clip <id>]
 //       runs the Worker in Chromium on the built app (`npm run build`
 //       first) and keeps what it wrote in .cache/text-study/; WebGPU runs
 //       headed, since headless Chromium reaches only a software GPU here
@@ -66,6 +66,7 @@ const { values } = parseArgs({
     run: { type: 'boolean', default: false },
     device: { type: 'string', multiple: true },
     model: { type: 'string', multiple: true },
+    clip: { type: 'string', multiple: true },
     port: { type: 'string', default: '4481' },
     out: {
       type: 'string',
@@ -144,6 +145,7 @@ const inPage = `async input => {
   const worker = new Worker(input.workerUrl, { type: 'module', name: 'text' })
   const waiting = []
   const replies = []
+  worker.onerror = event => waiting.splice(0).forEach(resolve => resolve({ _tag: 'Failed', reason: 'The text Worker did not load: ' + (event.message || input.workerUrl) }))
   worker.onmessage = ({ data }) => {
     replies.push({ at: performance.now(), reply: data })
     waiting.shift()?.(data)
@@ -227,7 +229,9 @@ const run = async (): Promise<void> => {
   const clips = await withSilero(speechModel, speech =>
     withSwiftF0(pitchModel, async pitch => {
       const cut = []
-      for (const clip of studyClips) {
+      for (const clip of studyClips.filter(
+        each => values.clip === undefined || values.clip.includes(each),
+      )) {
         const samples = mono16k(clip)
         const lines = await analyseClip(samples, { speech, pitch }, () => {})
         cut.push({

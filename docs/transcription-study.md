@@ -3,7 +3,7 @@
 # Transcription study
 
 The app’s own text Worker on the LibriVox CC0 clips of `fixtures/real/`, cut into lines by the app’s own code; `docs/transcription.md` says what it means.
-The references are the clips’ public-domain texts, `fixtures/real/<clip>.txt` (romandourou 1212 characters, gongitsune 1192 characters, good-bye 1139 characters).
+The references are the clips’ public-domain texts, `fixtures/real/<clip>.txt` (romandourou 298 characters, gongitsune 128 characters, good-bye 136 characters, punctuation left out).
 
 ## Character error
 
@@ -11,9 +11,18 @@ Edits from what the model wrote to the reference, over the reference’s length,
 
 | Clip | Model | Asked for | Ran on | Written form | Kana |
 | - | - | - | - | - | - |
-| romandourou | whisper-small | wasm | Wasm | 79.2% | 76.7% |
-| gongitsune | whisper-small | wasm | Wasm | 91.7% | 88.7% |
-| good-bye | whisper-small | wasm | Wasm | 91.1% | 88.1% |
+| romandourou | whisper-base | wasm | Wasm | 21.5% | 10.9% |
+| romandourou | whisper-base | webgpu | WebGpu | 23.2% | 11.7% |
+| romandourou | whisper-small | wasm | Wasm | 15.8% | 7.5% |
+| romandourou | whisper-small | webgpu | WebGpu | 15.4% | 7.0% |
+| gongitsune | whisper-base | wasm | Wasm | 26.6% | 7.0% |
+| gongitsune | whisper-base | webgpu | WebGpu | 28.9% | 7.6% |
+| gongitsune | whisper-small | wasm | Wasm | 22.7% | 1.9% |
+| gongitsune | whisper-small | webgpu | WebGpu | 22.7% | 1.9% |
+| good-bye | whisper-base | wasm | Wasm | 25.7% | 12.5% |
+| good-bye | whisper-base | webgpu | WebGpu | 25.7% | 11.9% |
+| good-bye | whisper-small | wasm | Wasm | 27.2% | 2.8% |
+| good-bye | whisper-small | webgpu | WebGpu | 27.2% | 2.3% |
 
 ## Text matched to lines
 
@@ -21,9 +30,18 @@ At each edge between two lines whose own reading has text, the characters of the
 
 | Clip | Model | Asked for | Lines | Edges | Wrong edges | Characters moved | Lines left empty |
 | - | - | - | - | - | - | - | - |
+| romandourou | whisper-base | wasm | 21 | 20 | 1 | 5 | 0 |
+| romandourou | whisper-base | webgpu | 21 | 20 | 1 | 6 | 0 |
 | romandourou | whisper-small | wasm | 21 | 20 | 3 | 24 | 0 |
+| romandourou | whisper-small | webgpu | 21 | 20 | 4 | 35 | 0 |
+| gongitsune | whisper-base | wasm | 10 | 9 | 1 | 3 | 0 |
+| gongitsune | whisper-base | webgpu | 10 | 9 | 0 | 2 | 0 |
 | gongitsune | whisper-small | wasm | 10 | 7 | 0 | 1 | 0 |
+| gongitsune | whisper-small | webgpu | 10 | 7 | 0 | 1 | 0 |
+| good-bye | whisper-base | wasm | 9 | 8 | 1 | 2 | 0 |
+| good-bye | whisper-base | webgpu | 9 | 8 | 0 | 0 | 0 |
 | good-bye | whisper-small | wasm | 9 | 8 | 0 | 0 | 0 |
+| good-bye | whisper-small | webgpu | 9 | 8 | 0 | 0 | 0 |
 
 ## Speed
 
@@ -31,10 +49,74 @@ The model already on the device: opening it (its sessions made), and reading the
 
 | Clip | Seconds | Windows | Model | Asked for | Ran on | GPU | Opening, s | Reading, s | Times real time |
 | - | - | - | - | - | - | - | - | - | - |
-| romandourou | 59.5 | 3 | whisper-small | wasm | Wasm | none | 2.3 | 81.0 | 0.73 |
-| gongitsune | 29.2 | 1 | whisper-small | wasm | Wasm | none | 2.4 | 28.6 | 1.02 |
-| good-bye | 28.8 | 1 | whisper-small | wasm | Wasm | none | 2.3 | 32.7 | 0.88 |
+| romandourou | 59.5 | 3 | whisper-base | wasm | Wasm | none | 1.1 | 17.5 | 3.40 |
+| romandourou | 59.5 | 3 | whisper-base | webgpu | WebGpu | nvidia ampere | 1.4 | 9.6 | 6.19 |
+| romandourou | 59.5 | 3 | whisper-small | wasm | Wasm | none | 3.3 | 78.4 | 0.76 |
+| romandourou | 59.5 | 3 | whisper-small | webgpu | WebGpu | nvidia ampere | 2.5 | 29.9 | 1.99 |
+| gongitsune | 29.2 | 1 | whisper-base | wasm | Wasm | none | 1.1 | 8.2 | 3.55 |
+| gongitsune | 29.2 | 1 | whisper-base | webgpu | WebGpu | nvidia ampere | 1.4 | 4.1 | 7.20 |
+| gongitsune | 29.2 | 1 | whisper-small | wasm | Wasm | none | 3.6 | 40.6 | 0.72 |
+| gongitsune | 29.2 | 1 | whisper-small | webgpu | WebGpu | nvidia ampere | 3.5 | 12.8 | 2.29 |
+| good-bye | 28.8 | 1 | whisper-base | wasm | Wasm | none | 1.1 | 8.8 | 3.28 |
+| good-bye | 28.8 | 1 | whisper-base | webgpu | WebGpu | nvidia ampere | 1.4 | 4.8 | 5.95 |
+| good-bye | 28.8 | 1 | whisper-small | wasm | Wasm | none | 3.4 | 40.2 | 0.72 |
+| good-bye | 28.8 | 1 | whisper-small | webgpu | WebGpu | nvidia ampere | 3.5 | 16.4 | 1.75 |
 
 ## The lines as matched
 
 whisper-base on WebAssembly: each line’s matched text, and what the model wrote reading the line alone.
+
+### romandourou
+
+| Line | Matched | Read alone |
+| - | - | - |
+| 1 | いや、変調子というのではなく | いや、変調子というのではなく |
+| 2 | 案外、そのような詳しくなったの方が正しいので | 案外、そのような暮らし方の方が正しいので |
+| 3 | 帰って、私ども一般の家庭の方こそ | 帰って私ども一般の家庭の方向を |
+| 4 | 変調子になっているのかもしれないが | 変調子になっているのかもしれないが |
+| 5 | とにかく、医療への家の空気は | とにかく、いれいの家の空気は |
+| 6 | 普通の家のそれとは少し違っているようである | 普通のやのそれとは少し違っているようである |
+| 7 | この家庭の奥家から暗示を得て | この家庭の奥から 安定して |
+| 8 | 私は横の前に一つの | 私は、横の前に、一つの |
+| 9 | 端ペン小説を作ってみたことがある | 単位に 出。編成説を作ってみたことがある |
+| 10 | 私は、ふるうこうの作家なので | 私はフリューコーの魚なので |
+| 11 | 作った作品を | て作った作品を |
+| 12 | すぐに雑誌に乗せてもらうこともできず | 数人が死に乗せてもらうこともできず |
+| 13 | その単編症設も長い間 | その担当性質も長い間 |
+| 14 | 私の作品の引き出しのそこに閉まわれたままであったのである | 私の机の引き出しのそこにしまわれたままであったのである。 |
+| 15 | その他にも | その他にも |
+| 16 | 私には三つよつそういう見発表のままの | 私には、三つよつ、そういう見発表のままの |
+| 17 | 言わば共定深くひめたる作品があったので | 弱場、共定不確、姫たる作品があったので、 |
+| 18 | おととしの操縮 | います私の操縮を |
+| 19 | それらを人まとめにして | それらを人間と目にして |
+| 20 | いきなり断交分として失敗したのである。 | いきなり、断交分として失敗したのである。 |
+| 21 | まるしい操作集ではあったが。 | まとし、総作集ではあったが |
+
+### gongitsune
+
+| Line | Matched | Read alone |
+| - | - | - |
+| 1 | 昔は私たちの村の近くの | 昔は私たちの村の近くのを |
+| 2 | 中山というところに小さなお城があって | 中山というところに小さなお城があって |
+| 3 | 中山様というおとの様が怒られたそうです | 中江まさまというおとのさまが、おられたそうです。 |
+| 4 | その中山から | その中山から |
+| 5 | 少し離れた山の中に | 少し離れた山の中に |
+| 6 | ゴンギスネというきつねがいました | 。5月ね、という季節がいました。 |
+| 7 | ゴンは一人ぼっちのゴンギスネで | ごんは、一人ぼちのこいつねで。 |
+| 8 | 下のいっぱいしぃえった森の中 | 下の一杯しにえった、盛りの中に |
+| 9 | に穴を掘って住んでいました | 。鼻を掘って住んでいました |
+| 10 | そして夜でも昼でも | そして、夜でも、昼でも |
+
+### good-bye
+
+| Line | Matched | Read alone |
+| - | - | - |
+| 1 | その帰り、二人の男が、歩いがさで歩いている | その代理、二人の男が、あやいがさで歩いている |
+| 2 | いずれもその成共した老大家にはおぎり一便。 | いずれもその選挙した老大家にはおぎり一伴 |
+| 3 | 話題は、女についての、極めて不金心なこと | 話題は、女についての極めて不金針なことを。 |
+| 4 | 文律の、初老の王男は文子。 | モンプクの初老の大都庫はVC |
+| 5 | それよりずっと若い、ロイドメがね | それよりずっと若いロイドメガネ |
+| 6 | しまず本の高断子は編集者 | 島つぼんの高弾詞は編集者 |
+| 7 | あいつも、と文子は言う | 。はいつも、と文字は言う。 |
+| 8 | 女が好きだったらしいな | 女が好きだったらしいな。 |
+| 9 | お前もそろそろ寝具のおさめドキじゃねえのか? | お前もそろそろ 寝具のおさめドキじゃねえのか |

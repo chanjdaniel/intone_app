@@ -178,7 +178,7 @@ export const transcriptionStudy = (cache: string, root: string): string => {
     '# Transcription study',
     '',
     'The app’s own text Worker on the LibriVox CC0 clips of `fixtures/real/`, cut into lines by the app’s own code; `docs/transcription.md` says what it means.',
-    `The references are the clips’ public-domain texts, \`fixtures/real/<clip>.txt\` (${studyClips.map(clip => `${clip} ${referenceLength(clip)} characters`).join(', ')}).`,
+    `The references are the clips’ public-domain texts, \`fixtures/real/<clip>.txt\` (${studyClips.map(clip => `${clip} ${referenceLength(clip)} characters`).join(', ')}, punctuation left out).`,
     '',
     '## Character error',
     '',
