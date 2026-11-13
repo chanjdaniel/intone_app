@@ -95,8 +95,10 @@ const toggleButton = <ViewMessage>(
   )
 }
 
-// What the readings are doing, said in one live region that stays in
-// place.
+// What the readings are doing, said in a polite live region that stays in
+// place; not a `status`, which the take's panel is, the screen's one.
+export const readingsNoteId = 'readings-note'
+
 const statusText = (state: ReadingsState): string => {
   if (state.choice._tag !== 'Read') {
     return ''
@@ -248,7 +250,11 @@ export const readingsControls = <ViewMessage>(
         ],
       ),
       h.p(
-        [h.Role('status'), h.Class('text-sm text-muted empty:hidden')],
+        [
+          h.Id(readingsNoteId),
+          h.AriaLive('polite'),
+          h.Class('text-sm text-muted empty:hidden'),
+        ],
         [statusText(state)],
       ),
       open === undefined ? h.empty : fixForm(open, events, h),

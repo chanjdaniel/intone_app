@@ -107,7 +107,7 @@ describe('a line’s readings', () => {
     scene(
       { update, view },
       given(onLine({ readingsChoice: shown })),
-      expect(role('status')).toHaveText('Loading the readings…'),
+      expect(selector('#readings-note')).toHaveText('Loading the readings…'),
       expect(role('button', { name: 'Hide readings' })).toExist(),
       expect(selector('ruby')).toBeAbsent(),
     )
@@ -128,7 +128,7 @@ describe('a line’s readings', () => {
       expect(last(all.selector('h1 ruby'))).toHaveText('好(す)'),
       expect(role('heading', { level: 1 })).toHaveText('雨(あめ)が好(す)き'),
       expect(role('button', { name: 'Edit a reading' })).toExist(),
-      expect(role('status')).toHaveText(
+      expect(selector('#readings-note')).toHaveText(
         'Readings come from a dictionary and may be wrong; edit any that are.',
       ),
     )
@@ -147,7 +147,9 @@ describe('a line’s readings', () => {
       expect(first(all.selector('h1 rt'))).toHaveClass('text-accent'),
       expect(first(all.selector('h1 rt'))).toHaveText('あま'),
       expect(last(all.selector('h1 rt'))).toHaveClass('text-muted'),
-      expect(role('status')).toHaveText('One reading is your own, in colour.'),
+      expect(selector('#readings-note')).toHaveText(
+        'One reading is your own, in colour.',
+      ),
     )
   })
 
@@ -162,7 +164,7 @@ describe('a line’s readings', () => {
           }),
         }),
       ),
-      expect(role('status')).toHaveText(
+      expect(selector('#readings-note')).toHaveText(
         'The readings did not load: The reading dictionary could not be downloaded. Hide them and show them again to try once more.',
       ),
     )

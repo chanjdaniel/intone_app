@@ -7,6 +7,7 @@ import {
   label,
   role,
   scene,
+  selector,
   submit,
   text,
   type,
@@ -36,7 +37,7 @@ describe('the readings entry', () => {
         text("Read-out: line 2; shown; 2 of its readings the learner's own"),
       ).toExist(),
       click(role('button', { name: 'Failed' })),
-      expect(role('status')).toHaveText(
+      expect(selector('#readings-note')).toHaveText(
         'The readings did not load: The reading dictionary could not be downloaded. Hide them and show them again to try once more.',
       ),
     )
