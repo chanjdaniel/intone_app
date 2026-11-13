@@ -207,6 +207,8 @@ export const StarterPackLine = Schema.Struct({
       kana: Schema.String,
       accentType: AccentType,
       particle: Schema.NullOr(Schema.String),
+      // The rule its accent is stated by, when it is not looked up.
+      byRule: Schema.NullOr(Schema.String),
     }),
   ),
   flag: Schema.NullOr(Schema.String),

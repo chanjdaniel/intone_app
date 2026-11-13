@@ -48,9 +48,18 @@ A ます form is stated by its rule, falling on its ま whatever the verb's own 
 
 The flagged lines on 2026-11-13:
 
-FLAGS
+| Line             | Flag                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| 桜が             | 桜 (さくら): UniDic gives 0, Wiktionary gives 0 and 1; the list states 0.             |
+| 昨日が           | 昨日 (きのう): UniDic gives 2 and 0, Wiktionary gives 2 and 0; the list states 2.     |
+| 休みが           | 休み (やすみ): UniDic gives 3 and 2, Wiktionary gives 3; the list states 3.           |
+| 雨が好き         | 好き (すき): UniDic gives 2 and 1, Wiktionary gives 2; the list states 2.             |
+| 飴が好き         | 好き (すき): UniDic gives 2 and 1, Wiktionary gives 2; the list states 2.             |
+| 電車に乗ります   | 電車 (でんしゃ): UniDic gives 0 and 1, Wiktionary gives 0 and 1; the list states 0.   |
+| お祭りがあります | お祭り (おまつり): UniDic has no entry for it, Wiktionary gives 0; the list states 0. |
 
-雲 and 蜘蛛 are both atamadaka in Tokyo in both sources, so they are no minimal pair there, as the report supposed; they stay as a pair the review can keep, reject or note, since Kansai tells them apart.
+雲 and 蜘蛛 are both atamadaka in Tokyo in both sources, so they are no minimal pair there, as the report supposed, and no flag says so, since each source agrees with the list; their lines carry a note instead, and stay as a pair the review can keep, reject or note, since Kansai tells them apart.
+休み's and 好き's second UniDic type is the verb's (休む, 好く), read as the same kana; the flag says so plainly enough for the review to judge.
 
 ## The pack
 
@@ -71,7 +80,7 @@ A line's file is made only when what it is made from changes, its `made` key: a 
 - Each file reaches the app through Vite's asset handling, as `/assets/<line>-<hash>.wav`, which both servers keep for good (`public, max-age=31536000, immutable`, `build/headers.ts`); only its address is in the entry chunk, and the browser fetches the file when its line opens.
   `tests/build/production-build.test.ts` checks every audio file the build carries is a credited one under such a path, and in no JavaScript chunk.
 
-The bundled audio is SIZE.
+The bundled audio is 49 files, 2,906,220 B in all (2.9 MB, about 59 KB a line), measured on `starter/pack/audio/` on 2026-11-13; a line downloads only its own file when it opens.
 
 ## Adding, replacing or dropping a line
 

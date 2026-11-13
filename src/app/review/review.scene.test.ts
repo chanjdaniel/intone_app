@@ -15,16 +15,10 @@ import { describe, test } from 'vitest'
 
 import { moraeOf } from '../../engine/text/morae'
 import type { ReviewDraft } from '../../services/review-store'
-import { starterPack } from '../line/starter'
+import { patternOf, starterPack } from '../line/starter'
 import { AppRoute, Message, initialModel, update, view } from '../main'
 import { ExportReview, SaveReview } from './commands'
-import {
-  ReviewExported,
-  ReviewPage,
-  ReviewPlay,
-  ReviewSave,
-  patternOf,
-} from './review'
+import { ReviewExported, ReviewPage, ReviewPlay, ReviewSave } from './review'
 
 // /review lists every starter line with what the list states of it, and
 // takes the reviewer's verdicts.

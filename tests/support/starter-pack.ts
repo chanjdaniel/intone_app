@@ -401,6 +401,7 @@ export const packLineOf = (
       kana: word.kana,
       accentType: word.accentType,
       particle: word.particle ?? null,
+      byRule: word.byRule ?? null,
     })),
     flag: line.flag ?? null,
     note: line.note ?? null,

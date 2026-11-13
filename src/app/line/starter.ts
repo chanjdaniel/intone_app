@@ -1,5 +1,6 @@
 import { Schema } from 'effect'
 
+import { moraeOf } from '../../engine/text/morae'
 import {
   type StarterCredit,
   StarterPack,
@@ -41,6 +42,25 @@ export const creditSentence = (credit: StarterCredit): string =>
   credit.source === 'VOICEVOX'
     ? `Voice: ${credit.author}, made with VOICEVOX, under its terms of use.`
     : `Spoken by ${credit.author}, from ${credit.source}, under ${credit.licence}. ${credit.changes}`
+
+// The pattern an accent type names in a word of `morae` morae.
+export const patternOf = (accentType: number, morae: number): string =>
+  accentType === 0
+    ? 'heiban'
+    : accentType === 1
+      ? 'atamadaka'
+      : accentType === morae
+        ? 'odaka'
+        : 'nakadaka'
+
+// The accent a line states, word by word, as its row says it:
+// "Accent type 1, atamadaka", or "Accent types: 橋 2, 渡ります 4".
+export const accentText = (line: Pick<StarterPackLine, 'words'>): string => {
+  const [only, ...rest] = line.words
+  return only !== undefined && rest.length === 0
+    ? `Accent type ${only.accentType}, ${patternOf(only.accentType, moraeOf(only.kana).length)}`
+    : `Accent types: ${line.words.map(word => `${word.text} ${word.accentType}`).join(', ')}`
+}
 
 export const isUnreviewed = (line: Pick<StarterPackLine, 'review'>): boolean =>
   line.review.verdict === 'unreviewed'

@@ -55,16 +55,6 @@ export type ReviewPage = typeof ReviewPage.Type
 
 export type ReviewReady = Extract<ReviewPage, { _tag: 'Ready' }>
 
-// The pattern an accent type names in a word of `morae` morae.
-export const patternOf = (accentType: number, morae: number): string =>
-  accentType === 0
-    ? 'heiban'
-    : accentType === 1
-      ? 'atamadaka'
-      : accentType === morae
-        ? 'odaka'
-        : 'nakadaka'
-
 export const verdictOf = (
   draft: ReviewDraft,
   lineId: string,

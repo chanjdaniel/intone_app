@@ -39,6 +39,7 @@ export const noPackFields = {
   maybeText: Option.none(),
   maybeKana: Option.none(),
   maybeSource: Option.none(),
+  maybeDetail: Option.none(),
 } as const
 
 // A level imported from the local pack, as the history keeps it: a line

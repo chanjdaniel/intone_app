@@ -73,6 +73,7 @@ const longClip = (): LevelClip => ({
     maybeText: Option.none(),
     maybeKana: Option.none(),
     maybeSource: Option.none(),
+    maybeDetail: Option.none(),
   })),
   maybeUndo: Option.none(),
   origin: 'Upload',

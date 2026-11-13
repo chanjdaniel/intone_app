@@ -51,6 +51,9 @@ export const LevelLine = Schema.Struct({
   maybeText: Schema.Option(Schema.String),
   maybeKana: Schema.Option(Schema.String),
   maybeSource: Schema.Option(SourceLink),
+  // What a bundled line's row says in place of where it is in its file,
+  // which is all of it: a starter line's stated accent.
+  maybeDetail: Schema.Option(Schema.String),
 })
 export type LevelLine = typeof LevelLine.Type
 
@@ -106,6 +109,7 @@ export const levelClipOf = (clip: ClipEntry): LevelClip => {
       maybeText: nonEmpty(texts[k]),
       maybeKana: nonEmpty(line.kana),
       maybeSource: Option.map(Option.fromNullishOr(line.source), sourceLinkOf),
+      maybeDetail: Option.none(),
     })),
     maybeUndo: Option.map(Option.fromNullishOr(clip.undo), undo => undo.change),
     origin: clip.pack === undefined ? 'Upload' : 'Pack',
@@ -135,6 +139,7 @@ export const levelClipOfBundled = (clip: BundledClip): LevelClip => ({
     maybeText: Option.some(line.text),
     maybeKana: Option.some(line.reading),
     maybeSource: Option.none(),
+    maybeDetail: line.maybeAccent,
   })),
   maybeUndo: Option.none(),
   origin: 'Bundled',
@@ -227,8 +232,10 @@ export const levelLineText = (line: LevelLine): string =>
     ...Option.toArray(line.maybeText),
     ...Option.toArray(line.maybeKana),
     ...Option.toArray(line.maybeFile),
-    clockText(line.from, true),
-    clockText(line.to, true),
+    ...Option.match(line.maybeDetail, {
+      onNone: () => [clockText(line.from, true), clockText(line.to, true)],
+      onSome: detail => [detail],
+    }),
   ].join(' ')
 
 export const levelLineTitle = (line: Pick<LevelLine, 'number'>): string =>

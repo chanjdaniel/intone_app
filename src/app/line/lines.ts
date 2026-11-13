@@ -10,6 +10,7 @@ import {
   clipLineTexts,
 } from '../../services/history-records'
 import {
+  accentText,
   creditSentence,
   isUnreviewed,
   reviewNoteOf,
@@ -38,8 +39,10 @@ export type BundledLine = Readonly<{
   // or the voice's terms ask it to be credited, and where it came from.
   credit: string
   maybeSource: Option.Option<SourceLink>
-  // Whether a native speaker has yet to hear a starter line.
+  // Whether a native speaker has yet to hear a starter line, and the
+  // accent the starter set states for it.
   isUnreviewed: boolean
+  maybeAccent: Option.Option<string>
   // The clip's audio, from the app's own origin, and how long it is.
   audioUrl: string
   seconds: number
@@ -84,6 +87,7 @@ export const starterLevels: ReadonlyArray<BundledClip> = starterPack.levels.map(
               maybeTo: Option.none(),
             }),
       isUnreviewed: isUnreviewed(line),
+      maybeAccent: Option.some(accentText(line)),
       audioUrl: starterAudioUrl(line),
       seconds: line.seconds,
     })),
@@ -106,6 +110,7 @@ export const bundledClips: ReadonlyArray<BundledClip> = [
         credit: 'Voice: VOICEVOX:冥鳴ひまり, made with VOICEVOX.',
         maybeSource: Option.none(),
         isUnreviewed: false,
+        maybeAccent: Option.none(),
         audioUrl: ameGaSukiAudio,
         seconds: 30464 / 24000,
       },

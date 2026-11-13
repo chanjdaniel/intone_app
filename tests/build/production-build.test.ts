@@ -347,8 +347,9 @@ describe('the production build', () => {
     }
     expect(found.size).toBe(audio.length)
     for (const file of files().filter(file => /\.(js|mjs)$/.test(file))) {
+      // A file inlined would be a data: URL, its RIFF header in base64.
       expect(readFileSync(join(dist, file), 'utf8'), file).not.toMatch(
-        /data:audio|RIFF/,
+        /data:audio|UklGR/,
       )
     }
   })

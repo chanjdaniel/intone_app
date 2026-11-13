@@ -297,9 +297,25 @@ const synthesise = (
   return made
 }
 
-const readPack = (): StarterPack | undefined =>
+// What the pack on disk says each line's file was made from: only that,
+// so a pack of an older shape still lets its files be kept.
+const PackMade = Schema.Struct({
+  levels: Schema.Array(
+    Schema.Struct({
+      lines: Schema.Array(
+        Schema.Struct({
+          id: Schema.String,
+          made: Schema.String,
+          sha256: Schema.String,
+        }),
+      ),
+    }),
+  ),
+})
+
+const readPack = (): typeof PackMade.Type | undefined =>
   existsSync(levelsPath)
-    ? Schema.decodeUnknownSync(StarterPack)(
+    ? Schema.decodeUnknownSync(PackMade)(
         JSON.parse(readFileSync(levelsPath, 'utf8')),
       )
     : undefined

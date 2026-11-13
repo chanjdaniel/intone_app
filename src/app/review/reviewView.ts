@@ -10,13 +10,13 @@ import type {
   StarterPackLine,
 } from '../../services/starter-records'
 import { countText } from '../history/format'
+import { patternOf } from '../line/starter'
 import { pageFrame } from '../pageFrame'
 import {
   ReviewExported,
   ReviewPage,
   type ReviewReady,
   ReviewSave,
-  patternOf,
   verdictOf,
 } from './review'
 
@@ -65,6 +65,7 @@ const statedAccent = <ViewMessage>(
           ...(word.particle === null
             ? []
             : [', then ', h.span([h.Lang('ja')], [word.particle])]),
+          ...(word.byRule === null ? [] : [`, by rule: ${word.byRule}`]),
         ],
       ),
     ),
@@ -123,7 +124,7 @@ const verdictFields = <ViewMessage>(
                 h.Value(verdict),
                 h.Checked(Option.contains(chosen, verdict)),
                 h.OnChange(() => events.chooseVerdict(line.id, verdict)),
-                h.Class('size-5 accent-accent'),
+                h.Class('size-5 shrink-0 accent-accent'),
               ]),
               h.span([], [label]),
             ],
@@ -247,11 +248,17 @@ const lineCard = <ViewMessage>(
                 [line.text],
               ),
               h.p(
-                [h.Class('text-base text-muted break-words')],
+                [h.Lang('ja'), h.Class('text-base text-muted break-words')],
+                [line.kana],
+              ),
+              h.p(
+                [h.Class('text-base text-muted')],
                 [
-                  h.span([h.Lang('ja')], [line.kana]),
-                  ` · ${countText(line.morae.length, 'mora', 'morae')}: `,
-                  h.span([h.Lang('ja')], [line.morae.join('・')]),
+                  `${countText(line.morae.length, 'mora', 'morae')}: `,
+                  h.span(
+                    [h.Lang('ja'), h.Class('whitespace-nowrap')],
+                    [line.morae.join('・')],
+                  ),
                 ],
               ),
             ],
@@ -273,7 +280,11 @@ const lineCard = <ViewMessage>(
         : [h.p([h.Class('text-sm text-muted break-words')], [line.note])]),
       h.p(
         [h.Class('text-sm text-muted break-words')],
-        [`Recorded by ${line.credit.author}, from ${line.credit.source}.`],
+        [
+          line.credit.source === 'VOICEVOX'
+            ? `Voice: ${line.credit.author}, made with VOICEVOX.`
+            : `Spoken by ${line.credit.author}, from ${line.credit.source}.`,
+        ],
       ),
       verdictFields(line, verdictOf(page.draft, line.id), events, h),
     ],

@@ -24,7 +24,8 @@
               "text": "水",
               "kana": "みず",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -62,7 +63,8 @@
               "text": "鳥",
               "kana": "とり",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -101,7 +103,8 @@
               "text": "桜",
               "kana": "さくら",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": "桜 (さくら): UniDic gives 0, Wiktionary gives 0 and 1; the list states 0.",
@@ -140,7 +143,8 @@
               "text": "名前",
               "kana": "なまえ",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -180,7 +184,8 @@
               "text": "学校",
               "kana": "がっこう",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -220,7 +225,8 @@
               "text": "友達",
               "kana": "ともだち",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -266,7 +272,8 @@
               "text": "猫",
               "kana": "ねこ",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -304,7 +311,8 @@
               "text": "秋",
               "kana": "あき",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -343,7 +351,8 @@
               "text": "命",
               "kana": "いのち",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -382,7 +391,8 @@
               "text": "緑",
               "kana": "みどり",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -422,7 +432,8 @@
               "text": "経済",
               "kana": "けいざい",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -462,7 +473,8 @@
               "text": "玄関",
               "kana": "げんかん",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -509,7 +521,8 @@
               "text": "昨日",
               "kana": "きのう",
               "accentType": 2,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": "昨日 (きのう): UniDic gives 2 and 0, Wiktionary gives 2 and 0; the list states 2.",
@@ -548,7 +561,8 @@
               "text": "一人",
               "kana": "ひとり",
               "accentType": 2,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -588,7 +602,8 @@
               "text": "湖",
               "kana": "みずうみ",
               "accentType": 3,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -628,7 +643,8 @@
               "text": "先生",
               "kana": "せんせい",
               "accentType": 3,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -674,7 +690,8 @@
               "text": "山",
               "kana": "やま",
               "accentType": 2,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -712,7 +729,8 @@
               "text": "犬",
               "kana": "いぬ",
               "accentType": 2,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -751,7 +769,8 @@
               "text": "男",
               "kana": "おとこ",
               "accentType": 3,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -790,7 +809,8 @@
               "text": "休み",
               "kana": "やすみ",
               "accentType": 3,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": "休み (やすみ): UniDic gives 3 and 2, Wiktionary gives 3; the list states 3.",
@@ -830,7 +850,8 @@
               "text": "弟",
               "kana": "おとうと",
               "accentType": 4,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -870,7 +891,8 @@
               "text": "妹",
               "kana": "いもうと",
               "accentType": 4,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -918,13 +940,15 @@
               "text": "雨",
               "kana": "あめ",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             },
             {
               "text": "好き",
               "kana": "すき",
               "accentType": 2,
-              "particle": null
+              "particle": null,
+              "byRule": null
             }
           ],
           "flag": "好き (すき): UniDic gives 2 and 1, Wiktionary gives 2; the list states 2.",
@@ -964,13 +988,15 @@
               "text": "飴",
               "kana": "あめ",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             },
             {
               "text": "好き",
               "kana": "すき",
               "accentType": 2,
-              "particle": null
+              "particle": null,
+              "byRule": null
             }
           ],
           "flag": "好き (すき): UniDic gives 2 and 1, Wiktionary gives 2; the list states 2.",
@@ -1008,7 +1034,8 @@
               "text": "橋",
               "kana": "はし",
               "accentType": 2,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1046,7 +1073,8 @@
               "text": "箸",
               "kana": "はし",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1084,7 +1112,8 @@
               "text": "端",
               "kana": "はし",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1122,7 +1151,8 @@
               "text": "花",
               "kana": "はな",
               "accentType": 2,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1160,7 +1190,8 @@
               "text": "鼻",
               "kana": "はな",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1198,7 +1229,8 @@
               "text": "柿",
               "kana": "かき",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1236,7 +1268,8 @@
               "text": "牡蠣",
               "kana": "かき",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1274,7 +1307,8 @@
               "text": "神",
               "kana": "かみ",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1312,7 +1346,8 @@
               "text": "紙",
               "kana": "かみ",
               "accentType": 2,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1350,7 +1385,8 @@
               "text": "酒",
               "kana": "さけ",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1388,7 +1424,8 @@
               "text": "鮭",
               "kana": "さけ",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1426,7 +1463,8 @@
               "text": "雲",
               "kana": "くも",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1464,7 +1502,8 @@
               "text": "蜘蛛",
               "kana": "くも",
               "accentType": 1,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             }
           ],
           "flag": null,
@@ -1515,13 +1554,15 @@
               "text": "橋",
               "kana": "はし",
               "accentType": 2,
-              "particle": "を"
+              "particle": "を",
+              "byRule": null
             },
             {
               "text": "渡ります",
               "kana": "わたります",
               "accentType": 4,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": null,
@@ -1565,13 +1606,15 @@
               "text": "時計",
               "kana": "とけい",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             },
             {
               "text": "動きます",
               "kana": "うごきます",
               "accentType": 4,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": null,
@@ -1614,13 +1657,15 @@
               "text": "薬",
               "kana": "くすり",
               "accentType": 0,
-              "particle": "を"
+              "particle": "を",
+              "byRule": null
             },
             {
               "text": "飲みます",
               "kana": "のみます",
               "accentType": 3,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": null,
@@ -1663,13 +1708,15 @@
               "text": "道",
               "kana": "みち",
               "accentType": 0,
-              "particle": "を"
+              "particle": "を",
+              "byRule": null
             },
             {
               "text": "歩きます",
               "kana": "あるきます",
               "accentType": 4,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": null,
@@ -1712,13 +1759,15 @@
               "text": "電車",
               "kana": "でんしゃ",
               "accentType": 0,
-              "particle": "に"
+              "particle": "に",
+              "byRule": null
             },
             {
               "text": "乗ります",
               "kana": "のります",
               "accentType": 3,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": "電車 (でんしゃ): UniDic gives 0 and 1, Wiktionary gives 0 and 1; the list states 0.",
@@ -1760,13 +1809,15 @@
               "text": "靴",
               "kana": "くつ",
               "accentType": 2,
-              "particle": "を"
+              "particle": "を",
+              "byRule": null
             },
             {
               "text": "はきます",
               "kana": "はきます",
               "accentType": 3,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": null,
@@ -1808,13 +1859,15 @@
               "text": "駅",
               "kana": "えき",
               "accentType": 1,
-              "particle": "に"
+              "particle": "に",
+              "byRule": null
             },
             {
               "text": "着きます",
               "kana": "つきます",
               "accentType": 3,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": null,
@@ -1858,13 +1911,15 @@
               "text": "先生",
               "kana": "せんせい",
               "accentType": 3,
-              "particle": "に"
+              "particle": "に",
+              "byRule": null
             },
             {
               "text": "聞きます",
               "kana": "ききます",
               "accentType": 3,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": null,
@@ -1907,13 +1962,15 @@
               "text": "眼鏡",
               "kana": "めがね",
               "accentType": 1,
-              "particle": "を"
+              "particle": "を",
+              "byRule": null
             },
             {
               "text": "かけます",
               "kana": "かけます",
               "accentType": 3,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": null,
@@ -1958,13 +2015,15 @@
               "text": "大学",
               "kana": "だいがく",
               "accentType": 0,
-              "particle": "に"
+              "particle": "に",
+              "byRule": null
             },
             {
               "text": "入ります",
               "kana": "はいります",
               "accentType": 4,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": null,
@@ -2008,13 +2067,15 @@
               "text": "お祭り",
               "kana": "おまつり",
               "accentType": 0,
-              "particle": "が"
+              "particle": "が",
+              "byRule": null
             },
             {
               "text": "あります",
               "kana": "あります",
               "accentType": 3,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": "お祭り (おまつり): UniDic has no entry for it, Wiktionary gives 0; the list states 0.",
@@ -2058,13 +2119,15 @@
               "text": "コーヒー",
               "kana": "コーヒー",
               "accentType": 3,
-              "particle": "を"
+              "particle": "を",
+              "byRule": null
             },
             {
               "text": "入れます",
               "kana": "いれます",
               "accentType": 3,
-              "particle": null
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
             }
           ],
           "flag": null,

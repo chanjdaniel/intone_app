@@ -99,7 +99,10 @@ const lineDetail = (line: LevelLine): string =>
   [
     ...(Option.isSome(line.maybeText) ? [levelLineTitle(line)] : []),
     ...Option.toArray(line.maybeFile),
-    `${clockText(line.from, true)} to ${clockText(line.to, true)}`,
+    Option.getOrElse(
+      line.maybeDetail,
+      () => `${clockText(line.from, true)} to ${clockText(line.to, true)}`,
+    ),
     `${lengthTenthsText(line.from, line.to)} s`,
   ].join(' · ')
 
@@ -277,7 +280,10 @@ export const levelLineList = <ViewMessage>(
       find: {
         inputId: levelFindInputId,
         label: 'Find a line',
-        placeholder: 'A line’s number or time, such as 12 or 1:05',
+        placeholder:
+          clip.origin === 'Bundled'
+            ? 'A line’s text, kana or number'
+            : 'A line’s number or time, such as 12 or 1:05',
       },
       countLine: countLine(found.length, clip.lines.length, words),
       changedWords: events.changedWords,
