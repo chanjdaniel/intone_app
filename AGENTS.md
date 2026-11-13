@@ -35,6 +35,8 @@ The pins that move together:
 - `effect`, `@effect/platform-browser` and `@effect/vitest` at 4.1.2, inside Foldkit's peer range `~4.1.0`.
 - `@effect/tsgo` 0.67.5 on TypeScript 7, which accepts only oxlint 1.88.0 to 1.92.0 (1.92.0 here) and oxlint-tsgolint 7.0.2004 to 7.0.2006 (7.0.2006 here).
 - `onnxruntime-web` 1.31.1, whose WebAssembly the build serves from `/ort/<version>/`.
+- `@huggingface/transformers` 4.3.2, with the ONNX Runtime it pins itself (`onnxruntime-web` 1.31.0-dev.20260914-8d85527a0), served from `/ort/<its version>/`; `src/engine/text/pieces.ts` and `src/workers/whisper-session.ts` work round its 4.3.2 behaviour, and `src/workers/text-model-cache.ts` keys its cache as 4.3.2 does, so a bump rereads all three (`docs/transcription.md`).
+- `lindera-wasm` 6.2.0, with the IPADIC built for it in `models.json` (`lindera-ipadic`, `docs/readings.md`); `/credits` names its version, which `src/app/credits/credits.scene.test.ts` holds to the pin.
 - Node 24.22.1, in `.nvmrc` only, read by CI and the local tools (`nvm use`), and by a host once there is one.
 
 Any change to the lockfile or `models.json` is followed by `npm run generate`, which rewrites `NOTICES.md` and `src/virtual-modules.d.ts`; CI fails while either is stale.
@@ -46,7 +48,7 @@ Any change to the lockfile or `models.json` is followed by `npm run generate`, w
 | `src/app`      | Foldkit, Effect, everything below               | Main thread                        | Screens, Model, `update`, `view`, Commands, Mounts, ManagedResources, Subscriptions, routes                                                                 |
 | `src/services` | Effect, `src/engine`, `src/score`               | Main thread and Workers            | Each service a `Context.Service` with a real layer and a test layer, and the plain modules they are built from (records, IndexedDB, backup, the local pack) |
 | `src/workers`  | Effect, `src/engine`, `src/score`               | Workers                            | Worker programs: load a model in a scope, receive audio, cancel cleanly                                                                                     |
-| `src/engine`   | Nothing from Effect or Foldkit                  | Audio thread, Workers, main thread | `worklet/`, `pitch/`, `features/`, `draw/`, `audio/`, `reason.ts`                                                                                           |
+| `src/engine`   | Nothing from Effect or Foldkit                  | Audio thread, Workers, main thread | `worklet/`, `pitch/`, `features/`, `draw/`, `audio/`, `cut/`, `text/`, `reason.ts`                                                                          |
 | `src/score`    | Nothing from Effect, Foldkit or any browser API | Anywhere, Node included            | Score maths on plain typed arrays                                                                                                                           |
 
 The line falls where code runs per audio block or per frame: there, plain TypeScript on typed arrays keeps the hot paths allocation-free, and only `src/app` would need rewriting to leave Foldkit.

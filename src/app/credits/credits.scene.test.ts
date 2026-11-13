@@ -3,6 +3,7 @@ import { expect, given, role, scene, text } from 'foldkit/scene'
 import { modelCredits } from 'virtual:intone/models'
 import { describe, test } from 'vitest'
 
+import packageJson from '../../../package.json'
 import type { StarterPack } from '../../services/starter-records'
 import { starterPack } from '../line/starter'
 import { AppRoute, initialModel, update, view } from '../main'
@@ -16,6 +17,8 @@ import { creditsView } from './creditsView'
 
 // /credits names every model the app ships, from the build's own list,
 // and the recording it brings.
+
+const lindera = packageJson.dependencies['lindera-wasm']
 
 describe('/credits', () => {
   test('names every model the app ships with its licence and source, and the bundled recording’s voice', () => {
@@ -43,11 +46,13 @@ describe('/credits', () => {
         'noopener noreferrer',
       ),
       expect(text(/Voice: VOICEVOX:冥鳴ひまり, made with VOICEVOX/)).toExist(),
-      expect(role('heading', { name: 'Lindera 6.2.0' })).toExist(),
+      // The tokeniser at the version package.json pins, so a bump that
+      // leaves the credit behind fails here.
+      expect(role('heading', { name: `Lindera ${lindera}` })).toExist(),
       expect(text('Licence: MIT')).toExist(),
-      expect(role('link', { name: 'Source of Lindera 6.2.0' })).toHaveAttr(
+      expect(role('link', { name: `Source of Lindera ${lindera}` })).toHaveAttr(
         'href',
-        'https://github.com/lindera/lindera/tree/v6.2.0',
+        `https://github.com/lindera/lindera/tree/v${lindera}`,
       ),
       expect(role('link', { name: 'The notices' })).toHaveAttr(
         'href',
