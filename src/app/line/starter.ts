@@ -5,6 +5,7 @@ import {
   type StarterCredit,
   StarterPack,
   type StarterPackLine,
+  reviewNote,
 } from '../../services/starter-records'
 
 // The starter set (docs/starter-set.md): the levels and lines
@@ -65,10 +66,9 @@ export const accentText = (line: Pick<StarterPackLine, 'words'>): string => {
 export const isUnreviewed = (line: Pick<StarterPackLine, 'review'>): boolean =>
   line.review.verdict === 'unreviewed'
 
-export const unreviewedNote = 'Not yet checked by a native speaker.'
+export const unreviewedNote = `${reviewNote({ verdict: 'unreviewed' })}.`
 
-// Whether a native speaker has heard the line yet (ticket 25).
+// Whether a native speaker has heard the line yet (ticket 25), and who,
+// when they agreed to be credited.
 export const reviewNoteOf = (line: Pick<StarterPackLine, 'review'>): string =>
-  line.review.verdict === 'unreviewed'
-    ? unreviewedNote
-    : `Checked by a native speaker on ${line.review.reviewedOn}.`
+  `${reviewNote(line.review)}.`

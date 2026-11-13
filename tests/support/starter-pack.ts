@@ -17,6 +17,7 @@ import {
   type StarterRecording,
   type StarterWord,
   isShareAlike,
+  reviewNote,
 } from '../../src/services/starter-records.ts'
 
 // The rate every bundled file is written at: VOICEVOX's own, and half
@@ -496,11 +497,6 @@ export const applyReview = (
 
 const cell = (text: string): string => text.replaceAll('|', '\\|')
 
-const reviewText = (line: StarterPackLine): string =>
-  line.review.verdict === 'unreviewed'
-    ? 'Not yet checked by a native speaker'
-    : `Checked by a native speaker on ${line.review.reviewedOn}`
-
 // CREDITS.md, written whole from the pack: the line bundled since ticket
 // 09, then every starter recording with its author, source, licence and
 // what was done to it, as CC BY and CC BY-SA ask, and the sources of the
@@ -534,7 +530,7 @@ export const creditsMarkdown = (pack: StarterPack): string =>
       '| - | - | - | - | - | - |',
       ...level.lines.map(
         line =>
-          `| ${cell(line.text)} (${cell(line.kana)}) | ${cell(line.credit.author)} | [${line.credit.source}](${line.credit.page}) | [${cell(line.credit.licence)}](${line.credit.licenceUrl}) | ${cell(line.credit.changes)} | ${reviewText(line)} |`,
+          `| ${cell(line.text)} (${cell(line.kana)}) | ${cell(line.credit.author)} | [${line.credit.source}](${line.credit.page}) | [${cell(line.credit.licence)}](${line.credit.licenceUrl}) | ${cell(line.credit.changes)} | ${reviewNote(line.review)} |`,
       ),
       '',
     ]),

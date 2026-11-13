@@ -123,6 +123,16 @@ export const LineReview = Schema.Union([
 ])
 export type LineReview = typeof LineReview.Type
 
+// What a line's credit says of its review, shared by the app and
+// CREDITS.md: the reviewer is named only when the export carries a name,
+// which the review page asks for only with their written agreement.
+export const reviewNote = (review: LineReview): string =>
+  review.verdict === 'unreviewed'
+    ? 'Not yet checked by a native speaker'
+    : review.reviewer === undefined
+      ? `Checked by a native speaker on ${review.reviewedOn}`
+      : `Checked by ${review.reviewer}, a native speaker, on ${review.reviewedOn}`
+
 // One word of a line, an accent phrase of its own, with the particle
 // that follows it. `unidic` and `wiktionary` are what each source gives
 // for the word as a dictionary entry, written by the script's

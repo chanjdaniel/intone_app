@@ -1,6 +1,7 @@
 import type { Html, HtmlBuilder } from 'foldkit/html'
 import { type ModelId, modelCredits } from 'virtual:intone/models'
 
+import type { StarterPack } from '../../services/starter-records'
 import { firstLines } from '../line/lines'
 import { reviewNoteOf, starterPack } from '../line/starter'
 import { pageFrame } from '../pageFrame'
@@ -87,7 +88,11 @@ const credit = <ViewMessage>(
     ],
   )
 
-export const creditsView = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
+// `pack` is the starter set's, the app's own unless a test gives another.
+export const creditsView = <ViewMessage>(
+  h: HtmlBuilder<ViewMessage>,
+  pack: StarterPack = starterPack,
+): Html =>
   pageFrame(
     'Credits',
     [
@@ -133,7 +138,7 @@ export const creditsView = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
               ),
             ),
           ),
-          ...starterPack.levels.map(level =>
+          ...pack.levels.map(level =>
             h.keyed('div')(
               level.id,
               [h.Class('flex flex-col gap-3')],

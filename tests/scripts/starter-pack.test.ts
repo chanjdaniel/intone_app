@@ -110,6 +110,7 @@ describe('the starter pack', () => {
       review,
       JSON.stringify({
         reviewedOn: '2026-12-01',
+        reviewer: '山田花子',
         verdicts: [
           { lineId: accepted.id, verdict: 'accept', note: 'clear' },
           { lineId: rejected.id, verdict: 'reject' },
@@ -125,6 +126,7 @@ describe('the starter pack', () => {
     ).toStrictEqual({
       verdict: 'accept',
       reviewedOn: '2026-12-01',
+      reviewer: '山田花子',
       note: 'clear',
     })
     const pack = readFileSync(
@@ -136,7 +138,7 @@ describe('the starter pack', () => {
       existsSync(join(copy, 'starter', 'pack', 'audio', `${rejected.id}.wav`)),
     ).toBe(false)
     expect(readFileSync(join(copy, 'CREDITS.md'), 'utf8')).toContain(
-      'Checked by a native speaker on 2026-12-01',
+      'Checked by 山田花子, a native speaker, on 2026-12-01',
     )
     expect(script(['--check', '--root', copy]).status).toBe(0)
   })

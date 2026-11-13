@@ -3,6 +3,7 @@ import { expect, given, role, scene, text } from 'foldkit/scene'
 import { modelCredits } from 'virtual:intone/models'
 import { describe, test } from 'vitest'
 
+import type { StarterPack } from '../../services/starter-records'
 import { starterPack } from '../line/starter'
 import { AppRoute, initialModel, update, view } from '../main'
 import {
@@ -11,6 +12,7 @@ import {
   RestoreState,
   SettingsPage,
 } from '../settings/settings'
+import { creditsView } from './creditsView'
 
 // /credits names every model the app ships, from the build's own list,
 // and the recording it brings.
@@ -75,6 +77,52 @@ describe('/credits', () => {
           ).toHaveAttr('href', line.credit.page),
         ),
       expect(text(/checked against UniDic 2023\.02/)).toExist(),
+    )
+  })
+
+  test('names the native speaker who checked a line, when they agreed to be credited, and the day', () => {
+    const [first, ...rest] = starterPack.levels
+    if (first === undefined) {
+      throw new Error('the pack has no level')
+    }
+    const [line, ...others] = first.lines
+    if (line === undefined) {
+      throw new Error('the first level has no line')
+    }
+    const reviewed: StarterPack = {
+      ...starterPack,
+      levels: [
+        {
+          ...first,
+          lines: [
+            {
+              ...line,
+              review: {
+                verdict: 'accept',
+                reviewedOn: '2026-12-01',
+                reviewer: '山田花子',
+              },
+            },
+            ...others,
+          ],
+        },
+        ...rest,
+      ],
+    }
+    scene(
+      {
+        update,
+        view: (_model, h) => ({
+          title: 'Credits',
+          body: creditsView(h, reviewed),
+        }),
+      },
+      given(initialModel(AppRoute.Credits())),
+      expect(
+        text(
+          `${line.credit.changes} Checked by 山田花子, a native speaker, on 2026-12-01.`,
+        ),
+      ).toExist(),
     )
   })
 
