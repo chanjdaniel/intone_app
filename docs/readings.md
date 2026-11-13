@@ -11,10 +11,10 @@ This file says what the learner sees, which tokeniser was chosen and why, what i
   Until the learner first shows readings it says what that costs: "Shows the kana over the kanji. The first time, it downloads the reading dictionary, 12 MB, from Intone itself."
   Nothing of the dictionary is fetched before the press.
 - Shown, the line's heading carries the kana over each run of kanji as ruby (`<ruby>`, with `<rp>` parentheses for a browser with none), in the app's own font stack, Japanese faces first; the kana a word is written with stay bare, so 好き has す over 好 alone.
-  The status line under the buttons says "Loading the readings…" until they come, then "Readings come from a dictionary and may be wrong; edit any that are."
+  The note under the buttons, a polite live region, says "Loading the readings…" until they come, then "Readings come from a dictionary and may be wrong; edit any that are."
 - "Edit a reading" opens a form of one field a word with kanji, labelled by the word, holding its reading, with the dictionary's as the placeholder.
   A reading must be kana (hiragana, katakana or ー); a field left empty, or holding the dictionary's own reading, is no edit.
-  An edited reading is drawn in the accent's colour, the dictionary's in grey, and the status line counts them ("One reading is your own, in colour.").
+  An edited reading is drawn in the accent's colour, the dictionary's in grey, and the note counts them ("One reading is your own, in colour.").
 - The choice to show readings is kept with the settings, so readings stay shown, or hidden, across a reload and from line to line; "Hide readings" hides them and frees the dictionary.
 - `/credits` names the dictionary (from `models.json`, as every model) and Lindera, the tokeniser, each with its licence and source; `NOTICES.md` lists the `lindera-wasm` package and the dictionary's files.
 
