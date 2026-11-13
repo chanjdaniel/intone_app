@@ -1,3 +1,5 @@
+import { zipSync } from 'fflate'
+import { createHash } from 'node:crypto'
 import {
   copyFileSync,
   mkdirSync,
@@ -10,6 +12,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 
+import { modelNotices, servedNotices } from '../../build/notices.ts'
 import { root, run } from '../support/run'
 
 // NOTICES.md and src/virtual-modules.d.ts are generated from the lockfile
@@ -88,5 +91,56 @@ describe('the generated files', () => {
     expect(
       readFileSync(join(root, 'src', 'virtual-modules.d.ts'), 'utf8'),
     ).toContain("export type ModelId = 'swift-f0' | 'silero-vad'")
+  })
+})
+
+describe('the notices a model file carries', () => {
+  test('are read from each zip in the model cache and follow the generated notices in the copy the build serves', async () => {
+    const encode = (text: string) => new TextEncoder().encode(text)
+    const zip = zipSync({
+      'dict/NOTICE.txt': encode('Copyright NAIST.\nPermission granted.\n'),
+      'dict/LICENSE': encode('The tokeniser’s own.\n'),
+      'dict/matrix.mtx': encode('not a notice'),
+    })
+    const sha256 = createHash('sha256').update(zip).digest('hex')
+    mkdirSync(join(scratch, 'cache', sha256), { recursive: true })
+    writeFileSync(join(scratch, 'cache', sha256, 'dict.zip'), zip)
+    const notices = await modelNotices(
+      [
+        {
+          id: 'a-dictionary',
+          name: 'A dictionary',
+          licence: 'its own notice',
+          source: 'https://example.org/',
+          files: [
+            {
+              path: 'dict.zip',
+              url: 'https://example.org/dict.zip',
+              bytes: zip.length,
+              sha256,
+            },
+          ],
+        },
+      ],
+      join(scratch, 'cache'),
+    )
+    expect(notices).toStrictEqual([
+      {
+        model: 'A dictionary',
+        path: 'a-dictionary/dict.zip: dict/LICENSE',
+        text: 'The tokeniser’s own.\n',
+      },
+      {
+        model: 'A dictionary',
+        path: 'a-dictionary/dict.zip: dict/NOTICE.txt',
+        text: 'Copyright NAIST.\nPermission granted.\n',
+      },
+    ])
+    const served = servedNotices('# Notices\n\nThe rest.\n', notices)
+    expect(served.startsWith('# Notices\n\nThe rest.\n')).toBe(true)
+    expect(served).toContain(
+      '### A dictionary\n\nFrom `a-dictionary/dict.zip: dict/NOTICE.txt`, as it ships:\n\n```text\nCopyright NAIST.\nPermission granted.\n```',
+    )
+    expect(servedNotices('# Notices\n', [])).toBe('# Notices\n')
   })
 })

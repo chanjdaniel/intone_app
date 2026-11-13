@@ -259,10 +259,19 @@ describe('the production build', () => {
   // The app claims only what it compared (report section 3): no text it
   // ships says "accuracy", or that a take is correct. Every text file the
   // build writes is read, libraries and ONNX Runtime's loader included.
-  test('ships the notices of every package and model file it carries, as NOTICES.md', () => {
-    expect(readFileSync(join(dist, 'NOTICES.md'), 'utf8')).toBe(
-      readFileSync(join(root, 'NOTICES.md'), 'utf8'),
+  test('ships the notices of every package and model file it carries, as NOTICES.md, with the text of mecab-ipadic’s notice', () => {
+    const served = readFileSync(join(dist, 'NOTICES.md'), 'utf8')
+    expect(
+      served.startsWith(
+        readFileSync(join(root, 'NOTICES.md'), 'utf8').trimEnd(),
+      ),
+    ).toBe(true)
+    expect(served).toContain('## Notices the model files carry')
+    expect(served).toContain(
+      'From `lindera-ipadic/lindera-ipadic-6.2.0.zip: lindera-ipadic/NOTICE.txt`, as it ships:',
     )
+    expect(served).toContain('Nara Institute of Science and Technology')
+    expect(served).toContain('originate from ICOT Free Software.')
   })
 
   // Transformers.js's own words to a developer, in the text Worker, each

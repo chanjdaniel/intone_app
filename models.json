@@ -131,7 +131,7 @@
     {
       "id": "lindera-ipadic",
       "name": "IPADIC 2.7.0, built for Lindera 6.2.0",
-      "licence": "mecab-ipadic's own notice (NAIST, and ICOT Free Software), in the zip's NOTICE.txt",
+      "licence": "mecab-ipadic's own notice (NAIST, and ICOT Free Software), whose text the app's /NOTICES.md carries",
       "source": "https://github.com/lindera/lindera/tree/0482efcc46b5ec518b7238efae55e9fed9bba0c0/lindera-ipadic",
       "files": [
         {
