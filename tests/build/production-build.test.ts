@@ -265,34 +265,54 @@ describe('the production build', () => {
     )
   })
 
-  // Transformers.js's own words to a developer, in the text Worker: two
-  // warnings to the console, of its tokenizer and its timestamps, and one
-  // error, which the Worker writes to the console and says in its own
-  // words on screen (src/workers/whisper-session.ts).
-  const libraryWarnings = [
-    'you may experience slightly inaccurate results',
-    'This may lead to inaccurate token-level timestamps',
-    'Incorrect state encountered during generation.',
+  // Transformers.js's own words to a developer, in the text Worker, each
+  // with how often it is there: three warnings to the console, two of its
+  // tokenizers (Marian's and XLM's, in the same words) and one of its
+  // timestamps, and one error, which the Worker writes to the console and
+  // says in its own words on screen (src/workers/whisper-session.ts).
+  const libraryWarnings: ReadonlyArray<readonly [string, number]> = [
+    ['you may experience slightly inaccurate results', 2],
+    ['This may lead to inaccurate token-level timestamps', 1],
+    ['Incorrect state encountered during generation.', 1],
   ]
   // The starter review's verdict that a stated accent is another, as the
   // export the script applies spells it (src/services/starter-records.ts):
   // a value in the file, which the review page never shows; it says of a
-  // dictionary's accent, never of a take.
+  // dictionary's accent, never of a take. Its six uses, all in the entry
+  // chunk: the verdict's Schema, the review's two reads of it in
+  // review.ts and one in update.ts, and the view's choice and its accent
+  // field. A seventh would be a new use, which must be read before it is
+  // let through.
   const reviewVerdict = /(["'`])correct\1/g
+  const reviewVerdictUses = 6
 
   test('ships no text that says "accuracy" or that a take is correct', () => {
     const texts = files().filter(file => /\.(js|mjs|html|css)$/.test(file))
     expect(texts.length).toBeGreaterThan(3)
+    const allowed = new Map<string, number>()
+    const count = (key: string, found: number) =>
+      allowed.set(key, (allowed.get(key) ?? 0) + found)
     for (const file of texts) {
+      const read = readFileSync(join(dist, file), 'utf8')
+      for (const [warning] of libraryWarnings) {
+        count(warning, read.split(warning).length - 1)
+      }
+      const verdicts = read.match(reviewVerdict)?.length ?? 0
+      count('the review verdict', verdicts)
+      if (verdicts > 0) {
+        expect(file).toMatch(/^assets\/index-/)
+      }
       const code = libraryWarnings
-        .reduce(
-          (read, warning) => read.replaceAll(warning, ''),
-          readFileSync(join(dist, file), 'utf8'),
-        )
+        .reduce((rest, [warning]) => rest.replaceAll(warning, ''), read)
         .replace(reviewVerdict, '')
       expect(code, file).not.toMatch(/accura/i)
       expect(code, file).not.toMatch(/\b(in)?correct/i)
     }
+    // Each allowance is let through exactly as often as it is known.
+    expect(Object.fromEntries(allowed)).toStrictEqual({
+      ...Object.fromEntries(libraryWarnings),
+      'the review verdict': reviewVerdictUses,
+    })
     // The score's own words are there to be read.
     expect(
       texts.some(file =>
