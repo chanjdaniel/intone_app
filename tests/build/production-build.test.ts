@@ -42,7 +42,9 @@ const quoted = (value: string): RegExp => new RegExp(`["'\`]${value}["'\`]`)
 
 // A key and its string value in minified code, whichever quotes it chose.
 const quotedPair = (key: string, value: string): RegExp =>
-  new RegExp(`["'\`]?${key}["'\`]?:\\s*["'\`]${value}["'\`]`)
+  new RegExp(
+    `["'\`]?${key}["'\`]?:\\s*["'\`]${value.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)}["'\`]`,
+  )
 
 const sha256 = (bytes: Buffer): string =>
   createHash('sha256').update(bytes).digest('hex')
@@ -151,7 +153,7 @@ describe('the production build', () => {
     )
   })
 
-  test("ships both ONNX Runtime builds' WebAssembly from its own origin, unchanged", async () => {
+  test("ships both ONNX Runtime builds' WebAssembly and Lindera's from its own origin, unchanged", async () => {
     const version = await onnxRuntimeVersion()
     for (const file of onnxRuntimeFiles) {
       expect(readFileSync(join(dist, 'ort', version, file))).toStrictEqual(
@@ -173,15 +175,24 @@ describe('the production build', () => {
         ),
       )
     }
-    expect(
-      files()
-        .filter(file => file.endsWith('.wasm'))
-        .sort(),
-    ).toStrictEqual(
+    const wasm = files()
+      .filter(file => file.endsWith('.wasm'))
+      .sort()
+    expect(wasm.filter(file => file.startsWith('ort'))).toStrictEqual(
       [
         join('ort', version, 'ort-wasm-simd-threaded.wasm'),
         join('ort', textVersion, 'ort-wasm-simd-threaded.asyncify.wasm'),
       ].sort(),
+    )
+    // Lindera's, which the bundler emits beside the readings Worker under
+    // a hashed name.
+    const lindera = wasm.filter(file => !file.startsWith('ort'))
+    expect(lindera).toHaveLength(1)
+    expect(lindera[0]).toMatch(/^assets\/lindera_wasm_bg-[\w-]{8}\.wasm$/)
+    expect(readFileSync(join(dist, lindera[0] ?? ''))).toStrictEqual(
+      readFileSync(
+        join(root, 'node_modules', 'lindera-wasm', 'lindera_wasm_bg.wasm'),
+      ),
     )
   })
 

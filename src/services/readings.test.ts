@@ -59,7 +59,7 @@ const answering = (message: ToReadings): ReadonlyArray<FromReadings> => {
   return [{ _tag: 'Closed' }]
 }
 
-const dictionary = { url: '/models/lindera-ipadic/v/d.zip', bytes: 10 }
+const dictionary = { url: '/dictionary.zip', bytes: 10 }
 
 describe('the readings', () => {
   it.effect(
