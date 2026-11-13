@@ -40,7 +40,10 @@ const program = Effect.gen(function* () {
     modelsRoot: string | null
     stopping: boolean
     job: Fiber.Fiber<void> | null
-  } = { modelsRoot: null, stopping: false, job: null }
+    // A download is interrupted at once, its fetch aborted; Whisper's run
+    // cannot be, so a transcription stops at its next window.
+    interruptible: boolean
+  } = { modelsRoot: null, stopping: false, job: null, interruptible: false }
 
   const download = (modelsRoot: string, model: TextModel) => {
     const sent = { at: 0 }
@@ -87,7 +90,10 @@ const program = Effect.gen(function* () {
       }),
     )
 
-  const run = (job: Effect.Effect<void, Readonly<{ reason: string }>>) =>
+  const run = (
+    job: Effect.Effect<void, Readonly<{ reason: string }>>,
+    interruptible: boolean,
+  ) =>
     Effect.gen(function* () {
       if (state.job !== null) {
         return yield* post({
@@ -95,6 +101,7 @@ const program = Effect.gen(function* () {
           reason: 'The text Worker is busy.',
         })
       }
+      state.interruptible = interruptible
       state.job = yield* Effect.forkIn(
         job.pipe(
           Effect.catch(error => post({ _tag: 'Failed', reason: error.reason })),
@@ -128,11 +135,12 @@ const program = Effect.gen(function* () {
               download(modelsRoot, model).pipe(
                 Effect.andThen(post({ _tag: 'Downloaded' })),
               ),
+              true,
             ),
           ),
         Transcribe: ({ model, samples, windows }) =>
           loaded(modelsRoot =>
-            run(transcribe(modelsRoot, model, samples, windows)),
+            run(transcribe(modelsRoot, model, samples, windows), false),
           ),
         Close: () =>
           Effect.sync(() => {
@@ -155,13 +163,16 @@ const program = Effect.gen(function* () {
   )
 
   // A download stops at once; a transcription at its next window, before
-  // the model it runs on is freed.
+  // the model it runs on is freed, or after a second, which the page's
+  // two seconds of grace leave room for.
   if (state.job !== null) {
     const job = state.job
-    yield* Effect.raceFirst(
-      Fiber.await(job),
-      Effect.sleep('1 second').pipe(Effect.andThen(Fiber.interrupt(job))),
-    )
+    yield* state.interruptible
+      ? Fiber.interrupt(job)
+      : Effect.raceFirst(
+          Fiber.await(job),
+          Effect.sleep('1 second').pipe(Effect.andThen(Fiber.interrupt(job))),
+        )
   }
   yield* Scope.close(jobScope, Exit.void)
   yield* post({ _tag: 'Closed' })

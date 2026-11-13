@@ -35,6 +35,7 @@
     "docs/score-study.md",
     "docs/cut-study.md",
     "docs/sounds-study.md",
+    "docs/transcription-study.md",
     "src/app/dev/cutStudyLines.json"
   ]
 }

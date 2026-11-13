@@ -97,7 +97,8 @@ The app's `chosenAligner` still reads the bands, since the bar's rule for the al
 - each take would wait 2.3 to 5.9 s for the model's frames, where the whole score now shows about 50 ms after the take ends (`docs/latency.md`);
 - the gain is 5 ms at the 90th percentile and 0.012 at 19 morae.
 
-Once transcription keeps Whisper-base's encoder on the device, aligning by its frames when they are there is the change to weigh, with a `SCORE_VERSION` bump, since it moves scores.
+Ticket 16 now keeps Whisper-base's encoder on the device once the learner agrees to its download.
+Aligning by its frames when they are there was weighed then and left out, for the first reason above: a take's score would depend on a download the learner may decline, which the transcription's own rule forbids (no score depends on the text model, `docs/transcription.md`); it would also wait the 2.3 s each take.
 
 ## The licences, read at source
 

@@ -41,6 +41,7 @@ export const libraryEntries: ReadonlyArray<
   { name: 'clip-lines', title: 'A clip’s lines' },
   { name: 'line-editor', title: 'Line editor' },
   { name: 'local-pack', title: 'Local pack: importing and its lines' },
+  { name: 'text-for-lines', title: 'Text for the lines' },
   { name: 'practice-calendar', title: 'Practice calendar' },
   { name: 'score-trend', title: 'Score trend' },
   { name: 'blind-chart', title: 'Blind-take chart' },

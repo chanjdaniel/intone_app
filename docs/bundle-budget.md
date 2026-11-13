@@ -15,18 +15,22 @@ No model file is in any of them: models are served whole from `/models/` (`docs/
 
 Each line is the chunk's gzip size, measured through Vite's production build, plus 10%, rounded up to the next 1,000 B:
 
-| Chunk                                                    | Gzip        | Line        |
-| -------------------------------------------------------- | ----------- | ----------- |
-| `tracker.worker` (SwiftF0 and ONNX Runtime's JavaScript) | 50,823 B    | 56,000 B    |
-| `clip.worker` (Silero VAD, SwiftF0, the cut)             | 52,657 B    | 58,000 B    |
-| `clip-store.worker` (the origin private file system)     | 25,449 B    | 28,000 B    |
-| `capture-processor` (the worklet)                        | 336 B       | 1,000 B     |
-| `backup` (the backup's code and `fflate`)                | 7,694 B     | 9,000 B     |
-| `compare-take` (the score's maths)                       | 3,223 B     | 4,000 B     |
-| `ort-wasm-simd-threaded.mjs`                             | 9,216 B     | 11,000 B    |
-| `ort-wasm-simd-threaded.wasm`                            | 3,827,372 B | 4,180,000 B |
+| Chunk                                                                           | Gzip        | Line        |
+| ------------------------------------------------------------------------------- | ----------- | ----------- |
+| `tracker.worker` (SwiftF0 and ONNX Runtime's JavaScript)                        | 50,823 B    | 56,000 B    |
+| `clip.worker` (Silero VAD, SwiftF0, the cut)                                    | 52,657 B    | 58,000 B    |
+| `clip-store.worker` (the origin private file system)                            | 25,449 B    | 28,000 B    |
+| `capture-processor` (the worklet)                                               | 336 B       | 1,000 B     |
+| `backup` (the backup's code and `fflate`)                                       | 7,694 B     | 9,000 B     |
+| `compare-take` (the score's maths)                                              | 3,223 B     | 4,000 B     |
+| `ort-wasm-simd-threaded.mjs`                                                    | 9,216 B     | 11,000 B    |
+| `ort-wasm-simd-threaded.wasm`                                                   | 3,827,372 B | 4,180,000 B |
+| `text.worker` (Transformers.js, its ONNX Runtime's JavaScript, the text Worker) | 174,641 B   | 193,000 B   |
+| `ort-wasm-simd-threaded.asyncify.mjs` (Transformers.js's ONNX Runtime)          | 19,394 B    | 22,000 B    |
+| `ort-wasm-simd-threaded.asyncify.wasm` (Transformers.js's ONNX Runtime)         | 6,625,019 B | 7,288,000 B |
 
-ONNX Runtime's two files are its release's own and change only when it is upgraded (`docs/upgrading.md`).
+ONNX Runtime's files are its release's own and change only when it is upgraded (`docs/upgrading.md`); Transformers.js's two come with its own pinned ONNX Runtime, so they move only when Transformers.js does.
+The text Worker's chunk and Transformers.js's ONNX Runtime are fetched only once the learner agrees to the text model's download (`docs/transcription.md`).
 
 ## How the cap was set
 
