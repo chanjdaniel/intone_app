@@ -1,13 +1,16 @@
 import { Schema } from 'effect'
-import { readFileSync } from 'node:fs'
+import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
 import {
   ReviewExport,
+  StarterList,
   StarterPack,
 } from '../../src/services/starter-records.ts'
+import { run } from '../support/run.ts'
 import { launch, withPage } from './take-session.ts'
 
 // The starter set in the built app (docs/starter-set.md): its levels on
@@ -15,8 +18,8 @@ import { launch, withPage } from './take-session.ts'
 // take of it in another voice, its file served from the app's own origin
 // under a hashed path kept for good, its credit on the practice screen
 // and on /credits; and the review page, reached only by its address, its
-// verdicts kept across a reload and saved as one file the script reads.
-// Nothing is sent anywhere.
+// verdicts kept across a reload and saved as one file, which the script
+// writes into a copy of the list and its pack. Nothing is sent anywhere.
 
 const root = join(import.meta.dirname, '..', '..')
 
@@ -31,6 +34,24 @@ const rain = pairs?.lines.find(line => line.id === 'ame-ga-suki')
 if (pairs === undefined || rain === undefined) {
   throw new Error('The starter pack has no 雨が好き in its pairs.')
 }
+
+// A phrase recorded by a person, on Commons: correcting its accent
+// leaves its file as it is, so the script takes the review in with no
+// VOICEVOX, as on CI.
+const phrases = pack.levels.find(level => level.kind === 'Phrases')
+const bridge = phrases?.lines.find(line => line.id === 'hashi-o-watarimasu')
+if (bridge === undefined || bridge.words[0]?.accentType !== 2) {
+  throw new Error('The starter pack has no 橋を渡ります stated as 橋 2.')
+}
+
+// scripts/starter-pack.ts on a copy of the list, its pack and CREDITS.md.
+const starterPackScript = (args: ReadonlyArray<string>) =>
+  run('node', [
+    '--import',
+    join(root, 'scripts', 'source-imports.ts'),
+    join(root, 'scripts', 'starter-pack.ts'),
+    ...args,
+  ])
 
 const rightTake = join(
   root,
@@ -152,7 +173,7 @@ test('a starter level: listed on home, a line practised, its file kept for good,
   }
 })
 
-test('the review page: a line heard, verdicts kept across a reload, saved as one file, nothing sent', async ({
+test('the review page: a line heard, verdicts kept across a reload, saved as one file the script takes into the list, nothing sent', async ({
   playwright,
   baseURL,
 }) => {
@@ -176,20 +197,20 @@ test('the review page: a line heard, verdicts kept across a reload, saved as one
         }),
       ).toBeVisible()
       const card = page.getByRole('listitem').filter({
-        has: page.getByRole('heading', { name: rain.text, level: 3 }),
+        has: page.getByRole('heading', { name: bridge.text, level: 3 }),
       })
-      await card.getByRole('button', { name: `Play ${rain.text}` }).click()
+      await card.getByRole('button', { name: `Play ${bridge.text}` }).click()
       await expect(
-        card.getByRole('button', { name: `Play ${rain.text}` }),
+        card.getByRole('button', { name: `Play ${bridge.text}` }),
       ).toBeVisible({ timeout: 10_000 })
 
       await card
         .getByRole('radio', { name: 'The accent is another: choose it below' })
         .check()
       await card
-        .getByRole('combobox', { name: 'Accent type of 雨' })
-        .selectOption('0')
-      await card.getByLabel('Note, if any').fill('sounds like candy')
+        .getByRole('combobox', { name: 'Accent type of 橋' })
+        .selectOption('1')
+      await card.getByLabel('Note, if any').fill('sounds like 箸')
       const status = page.getByRole('status')
       await expect(status).toHaveText(
         /^1 of \d+ lines have a verdict\. Your verdicts are kept on this device\.$/,
@@ -197,10 +218,10 @@ test('the review page: a line heard, verdicts kept across a reload, saved as one
 
       await page.reload()
       await expect(
-        card.getByRole('combobox', { name: 'Accent type of 雨' }),
-      ).toHaveValue('0')
+        card.getByRole('combobox', { name: 'Accent type of 橋' }),
+      ).toHaveValue('1')
       await expect(card.getByLabel('Note, if any')).toHaveValue(
-        'sounds like candy',
+        'sounds like 箸',
       )
 
       const download = page.waitForEvent('download')
@@ -217,16 +238,45 @@ test('the review page: a line heard, verdicts kept across a reload, saved as one
       )
       expect(saved.verdicts).toStrictEqual([
         {
-          lineId: rain.id,
+          lineId: bridge.id,
           verdict: 'correct',
-          accentType: 0,
-          note: 'sounds like candy',
+          accentType: 1,
+          note: 'sounds like 箸',
         },
       ])
       expect(saved.reviewer).toBeUndefined()
       await expect(
         page.getByText(/^Saved 1 verdict as intone-starter-review-/),
       ).toBeVisible()
+
+      // The saved file, as the page wrote it, into a copy of the list: the
+      // line's first word takes the accent given, with the one stated
+      // before, and the pack written from it is current.
+      const copy = mkdtempSync(join(tmpdir(), 'starter-review-'))
+      try {
+        cpSync(join(root, 'starter'), join(copy, 'starter'), {
+          recursive: true,
+        })
+        cpSync(join(root, 'CREDITS.md'), join(copy, 'CREDITS.md'))
+        const applied = starterPackScript(['--root', copy, '--apply', path])
+        expect(applied.status, applied.output).toBe(0)
+        const list = Schema.decodeUnknownSync(StarterList)(
+          JSON.parse(readFileSync(join(copy, 'starter', 'lines.json'), 'utf8')),
+        )
+        const line = list.lines.find(each => each.id === bridge.id)
+        expect(line?.words[0]?.accentType).toBe(1)
+        expect(line?.review).toMatchObject({
+          verdict: 'correct',
+          reviewedOn: saved.reviewedOn,
+          accentType: 1,
+          statedBefore: 2,
+          note: 'sounds like 箸',
+        })
+        const checked = starterPackScript(['--check', '--root', copy])
+        expect(checked.status, checked.output).toBe(0)
+      } finally {
+        rmSync(copy, { recursive: true, force: true })
+      }
 
       nothingSent(requests, origin)
       expect(problems).toStrictEqual([])

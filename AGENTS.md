@@ -239,7 +239,7 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 - `src/app/line/starter.ts` decodes the pack, each file a hashed `/assets/` URL by `import.meta.glob`; `src/app/line/lines.ts` makes each level a bundled clip (`starterLevels`), listed on home by `src/app/level/starterLevels.ts`, credited on its practice screen and on `/credits`, and marked "Not yet checked by a native speaker." until its review.
 - `/review` (`src/app/review/`) is the starter review's page, reached only by its address: it plays each line (`subscriptions.ts`), keeps the verdicts in IndexedDB's `meta` store through `src/services/review-store.ts` (`ReviewStore`, with `layer` and `layerMemory(records)`), one write at a time, and saves them as one file (`ExportReview`, `src/app/saveFile.ts`).
   Its verdict "correct", the export's own word for another accent, is the one use of the word the built bundle's check allows; the page never shows it.
-- `tests/e2e/starter.spec.ts` practises a starter line with the fake microphone, checks its file's address and caching and its credits, and runs the review to its file, nothing sent.
+- `tests/e2e/starter.spec.ts` practises a starter line with the fake microphone, checks its file's address and caching and its credits, and runs the review to its file, which `npm run starter:pack -- --apply` takes into a copy of the list, nothing sent.
 
 ## Text for the lines
 
