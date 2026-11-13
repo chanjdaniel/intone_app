@@ -126,7 +126,7 @@ const working = <ViewMessage>(
       ...(job.step._tag === 'Keeping'
         ? [h.Disabled(true)]
         : [h.OnClick(events.cancelPack)]),
-      h.Class('button-secondary self-start disabled:text-muted'),
+      h.Class('button-secondary self-start'),
     ],
     ['Stop'],
   ),
@@ -165,12 +165,7 @@ export const packPanel = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   h.section(
-    [
-      h.AriaLabelledBy('pack-heading'),
-      h.Class(
-        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
-      ),
-    ],
+    [h.AriaLabelledBy('pack-heading'), h.Class('card')],
     [
       h.h2(
         [h.Id('pack-heading'), h.Class('text-xl font-bold')],

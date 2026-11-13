@@ -25,6 +25,7 @@ import {
   isReadingsFor,
   readingFieldId,
   readingsTarget,
+  shownWordsOf,
 } from './readings'
 
 // A line's readings: the choice to show them, read when a line opens and
@@ -265,18 +266,16 @@ export const keptFixes = (
         current._tag === 'Ready' && isReadingsFor(current, form)
           ? LineReadingsState.Ready({
               ...current,
-              words: current.words.map(word => {
-                const fix = fixes.find(
-                  each => each.from === word.from && each.to === word.to,
-                )
-                return fix === undefined
-                  ? {
-                      ...word,
-                      maybeKana: word.maybeDictionaryKana,
-                      fixed: false,
-                    }
-                  : { ...word, maybeKana: Option.some(fix.kana), fixed: true }
-              }),
+              words: shownWordsOf(
+                current.text,
+                current.words.map(word => ({
+                  from: word.from,
+                  to: word.to,
+                  surface: word.surface,
+                  kana: Option.getOrNull(word.maybeDictionaryKana),
+                })),
+                Option.some({ text: current.text, fixes }),
+              ),
             })
           : LineReadingsState.Idle(),
     }),

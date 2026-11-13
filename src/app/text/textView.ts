@@ -5,6 +5,7 @@ import { Dialog } from '@foldkit/ui'
 
 import type { TextChoice, TextModelId } from '../../services/history-records'
 import { textModelBytes } from '../../services/transcriber'
+import { bytesText } from '../history/format'
 import type { LevelClip, LevelLine } from '../level/level'
 import { levelLineTitle } from '../level/level'
 import { progressBar } from '../upload/progressBar'
@@ -42,15 +43,8 @@ export type TextEvents<ViewMessage> = Readonly<{
   notNow: ViewMessage
 }>
 
-const primaryButton = 'button-primary disabled:opacity-60'
-const secondaryButton = 'button-secondary disabled:text-muted'
-
-// Megabytes as the dialog says them: a million bytes, whole.
-export const megabytesText = (bytes: number): string =>
-  `${Math.round(bytes / 1_000_000)} MB`
-
 export const modelSizeText = (model: TextModelId): string =>
-  megabytesText(textModelBytes(model))
+  bytesText(textModelBytes(model))
 
 // The model as the learner reads its name.
 export const modelTitle = (model: TextModelId): string =>
@@ -64,7 +58,7 @@ export const stepText = (step: TextStep): string =>
   TextStep.match(step, {
     Decoding: () => 'Reading the clip’s audio.',
     Downloading: ({ done, total }) =>
-      `Downloading the text model: ${Math.round(done / 1_000_000)} of ${megabytesText(total)}.`,
+      `Downloading the text model: ${Math.round(done / 1_000_000)} of ${bytesText(total)}.`,
     Preparing: () => 'Opening the text model.',
     Transcribing: ({ done, total }) =>
       `Writing out the text: part ${Math.min(done + 1, total)} of ${total}.`,
@@ -144,7 +138,7 @@ export const textJobView = <ViewMessage>(
                     h.Type('button'),
                     h.OnClick(events.stop),
                     ...(step._tag === 'Keeping' ? [h.Disabled(true)] : []),
-                    h.Class(`${secondaryButton} self-start`),
+                    h.Class('button-secondary self-start'),
                   ],
                   ['Stop'],
                 ),
@@ -181,7 +175,7 @@ const formActions = <ViewMessage>(
         [
           h.Type('submit'),
           ...(status._tag === 'Saving' ? [h.Disabled(true)] : []),
-          h.Class(primaryButton),
+          h.Class('button-primary'),
         ],
         [status._tag === 'Saving' ? 'Saving…' : saveText],
       ),
@@ -189,7 +183,7 @@ const formActions = <ViewMessage>(
         [
           h.Type('button'),
           h.OnClick(events.cancelText),
-          h.Class(secondaryButton),
+          h.Class('button-secondary'),
         ],
         ['Cancel'],
       ),
@@ -258,9 +252,7 @@ export const lineTextControls = <ViewMessage>(
                 ? `Edit ${title.toLowerCase()}’s text`
                 : `Add ${title.toLowerCase()}’s text`,
             ),
-            h.Class(
-              'inline-flex min-h-11 items-center rounded-md text-base text-accent underline underline-offset-4 focus-ring',
-            ),
+            h.Class('link text-base'),
           ],
           [Option.isSome(line.maybeText) ? 'Edit the text' : 'Add its text'],
         ),
@@ -294,12 +286,7 @@ export const levelTextSection = <ViewMessage>(
   const pasting = edit._tag === 'WholeClip' && edit.clipId === clip.id
   const pasteErrorId = `${pastedTextFieldId}-error`
   return h.section(
-    [
-      h.AriaLabelledBy('level-text-heading'),
-      h.Class(
-        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
-      ),
-    ],
+    [h.AriaLabelledBy('level-text-heading'), h.Class('card')],
     [
       h.h2(
         [h.Id('level-text-heading'), h.Class('text-xl font-bold')],
@@ -351,7 +338,7 @@ export const levelTextSection = <ViewMessage>(
                         [
                           h.Type('button'),
                           h.OnClick(events.writeOut),
-                          h.Class(primaryButton),
+                          h.Class('button-primary'),
                         ],
                         [
                           Option.isSome(clip.maybeWrittenBy)
@@ -365,7 +352,7 @@ export const levelTextSection = <ViewMessage>(
                   [
                     h.Type('button'),
                     h.OnClick(events.paste),
-                    h.Class(secondaryButton),
+                    h.Class('button-secondary'),
                   ],
                   ['Paste your own text'],
                 ),
@@ -398,12 +385,7 @@ export const settingsTextSection = <ViewMessage>(
     choice._tag === 'Read' ? choice.maybeChoice : Option.none<TextChoice>()
   const agreed = Option.exists(maybeChoice, found => found._tag === 'Agreed')
   return h.section(
-    [
-      h.AriaLabelledBy('text-model-heading'),
-      h.Class(
-        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
-      ),
-    ],
+    [h.AriaLabelledBy('text-model-heading'), h.Class('card')],
     [
       h.h2(
         [h.Id('text-model-heading'), h.Class('text-xl font-bold')],
@@ -425,7 +407,7 @@ export const settingsTextSection = <ViewMessage>(
                 h.Type('button'),
                 h.OnClick(events.chooseModel),
                 h.Class(
-                  `${agreed ? secondaryButton : primaryButton} self-start`,
+                  `${agreed ? 'button-secondary' : 'button-primary'} self-start`,
                 ),
               ],
               [
@@ -536,7 +518,7 @@ export const textDialogView = <ViewMessage>(
                             ...initialFocus,
                             h.Type('button'),
                             h.OnClick(events.notNow),
-                            h.Class(secondaryButton),
+                            h.Class('button-secondary'),
                           ],
                           ['Not now'],
                         ),
@@ -544,7 +526,7 @@ export const textDialogView = <ViewMessage>(
                           [
                             h.Type('button'),
                             h.OnClick(events.agree),
-                            h.Class(primaryButton),
+                            h.Class('button-primary'),
                           ],
                           [`Download ${modelSizeText(model)}`],
                         ),

@@ -1,6 +1,7 @@
 import { Context, Effect, Layer, Schema, type Scope } from 'effect'
 import { modelFiles, modelUrls } from 'virtual:intone/models'
 
+import { filesBytes } from '../engine/files'
 import { type ReadingWord, type Token, wordsOf } from '../engine/text/readings'
 import {
   FromReadings,
@@ -18,10 +19,7 @@ import { type WorkerPort, openWorkerSession } from './worker-session'
 // the only requests are for the dictionary and the tokeniser, on the
 // app's own origin.
 
-const dictionaryBytes = modelFiles['lindera-ipadic'].reduce(
-  (sum, file) => sum + file.bytes,
-  0,
-)
+const dictionaryBytes = filesBytes(modelFiles['lindera-ipadic'])
 
 // What turning readings on first downloads, in bytes: the dictionary's
 // zip, from models.json, and Lindera's WebAssembly.

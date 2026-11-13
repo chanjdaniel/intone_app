@@ -2,6 +2,7 @@ import { Context, Effect, Layer, Match, Schema, Stream } from 'effect'
 import { modelFiles, modelVersions, modelsRoot } from 'virtual:intone/models'
 import { textRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'
 
+import { filesBytes } from '../engine/files'
 import type { TextPiece } from '../engine/text/pieces'
 import { type Span, textWindows } from '../engine/text/windows'
 import { isTextModelKept } from '../workers/text-model-cache'
@@ -37,7 +38,7 @@ export const textModelOf = (id: TextModelId): TextModel => ({
 
 // What the download takes, in bytes: every file Transformers.js loads.
 export const textModelBytes = (id: TextModelId): number =>
-  modelFiles[id].reduce((sum, file) => sum + file.bytes, 0)
+  filesBytes(modelFiles[id])
 
 export const textModelVersion = (id: TextModelId): string => modelVersions[id]
 

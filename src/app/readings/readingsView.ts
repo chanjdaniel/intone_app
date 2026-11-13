@@ -3,7 +3,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { rubyParts } from '../../engine/text/readings'
 import { readingsDownloadBytes } from '../../services/readings'
-import { megabytesText } from '../text/textView'
+import { bytesText } from '../history/format'
 import {
   LineReadingsState,
   type ReadingFixForm,
@@ -105,7 +105,7 @@ const statusText = (state: ReadingsState): string => {
   }
   if (!isShown(state.choice)) {
     return Option.isNone(state.choice.maybeShown)
-      ? `Shows the kana over the kanji. The first time, it downloads the reading dictionary, ${megabytesText(readingsDownloadBytes)}, from Intone itself.`
+      ? `Shows the kana over the kanji. The first time, it downloads the reading dictionary, ${bytesText(readingsDownloadBytes)}, from Intone itself.`
       : ''
   }
   if (state.tool._tag === 'Failed') {

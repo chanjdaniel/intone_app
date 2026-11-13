@@ -817,12 +817,7 @@ const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
         [`The app has no page at ${path}.`],
       ),
       h.a(
-        [
-          h.Href(homeRouter({ maybeFind: Option.none() })),
-          h.Class(
-            'inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring',
-          ),
-        ],
+        [h.Href(homeRouter({ maybeFind: Option.none() })), h.Class('link')],
         ['Go to the start'],
       ),
     ],

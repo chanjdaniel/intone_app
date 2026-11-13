@@ -1,5 +1,6 @@
 import { Effect, Schema } from 'effect'
 
+import { filesBytes } from '../engine/files'
 import { reasonOf } from '../engine/reason'
 import type { TextModel } from './text-protocol'
 
@@ -104,7 +105,7 @@ export const ensureTextModel = (
   Effect.tryPromise({
     try: async signal => {
       const cache = await caches.open(textModelCacheName)
-      const total = model.files.reduce((sum, file) => sum + file.bytes, 0)
+      const total = filesBytes(model.files)
       const state = { done: 0 }
       progress(0, total)
       for (const file of model.files) {

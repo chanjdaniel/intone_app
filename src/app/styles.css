@@ -112,9 +112,19 @@
 }
 
 @utility button-primary {
-  @apply button bg-accent text-on-accent;
+  @apply button bg-accent text-on-accent disabled:opacity-60;
 }
 
 @utility button-secondary {
-  @apply button border border-line bg-surface text-ink;
+  @apply button border border-line bg-surface text-ink disabled:text-muted;
+}
+
+/* A link the eye reads as one, with a 44 px target however short its words. */
+@utility link {
+  @apply inline-flex min-h-11 min-w-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring;
+}
+
+/* A screen's section, set apart from the page. */
+@utility card {
+  @apply flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6;
 }

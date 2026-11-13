@@ -64,7 +64,6 @@ export type LevelText = Readonly<{
   dialog: Dialog.Model
 }>
 
-const secondaryButton = 'button-secondary disabled:text-muted'
 const dangerButton = 'button bg-bad text-on-accent disabled:opacity-60'
 
 export const levelFindInputId = 'find-level-lines'
@@ -288,7 +287,7 @@ export const levelLineList = <ViewMessage>(
       countLine: countLine(found.length, clip.lines.length, words),
       changedWords: events.changedWords,
       showMore: events.showMore,
-      moreButtonClass: secondaryButton,
+      moreButtonClass: 'button-secondary',
       row: (line, index) =>
         levelRow(
           clip.id,
@@ -380,7 +379,7 @@ const deleteDialogView = <ViewMessage>(
                             ...initialFocus,
                             h.Type('button'),
                             h.OnClick(events.keepClip),
-                            h.Class(secondaryButton),
+                            h.Class('button-secondary'),
                           ],
                           [`Keep the ${nounOf(clip)}`],
                         ),
@@ -546,12 +545,7 @@ const deleteSection = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   h.section(
-    [
-      h.AriaLabelledBy('delete-clip-heading'),
-      h.Class(
-        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
-      ),
-    ],
+    [h.AriaLabelledBy('delete-clip-heading'), h.Class('card')],
     [
       h.h2(
         [h.Id('delete-clip-heading'), h.Class('text-xl font-bold')],

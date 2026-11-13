@@ -26,9 +26,7 @@ const externalLink = <ViewMessage>(
       h.Href(href),
       h.Target('_blank'),
       h.Rel('noopener noreferrer'),
-      h.Class(
-        'inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring',
-      ),
+      h.Class('link'),
     ],
     [name],
   )
@@ -40,12 +38,7 @@ const section = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   h.section(
-    [
-      h.AriaLabelledBy(id),
-      h.Class(
-        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
-      ),
-    ],
+    [h.AriaLabelledBy(id), h.Class('card')],
     [h.h2([h.Id(id), h.Class('text-xl font-bold')], [heading]), ...body],
   )
 
@@ -212,9 +205,7 @@ export const creditsView = <ViewMessage>(
           h.a(
             [
               h.Href(`${import.meta.env.BASE_URL}NOTICES.md`),
-              h.Class(
-                'inline-flex min-h-11 items-center self-start rounded-md text-accent underline underline-offset-4 focus-ring',
-              ),
+              h.Class('link self-start'),
             ],
             ['The notices'],
           ),

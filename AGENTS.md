@@ -103,7 +103,7 @@ Two guards keep it out of production:
 The tokens (colour, spacing, radius, type scale) and the system font stack, Japanese faces first, are defined once, in the `@theme` block of `src/app/styles.css`.
 Tailwind's own colours, radii and type steps are cleared there, so only the app's own classes build; `/dev/tokens` shows the set.
 The app downloads no font.
-The shared looks are utilities in the same file: `focus-ring`, the keyboard focus ring every control has, and `button`, `button-primary` and `button-secondary`; a screen uses them rather than copying class strings.
+The shared looks are utilities in the same file: `focus-ring`, the keyboard focus ring every control has, `button`, `button-primary` and `button-secondary`, each dimmed when disabled, `link`, a link with a 44 px target, and `card`, a screen's section; a screen uses them rather than copying class strings.
 Every screen but the not-found page sits in `src/app/pageFrame.ts`'s frame: `pageFrame` with the app's places at its top, or `screenFrame`, bare, for a line's practice.
 
 ## Effect

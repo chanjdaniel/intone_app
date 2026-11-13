@@ -188,9 +188,7 @@ const keptNote = <ViewMessage>(
                         lineId: line.lineId,
                       }),
                     ),
-                    h.Class(
-                      `inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring`,
-                    ),
+                    h.Class(`link`),
                   ],
                   ['See this line’s history'],
                 ),

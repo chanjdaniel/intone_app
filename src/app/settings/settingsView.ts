@@ -52,8 +52,6 @@ export type SettingsText = Readonly<{
   dialog: Dialog.Model
 }>
 
-const primaryButton = 'button-primary disabled:opacity-60'
-const secondaryButton = 'button-secondary disabled:text-muted'
 const dangerButton = 'button bg-bad text-on-accent disabled:opacity-60'
 
 const section = <ViewMessage>(
@@ -63,12 +61,7 @@ const section = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   h.section(
-    [
-      h.AriaLabelledBy(id),
-      h.Class(
-        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
-      ),
-    ],
+    [h.AriaLabelledBy(id), h.Class('card')],
     [h.h2([h.Id(id), h.Class('text-xl font-bold')], [heading]), ...body],
   )
 
@@ -165,7 +158,7 @@ const storageSection = <ViewMessage>(
               [
                 h.Type('button'),
                 h.OnClick(events.askToPersist),
-                h.Class(`${secondaryButton} self-start`),
+                h.Class('button-secondary self-start'),
               ],
               ['Ask the browser to keep it'],
             ),
@@ -302,7 +295,7 @@ const backupSection = <ViewMessage>(
               ...(page.backup._tag === 'Saving'
                 ? [h.Disabled(true)]
                 : [h.OnClick(events.saveBackup)]),
-              h.Class(primaryButton),
+              h.Class('button-primary'),
             ],
             ['Save a backup'],
           ),
@@ -312,7 +305,7 @@ const backupSection = <ViewMessage>(
               ...(page.restore._tag === 'Restoring'
                 ? [h.Disabled(true)]
                 : [h.OnClick(events.restoreBackup)]),
-              h.Class(secondaryButton),
+              h.Class('button-secondary'),
             ],
             ['Restore from a backup'],
           ),
@@ -429,7 +422,7 @@ const clearDialogView = <ViewMessage>(
                             ...initialFocus,
                             h.Type('button'),
                             h.OnClick(events.keepEverything),
-                            h.Class(secondaryButton),
+                            h.Class('button-secondary'),
                           ],
                           ['Keep everything'],
                         ),
@@ -514,12 +507,7 @@ export const settingsView = <ViewMessage>(
         [h.Class('text-base text-ink')],
         [
           h.a(
-            [
-              h.Href(creditsRouter()),
-              h.Class(
-                'inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring',
-              ),
-            ],
+            [h.Href(creditsRouter()), h.Class('link')],
             ['Credits for the models and recordings'],
           ),
         ],
