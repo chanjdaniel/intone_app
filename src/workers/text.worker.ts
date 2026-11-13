@@ -169,9 +169,11 @@ const program = Effect.gen(function* () {
     const job = state.job
     yield* state.interruptible
       ? Fiber.interrupt(job)
-      : Effect.raceFirst(
-          Fiber.await(job),
-          Effect.sleep('1 second').pipe(Effect.andThen(Fiber.interrupt(job))),
+      : Fiber.await(job).pipe(
+          Effect.timeoutOrElse({
+            duration: '1 second',
+            orElse: () => Fiber.interrupt(job),
+          }),
         )
   }
   yield* Scope.close(jobScope, Exit.void)
