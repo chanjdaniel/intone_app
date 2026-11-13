@@ -118,7 +118,7 @@ After a reload it writes the clip out again and sees no request for any model fi
 
 ## What it does not do
 
-- Kana readings are ticket 17's.
+- It writes no kana: a line's readings come from a dictionary run on the device (`docs/readings.md`).
 - A pack's lines take their text from its manifest, and the bundled lines have theirs; only uploads are written out.
 - An interrupted download is not resumed; the files already in the cache are kept, and the rest fetched again.
 - Nothing has been measured on a phone, whose speed and memory for Whisper are the largest unknown (report section 2).

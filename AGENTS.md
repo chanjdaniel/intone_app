@@ -129,7 +129,7 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 
 ## The line and the take
 
-- `src/app/line/` holds the lines and their practice screen: the bundled line (`lines.ts`, 雨が好き from the VOICEVOX fixtures, its audio imported with `?url`), the open line's native curve in the Model (`native.ts`, `Loading | Ready | Failed`), the `LoadNativeCurve` Command, the home screen's line row, the listen controls and the practice screen (`practiceView.ts`).
+- `src/app/line/` holds the lines and their practice screen: the bundled lines (`lines.ts`: the first, 雨が好き from the VOICEVOX fixtures, its audio imported with `?url`, and the starter set's levels, `starterLevels`, see "The starter set"), the open line's native curve in the Model (`native.ts`, `Loading | Ready | Failed`), the `LoadNativeCurve` Command, the home screen's line row, the listen controls and the practice screen (`practiceView.ts`).
   `/` lists the lines and `/line/:clipId/:lineId` is a line's practice screen; a take runs only there, and leaving the line drops its take and forgets its audio.
 - A line's native curve and features come from `src/services/native-curves.ts` (`NativeCurves`): the line's audio run through the take's own tracker once, then kept on the device by `src/services/curve-cache.ts` (`CurveCache`, a versioned record decoded on every read, format 2 since the features joined it) in the IndexedDB database that `src/services/indexed-db.ts` opens.
   That file holds the database's version, its stores and their upgrade, once: a later store is added there.
@@ -292,7 +292,7 @@ npm test
 ```
 
 `npm run check:effect` runs the `effect-tsgo` check on both tsconfigs, `npm run format:check` the formatter, `npm run generate:check` that the generated files are current, `npm run check:budget` the bundle budget against `dist/`, and `npm run test:e2e` builds and runs Playwright against the production build; CI runs all of them.
-The build and its tests fetch the listed model files once, about 300 MB, most of it the two Whisper models (`npm run fetch:models` fetches them alone, as CI does first), so they need the network until `.cache/models/` holds them.
+The build and its tests fetch the listed model files once, about 314 MB, most of it the two Whisper models (`npm run fetch:models` fetches them alone, as CI does first), so they need the network until `.cache/models/` holds them.
 `npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, `tests/support`, `tests/tracker`, `tests/score`, `tests/readings`, in Node, type checked by `tsconfig.node.json`).
 
 ## Content and privacy
