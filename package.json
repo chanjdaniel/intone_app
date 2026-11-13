@@ -31,7 +31,8 @@
     "sounds:study": "node --import ./scripts/source-imports.ts scripts/sounds-study.ts",
     "sounds:bench": "node --import ./scripts/source-imports.ts scripts/sounds-bench.ts",
     "vendor:foldkit": "scripts/vendor-foldkit.sh",
-    "text:study": "node --import ./scripts/source-imports.ts scripts/transcription-study.ts"
+    "text:study": "node --import ./scripts/source-imports.ts scripts/transcription-study.ts",
+    "starter:pack": "node --import ./scripts/source-imports.ts scripts/starter-pack.ts"
   },
   "dependencies": {
     "@effect/platform-browser": "4.1.2",

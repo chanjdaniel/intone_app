@@ -8,6 +8,8 @@ import { Dialog, FileDrop } from '@foldkit/ui'
 
 import { TextChoice, TextModelId } from '../services/history-records'
 import { MicrophoneFailure } from '../services/microphone'
+import { ReviewDraft } from '../services/review-store'
+import { ReviewVerdict } from '../services/starter-records'
 import {
   BlindPoint,
   DayCount,
@@ -323,5 +325,23 @@ export const Message = defineMessageUnion({
     reason: Schema.String,
   },
   CompletedFocusReadings: {},
+
+  // The starter review, at /review.
+  SucceededLoadReview: { draft: ReviewDraft },
+  FailedLoadReview: { reason: Schema.String },
+  ChangedReviewer: { name: Schema.String },
+  ChoseReviewVerdict: { lineId: Schema.String, verdict: ReviewVerdict },
+  ChoseReviewAccent: { lineId: Schema.String, accentType: Schema.String },
+  ChangedReviewNote: { lineId: Schema.String, note: Schema.String },
+  ClickedClearReviewVerdict: { lineId: Schema.String },
+  SucceededSaveReview: {},
+  FailedSaveReview: { reason: Schema.String },
+  ClickedPlayReviewLine: { lineId: Schema.String },
+  ClickedStopReviewLine: {},
+  EndedReviewPlay: { playNumber: Schema.Finite },
+  FailedReviewPlay: { playNumber: Schema.Finite, reason: Schema.String },
+  ClickedExportReview: {},
+  SucceededExportReview: { fileName: Schema.String, verdicts: Schema.Finite },
+  FailedExportReview: { reason: Schema.String },
 })
 export type Message = typeof Message.Type

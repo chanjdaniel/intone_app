@@ -12,7 +12,7 @@ describe('the line row entry', () => {
         'href',
         '/line/ame-ga-suki/1',
       ),
-      expect(text('VOICEVOX:冥鳴ひまり')).toExist(),
+      expect(text('Voice: VOICEVOX:冥鳴ひまり, made with VOICEVOX.')).toExist(),
       expect(text('Read-out: 雨が好き links to /line/ame-ga-suki/1')).toExist(),
     )
   })

@@ -3,7 +3,7 @@ import { Runtime, type Update } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
 
 import { linePath, lineRow } from '../../line/lineRow'
-import { bundledLines } from '../../line/lines'
+import { firstLines } from '../../line/lines'
 import { type DevEntry, entryFrame } from '../entry'
 
 // The home screen's row for each bundled line.
@@ -26,14 +26,13 @@ export const update = (model: Model): Update.Return<Model, never> => ({
 // VIEW
 
 export const readOut = (): string =>
-  Array.map(
-    bundledLines,
-    line => `${line.text} links to ${linePath(line)}`,
-  ).join('; ')
+  Array.map(firstLines, line => `${line.text} links to ${linePath(line)}`).join(
+    '; ',
+  )
 
 export const choices: ReadonlyArray<string> = [
   "Each row shows the line, its reading and its voice's credit, and the whole row opens the line. Should it also show the accent pattern, as the 2023 slides grouped lines by it?",
-  'The credit is the one VOICEVOX asks for. Is it in the right place, or should it move to a credits page (ticket 24)?',
+  'The credit is the one VOICEVOX asks for, and /credits names it too. Is it in the right place on the row?',
 ]
 
 export const view = (_model: Model, h: HtmlBuilder<never>): Html =>
@@ -44,7 +43,7 @@ export const view = (_model: Model, h: HtmlBuilder<never>): Html =>
       demo: [
         h.ul(
           [h.Class('flex flex-col gap-3')],
-          Array.map(bundledLines, line =>
+          Array.map(firstLines, line =>
             h.keyed('li')(
               `${line.clipId}/${line.lineId}`,
               [],

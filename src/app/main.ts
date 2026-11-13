@@ -18,13 +18,15 @@ import { FollowLineEditorPointer } from './level/editorPointer'
 import * as EditorUpdate from './level/editorUpdate'
 import { ClipsPage, LevelPage, deleteClipDialogId } from './level/level'
 import { levelView } from './level/levelView'
+import { starterLevelsSection } from './level/starterLevels'
 import { levelSubscriptions } from './level/subscriptions'
 import * as LevelUpdate from './level/update'
 import { lineRow } from './line/lineRow'
-import { type BundledLine, bundledLines } from './line/lines'
+import { type BundledLine, firstLines, starterLevels } from './line/lines'
 import { NativeCurve, shownLineOf } from './line/native'
 import { LinePlace } from './line/place'
 import { practiceView } from './line/practiceView'
+import { starterPack } from './line/starter'
 import * as LineUpdate from './line/update'
 import { Message } from './message'
 import { type Model } from './model'
@@ -41,6 +43,10 @@ import type { AppResourceServices } from './resources'
 import { dueSection } from './returns/dueList'
 import { DuePage } from './returns/returns'
 import * as ReturnsUpdate from './returns/update'
+import { ReviewPage } from './review/review'
+import { type ReviewEvents, reviewView } from './review/reviewView'
+import { reviewSubscriptions } from './review/subscriptions'
+import * as ReviewUpdate from './review/update'
 import { AppRoute, homeRouter, uploadRouter, urlToAppRoute } from './route'
 import { AskToPersistStorage } from './settings/commands'
 import { SettingsPage, clearDialogId } from './settings/settings'
@@ -78,6 +84,7 @@ export const subscriptions = Subscription.aggregate(
   uploadSubscriptions,
   levelSubscriptions,
   textSubscriptions,
+  reviewSubscriptions,
 )
 
 // INIT
@@ -112,6 +119,7 @@ export const initialModel = (route: AppRoute): Model => ({
   readingsTool: ReadingsTool.Released(),
   readings: LineReadingsState.Idle(),
   readingFix: ReadingFixForm.Closed(),
+  review: ReviewPage.NotLoaded(),
 })
 
 type UpdateReturn = Update.Return<Model, Message, AppResourceServices>
@@ -146,6 +154,7 @@ const opened = (model: Model, route: AppRoute): UpdateReturn =>
       ]),
     Upload: () => readTextChoice(model),
     Credits: () => ({ model }),
+    Review: () => ReviewUpdate.openedReview(model),
     Level: ({ clipId }) =>
       Update.combine(model, [
         stepModel => LevelUpdate.openedLevel(stepModel, clipId),
@@ -242,7 +251,11 @@ const updateMessage = (model: Model, message: Message) =>
         model.route._tag === 'Level' && !staysOnList(model.route, route)
           ? TextUpdate.leftLevel(leftHome)
           : leftHome
-      const left = leftLine ? TakeUpdate.leftLine(leftLevel) : leftLevel
+      const leftReview =
+        model.route._tag === 'Review' && route._tag !== 'Review'
+          ? ReviewUpdate.leftReview(leftLevel)
+          : leftLevel
+      const left = leftLine ? TakeUpdate.leftLine(leftReview) : leftReview
       const arrived = staysOnList(model.route, route)
         ? findOf(model.route) === findOf(route)
           ? { model: left }
@@ -564,6 +577,35 @@ const updateMessage = (model: Model, message: Message) =>
     FailedSetLineReadings: ({ clipId, lineId, reason }) =>
       ReadingsUpdate.failedKeepFixes(model, clipId, lineId, reason),
     CompletedFocusReadings: () => ({ model }),
+
+    SucceededLoadReview: ({ draft }) =>
+      ReviewUpdate.succeededLoadReview(model, draft),
+    FailedLoadReview: ({ reason }) =>
+      ReviewUpdate.failedLoadReview(model, reason),
+    ChangedReviewer: ({ name }) => ReviewUpdate.changedReviewer(model, name),
+    ChoseReviewVerdict: ({ lineId, verdict }) =>
+      ReviewUpdate.choseVerdict(model, lineId, verdict),
+    ChoseReviewAccent: ({ lineId, accentType }) =>
+      ReviewUpdate.choseAccent(model, lineId, accentType),
+    ChangedReviewNote: ({ lineId, note }) =>
+      ReviewUpdate.changedNote(model, lineId, note),
+    ClickedClearReviewVerdict: ({ lineId }) =>
+      ReviewUpdate.clearedVerdict(model, lineId),
+    SucceededSaveReview: () => ReviewUpdate.succeededSaveReview(model),
+    FailedSaveReview: ({ reason }) =>
+      ReviewUpdate.failedSaveReview(model, reason),
+    ClickedPlayReviewLine: ({ lineId }) =>
+      ReviewUpdate.clickedPlay(model, lineId),
+    ClickedStopReviewLine: () => ReviewUpdate.clickedStop(model),
+    EndedReviewPlay: ({ playNumber }) =>
+      ReviewUpdate.endedPlay(model, playNumber),
+    FailedReviewPlay: ({ playNumber, reason }) =>
+      ReviewUpdate.failedPlay(model, playNumber, reason),
+    ClickedExportReview: () => ReviewUpdate.clickedExport(model),
+    SucceededExportReview: ({ fileName, verdicts }) =>
+      ReviewUpdate.succeededExport(model, fileName, verdicts),
+    FailedExportReview: ({ reason }) =>
+      ReviewUpdate.failedExport(model, reason),
   })
 
 // The text's controls, the same on every screen that has them.
@@ -590,6 +632,20 @@ const readingsEvents: ReadingsEvents<Message> = {
   changeDraft: (from, text) => Message.ChangedReadingDraft({ from, text }),
   submit: Message.SubmittedReadings(),
   cancel: Message.ClickedCancelReadings(),
+}
+
+// The review page's controls.
+const reviewEvents: ReviewEvents<Message> = {
+  changeReviewer: name => Message.ChangedReviewer({ name }),
+  chooseVerdict: (lineId, verdict) =>
+    Message.ChoseReviewVerdict({ lineId, verdict }),
+  chooseAccent: (lineId, accentType) =>
+    Message.ChoseReviewAccent({ lineId, accentType }),
+  changeNote: (lineId, note) => Message.ChangedReviewNote({ lineId, note }),
+  clearVerdict: lineId => Message.ClickedClearReviewVerdict({ lineId }),
+  play: lineId => Message.ClickedPlayReviewLine({ lineId }),
+  stop: Message.ClickedStopReviewLine(),
+  export: Message.ClickedExportReview(),
 }
 
 // VIEW
@@ -700,6 +756,7 @@ const homeView = (
           ),
         ],
       ),
+      starterLevelsSection(starterLevels, h),
       clipsSection(clips, h),
     ],
     h,
@@ -802,7 +859,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
   body: AppRoute.match(model.route, {
     Home: ({ maybeFind }) =>
       homeView(
-        bundledLines,
+        firstLines,
         model.clips,
         model.due,
         Option.getOrElse(maybeFind, () => ''),
@@ -911,6 +968,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
         h,
       ),
     Credits: () => creditsView(h),
+    Review: () => reviewView(model.review, starterPack, reviewEvents, h),
     NotFound: ({ path }) => notFoundView(path, h),
   }),
 })

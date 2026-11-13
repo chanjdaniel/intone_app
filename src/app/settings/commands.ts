@@ -7,6 +7,7 @@ import { HistoryError, HistoryStore } from '../../services/history-store'
 import { deleteTextModels } from '../../workers/text-model-cache'
 import { isoDayOf } from '../history/format'
 import { Message } from '../message'
+import { saveFile } from '../saveFile'
 import { forgetTakeAudio } from '../take/takeAudio'
 import type { Browser, Persistence, StorageFacts } from './settings'
 
@@ -136,32 +137,6 @@ const loadBackupCode = Effect.tryPromise({
     }),
 })
 
-// Hands `bytes` to the browser as a file to save, named `fileName`.
-const saveFile = (bytes: Uint8Array, fileName: string): Effect.Effect<void> =>
-  Effect.acquireUseRelease(
-    Effect.sync(() =>
-      URL.createObjectURL(
-        new Blob([Uint8Array.from(bytes)], { type: 'application/zip' }),
-      ),
-    ),
-    url =>
-      Effect.sync(() => {
-        const link = document.createElement('a')
-        link.href = url
-        link.download = fileName
-        link.hidden = true
-        document.body.append(link)
-        link.click()
-        link.remove()
-      }),
-    // NOTE: the browser reads the file from its URL after the click
-    // returns, so the URL is let go a moment later.
-    url =>
-      Effect.sleep('1 second').pipe(
-        Effect.andThen(Effect.sync(() => URL.revokeObjectURL(url))),
-      ),
-  )
-
 // Makes the backup file, the kept audio in it only when `includeAudio`,
 // and hands it to the browser to save on the device.
 export const SaveBackup = Command.define('SaveBackup', {
@@ -183,7 +158,7 @@ export const SaveBackup = Command.define('SaveBackup', {
       const fileName = backupFileName(
         isoDayOf(Calendar.fromDateLocal(new Date(exportedAt))),
       )
-      yield* Effect.forkDetach(saveFile(bytes, fileName))
+      yield* Effect.forkDetach(saveFile(bytes, fileName, 'application/zip'))
       return Message.SucceededSaveBackup({
         fileName,
         takes: dump.takes.length,

@@ -4,7 +4,7 @@ Every screen, test, doc and name in the code uses these words with these meaning
 
 - **Clip:** one recording: a bundled starter recording, an upload, or a local-pack file.
 - **Line:** a stretch of a clip, with a start and end, to copy; optionally with text and kana.
-- **Level:** a clip's lines in order, with their stars, at `/level/:clipId`: a bundled clip's, an upload's or the local pack's; the starter set will be several levels by accent pattern.
+- **Level:** a clip's lines in order, with their stars, at `/level/:clipId`: a bundled clip's, an upload's or the local pack's; the starter set is six levels, one per accent pattern, then pairs and phrases.
 - **Take:** one recording of the learner copying a line.
   A **guided** take shows the native curve and the live curve; a **blind** take hides both until it ends.
 - **Curve:** the tracker's output for a recording: pitch, confidence and level per 16 ms frame, and the onset.
@@ -35,7 +35,8 @@ Every screen, test, doc and name in the code uses these words with these meaning
 - **Blind-take chart:** a line's blind takes over time on its history page, the threshold drawn across: whether practice held.
 - **Personal best:** a line's best match; a take that beats it, as the screen shows them in whole percent, is marked as a new one.
 - **Practice loop:** what a line's practice screen runs: hear the line, a guided take, the curves and the match, again as often as wanted, a blind take, and on to the next line of its level.
-- **Starter set:** the bundled, openly licensed lines.
+- **Starter set:** the bundled, openly licensed lines, about fifty, each credited and marked unreviewed until a native speaker has heard it (`docs/starter-set.md`).
+- **Starter review:** the native speaker's verdict on each starter line, given at `/review`, a page reached only by its address, and applied to the list by `npm run starter:pack -- --apply`.
 - **Local pack:** Daniel's untracked `local/` folder and its manifest, `pack.json`, imported from the files chosen as one level kept on the device; its lines may carry text, kana and a **source** link, shown and never fetched.
 - **Fixture:** generated, labelled test audio with its known curve, accent and mora boundaries.
 - **Local production build:** the app built by `vite build` and served by `vite preview` on the machine itself; where Daniel practises (`npm start`, `http://localhost:4300`) and where the end-to-end tests run, until there is a deploy.

@@ -68,6 +68,7 @@ export const notices = (
     '',
     "Intone's own code is all rights reserved (see `LICENSE`).",
     'The app ships these third-party packages and model files, each under its own licence.',
+    'The recordings it brings, each under its own licence or terms, are credited on its `/credits` screen and in `CREDITS.md`.',
     '',
     '## Packages',
     '',

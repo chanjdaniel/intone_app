@@ -13,6 +13,7 @@ import {
   ReadingsTool,
 } from './readings/readings'
 import { DuePage } from './returns/returns'
+import { ReviewPage } from './review/review'
 import { AppRoute } from './route'
 import { SettingsPage } from './settings/settings'
 import { Take } from './take/take'
@@ -65,5 +66,7 @@ export const Model = Schema.Struct({
   readingsTool: ReadingsTool,
   readings: LineReadingsState,
   readingFix: ReadingFixForm,
+  // The starter review at /review: the verdicts given, kept on the device.
+  review: ReviewPage,
 })
 export type Model = typeof Model.Type

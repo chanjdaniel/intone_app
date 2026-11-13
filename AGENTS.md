@@ -231,6 +231,16 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 - A line's source link is rendered by `src/app/line/sourceLink.ts` alone: `target="_blank"`, `rel="noopener noreferrer"`, never fetched; the app downloads nothing from YouTube.
 - `fixtures/local-pack/` (`npm run fixtures:local-pack`) is the tests' example pack; `tests/e2e/local-pack.spec.ts` imports it in the built app.
 
+## The starter set
+
+- `starter/lines.json` is the source list, edited by hand and by the review (`docs/starter-set.md`); `npm run starter:pack` (`scripts/starter-pack.ts`, its plain parts in `tests/support/starter-pack.ts`) writes `starter/pack/levels.json`, `starter/pack/audio/<line>.wav` and `CREDITS.md` from it, the same bytes every run, `--check` in CI by `tests/scripts/starter-pack.test.ts`; never edit what it writes.
+- The list, the pack and the review's export are Schemas in `src/services/starter-records.ts`, shared by the app and the script; a recording's licence outside CC0, CC BY and CC BY-SA on Commons, CC0 or public domain on LibriVox, or a recorded VOICEVOX voice's terms does not decode, and `tests/build/starter-licences.test.ts` and `tests/build/production-build.test.ts` fail on any committed or bundled recording without its source, author and licence.
+- Mora counts come from `src/engine/text/morae.ts`; accent types are checked by the script's `--accents` against UniDic 2023.02's `aType` and Wiktionary, a disagreement flagged in the list; no dictionary ships.
+- `src/app/line/starter.ts` decodes the pack, each file a hashed `/assets/` URL by `import.meta.glob`; `src/app/line/lines.ts` makes each level a bundled clip (`starterLevels`), listed on home by `src/app/level/starterLevels.ts`, credited on its practice screen and on `/credits`, and marked "Not yet checked by a native speaker." until its review.
+- `/review` (`src/app/review/`) is the starter review's page, reached only by its address: it plays each line (`subscriptions.ts`), keeps the verdicts in IndexedDB's `meta` store through `src/services/review-store.ts` (`ReviewStore`, with `layer` and `layerMemory(records)`), one write at a time, and saves them as one file (`ExportReview`, `src/app/saveFile.ts`).
+  Its verdict "correct", the export's own word for another accent, is the one use of the word the built bundle's check allows; the page never shows it.
+- `tests/e2e/starter.spec.ts` practises a starter line with the fake microphone, checks its file's address and caching and its credits, and runs the review to its file, nothing sent.
+
 ## Text for the lines
 
 - An upload's text is written out on the device by Whisper (`whisper-base`, or `whisper-small` as the larger option) only once the learner agrees in the consent dialog, which names the download's size (`src/app/text/textView.ts`); the answer is kept in the settings (`TextChoice` in `src/services/history-records.ts`), so "Not now" is not asked again and an agreed model writes later uploads out at once, and `/settings` offers the download again; `docs/transcription.md` says how it was chosen and what it measured.

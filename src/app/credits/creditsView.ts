@@ -1,16 +1,19 @@
 import type { Html, HtmlBuilder } from 'foldkit/html'
 import { type ModelId, modelCredits } from 'virtual:intone/models'
 
-import { bundledLines } from '../line/lines'
+import { firstLines } from '../line/lines'
+import { reviewNoteOf, starterPack } from '../line/starter'
 import { pageFrame } from '../pageFrame'
 
 // /credits: every model the app ships, read from the build's own model
 // list, so a model added there is credited here, with its licence and
-// its source, and the tokeniser that reads the reading dictionary; the recordings the app brings, credited as their terms
-// ask; and the software's notices, which every copy of the app carries
-// at /NOTICES.md. Each model runs on this device, served by the app
-// itself; the links to their sources are opened in a new tab, never
-// fetched.
+// its source, and the tokeniser that reads the reading dictionary; the
+// recordings the app brings, the starter set's read from its pack
+// (../line/starter.ts), each with its author, source, licence and what
+// was done to it, as CC BY and CC BY-SA ask; and the software's notices,
+// which every copy of the app carries at /NOTICES.md. Each model runs on
+// this device, served by the app itself; the links to their sources are
+// opened in a new tab, never fetched.
 
 const externalLink = <ViewMessage>(
   href: string,
@@ -122,16 +125,71 @@ export const creditsView = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
         [
           h.ul(
             [h.Class('flex flex-col gap-2')],
-            bundledLines.map(line =>
+            firstLines.map(line =>
               h.keyed('li')(
                 `${line.clipId}/${line.lineId}`,
                 [h.Class('text-base text-ink')],
-                [
-                  h.span([h.Lang('ja')], [line.text]),
-                  `: voice ${line.credit}, made with VOICEVOX.`,
-                ],
+                [h.span([h.Lang('ja')], [line.text]), `: ${line.credit}`],
               ),
             ),
+          ),
+          ...starterPack.levels.map(level =>
+            h.keyed('div')(
+              level.id,
+              [h.Class('flex flex-col gap-3')],
+              [
+                h.h3([h.Class('text-lg font-semibold')], [level.name]),
+                h.ul(
+                  [h.Class('flex flex-col gap-3')],
+                  level.lines.map(line =>
+                    h.keyed('li')(
+                      line.id,
+                      [h.Class('flex flex-col gap-0.5')],
+                      [
+                        h.p(
+                          [h.Class('text-base text-ink')],
+                          [
+                            h.span([h.Lang('ja')], [line.text]),
+                            ` (`,
+                            h.span([h.Lang('ja')], [line.kana]),
+                            `): ${line.credit.author}`,
+                          ],
+                        ),
+                        h.p(
+                          [h.Class('text-sm text-muted')],
+                          [`${line.credit.changes} ${reviewNoteOf(line)}`],
+                        ),
+                        h.div(
+                          [h.Class('flex flex-wrap gap-x-4')],
+                          [
+                            ...(line.credit.source === 'VOICEVOX'
+                              ? []
+                              : [
+                                  externalLink(
+                                    line.credit.page,
+                                    `${line.text} on ${line.credit.source}`,
+                                    h,
+                                  ),
+                                ]),
+                            externalLink(
+                              line.credit.licenceUrl,
+                              line.credit.licence,
+                              h,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          h.p(
+            [h.Class('text-sm text-muted')],
+            [
+              'Each word’s accent type was checked against UniDic 2023.02, under its BSD licence, and against Wiktionary, under CC BY-SA 4.0; no dictionary ships in the app.',
+            ],
           ),
         ],
         h,

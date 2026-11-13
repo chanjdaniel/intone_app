@@ -3,6 +3,7 @@ import { expect, given, role, scene, text } from 'foldkit/scene'
 import { modelCredits } from 'virtual:intone/models'
 import { describe, test } from 'vitest'
 
+import { starterPack } from '../line/starter'
 import { AppRoute, initialModel, update, view } from '../main'
 import {
   BackupState,
@@ -39,7 +40,7 @@ describe('/credits', () => {
         'rel',
         'noopener noreferrer',
       ),
-      expect(text(/voice VOICEVOX:冥鳴ひまり, made with VOICEVOX/)).toExist(),
+      expect(text(/Voice: VOICEVOX:冥鳴ひまり, made with VOICEVOX/)).toExist(),
       expect(role('heading', { name: 'Lindera 6.2.0' })).toExist(),
       expect(text('Licence: MIT')).toExist(),
       expect(role('link', { name: 'Source of Lindera 6.2.0' })).toHaveAttr(
@@ -50,6 +51,30 @@ describe('/credits', () => {
         'href',
         '/NOTICES.md',
       ),
+    )
+  })
+
+  test('names every starter recording’s author, source and licence, read from the pack', () => {
+    const lines = starterPack.levels.flatMap(level => level.lines)
+    scene(
+      { update, view },
+      given(initialModel(AppRoute.Credits())),
+      ...starterPack.levels.map(level =>
+        expect(role('heading', { name: level.name, level: 3 })).toExist(),
+      ),
+      ...lines.map(line =>
+        expect(
+          text(`${line.text} (${line.kana}): ${line.credit.author}`),
+        ).toExist(),
+      ),
+      ...lines
+        .filter(line => line.credit.source !== 'VOICEVOX')
+        .map(line =>
+          expect(
+            role('link', { name: `${line.text} on ${line.credit.source}` }),
+          ).toHaveAttr('href', line.credit.page),
+        ),
+      expect(text(/checked against UniDic 2023\.02/)).toExist(),
     )
   })
 

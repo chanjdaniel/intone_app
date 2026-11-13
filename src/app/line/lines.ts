@@ -9,14 +9,24 @@ import {
   type LineSource,
   clipLineTexts,
 } from '../../services/history-records'
+import {
+  creditSentence,
+  isUnreviewed,
+  reviewNoteOf,
+  starterAudioUrl,
+  starterPack,
+  unreviewedNote,
+} from './starter'
 
 // The lines to copy: those the app brings with it, and those of the
-// clips the learner brings (../upload/). For now the app brings one:
-// 雨が好き, in VOICEVOX's 冥鳴ひまり with its right Tokyo accent, from the
-// labelled fixtures (fixtures/README.md), whose terms ask for the credit
-// shown with it. A bundled line is its whole clip, from the file's first
-// sample to its last; a line of the learner's clip is a stretch of it.
-// Either way the tracker finds where the voice starts.
+// clips the learner brings (../upload/). The app brings 雨が好き, in
+// VOICEVOX's 冥鳴ひまり with its right Tokyo accent, from the labelled
+// fixtures (fixtures/README.md), whose terms ask for the credit shown
+// with it; and the starter set's levels (./starter.ts), each line
+// credited as its recording's licence asks. A bundled line is its whole
+// file, from its first sample to its last; a line of the learner's clip
+// is a stretch of it. Either way the tracker finds where the voice
+// starts.
 
 export type BundledLine = Readonly<{
   clipId: string
@@ -24,8 +34,12 @@ export type BundledLine = Readonly<{
   // The line as written, and its reading in kana.
   text: string
   reading: string
-  // Who or what is speaking, as the voice's terms ask it to be credited.
+  // Who or what is speaking, in a sentence, as the recording's licence
+  // or the voice's terms ask it to be credited, and where it came from.
   credit: string
+  maybeSource: Option.Option<SourceLink>
+  // Whether a native speaker has yet to hear a starter line.
+  isUnreviewed: boolean
   // The clip's audio, from the app's own origin, and how long it is.
   audioUrl: string
   seconds: number
@@ -35,29 +49,79 @@ export type BundledLine = Readonly<{
 export type BundledClip = Readonly<{
   id: string
   name: string
+  // Whether its name is Japanese text, read as such.
+  nameIsText: boolean
+  // What a starter level practises, and whether its lines are checked.
+  maybeAbout: Option.Option<string>
+  maybeReviewNote: Option.Option<string>
   lines: ReadonlyArray<BundledLine>
 }>
+
+// The starter set's levels, in its order.
+export const starterLevels: ReadonlyArray<BundledClip> = starterPack.levels.map(
+  level => ({
+    id: level.id,
+    name: level.name,
+    nameIsText: false,
+    maybeAbout: Option.some(level.about),
+    maybeReviewNote: level.lines.some(isUnreviewed)
+      ? Option.some(
+          `${unreviewedNote} A native speaker will hear every line and confirm its word and Tokyo accent; until then, take each as a good guess.`,
+        )
+      : Option.none(),
+    lines: level.lines.map(line => ({
+      clipId: level.id,
+      lineId: line.id,
+      text: line.text,
+      reading: line.kana,
+      credit: `${creditSentence(line.credit)} ${reviewNoteOf(line)}`,
+      maybeSource:
+        line.credit.source === 'VOICEVOX'
+          ? Option.none()
+          : Option.some({
+              url: line.credit.page,
+              maybeFrom: Option.none(),
+              maybeTo: Option.none(),
+            }),
+      isUnreviewed: isUnreviewed(line),
+      audioUrl: starterAudioUrl(line),
+      seconds: line.seconds,
+    })),
+  }),
+)
 
 export const bundledClips: ReadonlyArray<BundledClip> = [
   {
     id: 'ame-ga-suki',
     name: '雨が好き',
+    nameIsText: true,
+    maybeAbout: Option.none(),
+    maybeReviewNote: Option.none(),
     lines: [
       {
         clipId: 'ame-ga-suki',
         lineId: '1',
         text: '雨が好き',
         reading: 'あめがすき',
-        credit: 'VOICEVOX:冥鳴ひまり',
+        credit: 'Voice: VOICEVOX:冥鳴ひまり, made with VOICEVOX.',
+        maybeSource: Option.none(),
+        isUnreviewed: false,
         audioUrl: ameGaSukiAudio,
         seconds: 30464 / 24000,
       },
     ],
   },
+  ...starterLevels,
 ]
 
 export const bundledLines: ReadonlyArray<BundledLine> = bundledClips.flatMap(
   clip => clip.lines,
+)
+
+// The line the app has brought since before the starter set, which the
+// home screen offers at once.
+export const firstLines: ReadonlyArray<BundledLine> = bundledLines.filter(
+  line => !starterLevels.some(level => level.id === line.clipId),
 )
 
 export const bundledClipOf = (clipId: string): Option.Option<BundledClip> =>
@@ -134,10 +198,10 @@ export const practiceLineOfBundled = (line: BundledLine): PracticeLine => ({
   titleIsText: true,
   detail: line.reading,
   detailIsText: true,
-  credit: `Voice: ${line.credit}, made with VOICEVOX.`,
+  credit: line.credit,
   historyText: line.text,
   audio: LineAudio.Bundled({ url: line.audioUrl }),
-  maybeSource: Option.none(),
+  maybeSource: line.maybeSource,
 })
 
 // Minutes and seconds, as 1:05, and tenths of a second under a minute's

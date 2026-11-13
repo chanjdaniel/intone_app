@@ -4,7 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { Dialog } from '@foldkit/ui'
 
 import { countText } from '../history/format'
-import { clockText } from '../line/lines'
+import { bundledClipOf, clockText } from '../line/lines'
 import { sourceLink } from '../line/sourceLink'
 import { listFrame } from '../listFrame'
 import { pageFrame } from '../pageFrame'
@@ -447,19 +447,45 @@ const readyBody = <ViewMessage>(
 ): ReadonlyArray<Html> => {
   const { clip } = page
   const isUpload = clip.origin === 'Upload'
+  const maybeBundled = bundledClipOf(clip.id)
   return [
     h.header(
       [h.Class('flex flex-col gap-2')],
       [
         h.h1(
           [
-            ...(clip.origin === 'Bundled' ? [h.Lang('ja')] : []),
+            ...(Option.exists(maybeBundled, bundled => bundled.nameIsText)
+              ? [h.Lang('ja')]
+              : []),
             h.Class('text-3xl font-bold break-words sm:text-5xl'),
           ],
           [clip.name],
         ),
+        ...Option.match(
+          Option.flatMap(maybeBundled, bundled => bundled.maybeAbout),
+          {
+            onNone: () => [],
+            onSome: about => [h.p([h.Class('text-lg text-ink')], [about])],
+          },
+        ),
         h.p([h.Class('text-base text-muted')], [aboutText(clip)]),
       ],
+    ),
+    ...Option.match(
+      Option.flatMap(maybeBundled, bundled => bundled.maybeReviewNote),
+      {
+        onNone: () => [],
+        onSome: note => [
+          h.p(
+            [
+              h.Class(
+                'rounded-lg border border-warn bg-surface p-4 text-base text-ink',
+              ),
+            ],
+            [note],
+          ),
+        ],
+      },
     ),
     starsSummary(clip, page.stars, h),
     ...(clip.hasAudio

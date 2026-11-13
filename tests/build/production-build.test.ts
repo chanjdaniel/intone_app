@@ -1,3 +1,4 @@
+import { Schema } from 'effect'
 import { createHash } from 'node:crypto'
 import {
   mkdtempSync,
@@ -23,8 +24,10 @@ import {
   textRuntimeFiles,
   textRuntimeVersion,
 } from '../../build/onnx-runtime.ts'
+import { StarterPack } from '../../src/services/starter-records.ts'
 import { chunksOf, productionBuild } from '../support/build'
 import { root } from '../support/run'
+import { audioExtensions } from '../support/starter-pack.ts'
 
 // One real production build with the project's own config, read back from
 // its output directory.
@@ -268,15 +271,22 @@ describe('the production build', () => {
     'This may lead to inaccurate token-level timestamps',
     'Incorrect state encountered during generation.',
   ]
+  // The starter review's verdict that a stated accent is another, as the
+  // export the script applies spells it (src/services/starter-records.ts):
+  // a value in the file, which the review page never shows; it says of a
+  // dictionary's accent, never of a take.
+  const reviewVerdict = /(["'`])correct\1/g
 
   test('ships no text that says "accuracy" or that a take is correct', () => {
     const texts = files().filter(file => /\.(js|mjs|html|css)$/.test(file))
     expect(texts.length).toBeGreaterThan(3)
     for (const file of texts) {
-      const code = libraryWarnings.reduce(
-        (read, warning) => read.replaceAll(warning, ''),
-        readFileSync(join(dist, file), 'utf8'),
-      )
+      const code = libraryWarnings
+        .reduce(
+          (read, warning) => read.replaceAll(warning, ''),
+          readFileSync(join(dist, file), 'utf8'),
+        )
+        .replace(reviewVerdict, '')
       expect(code, file).not.toMatch(/accura/i)
       expect(code, file).not.toMatch(/\b(in)?correct/i)
     }
@@ -286,5 +296,60 @@ describe('the production build', () => {
         readFileSync(join(dist, file), 'utf8').includes('match to this clip'),
       ),
     ).toBe(true)
+  })
+
+  // Every recording the build bundles is credited (spec, "Content and
+  // licences"): a starter line, by its bytes, whose pack record names its
+  // source, author and licence, or the first bundled line, whose voice's
+  // credit and terms fixtures/voices/voices.json records.
+  test('bundles no recording without its credit, each under a hashed /assets/ path and in no chunk', () => {
+    const pack = Schema.decodeUnknownSync(StarterPack)(
+      JSON.parse(
+        readFileSync(join(root, 'starter', 'pack', 'levels.json'), 'utf8'),
+      ),
+    )
+    const starter = new Map(
+      pack.levels
+        .flatMap(level => level.lines)
+        .map(line => [line.sha256, line]),
+    )
+    const first = sha256(
+      readFileSync(
+        join(
+          root,
+          'fixtures',
+          'voices',
+          'ame-ga-suki',
+          'meimei-himari',
+          'right.wav',
+        ),
+      ),
+    )
+    const voices: ReadonlyArray<{
+      id: string
+      credit: string
+      termsUrl: string
+    }> = JSON.parse(
+      readFileSync(join(root, 'fixtures', 'voices', 'voices.json'), 'utf8'),
+    )
+    expect(voices.find(voice => voice.id === 'meimei-himari')).toMatchObject({
+      credit: 'VOICEVOX:冥鳴ひまり',
+      termsUrl: 'https://www.meimeihimari.com/terms-of-use',
+    })
+    const audio = files().filter(file => audioExtensions.test(file))
+    expect(audio.length).toBe(starter.size + 1)
+    const found = new Set<string>()
+    for (const file of audio) {
+      expect(file).toMatch(/^assets\/[a-z0-9-]+-[\w-]{8}\.wav$/)
+      const hash = sha256(readFileSync(join(dist, file)))
+      expect(starter.has(hash) || hash === first, file).toBe(true)
+      found.add(hash)
+    }
+    expect(found.size).toBe(audio.length)
+    for (const file of files().filter(file => /\.(js|mjs)$/.test(file))) {
+      expect(readFileSync(join(dist, file), 'utf8'), file).not.toMatch(
+        /data:audio|RIFF/,
+      )
+    }
   })
 })
