@@ -4,7 +4,8 @@ Every screen, test, doc and name in the code uses these words with these meaning
 
 - **Clip:** one recording: a bundled starter recording, an upload, or a local-pack file.
 - **Line:** a stretch of a clip, with a start and end, to copy; optionally with text and kana.
-- **Level:** a clip's lines in order, with their stars, at `/level/:clipId`: a bundled clip's, an upload's or the local pack's; the starter set is six levels, one per accent pattern, then pairs and phrases.
+- **Level:** lines to copy in order, with their stars, at `/level/:clipId`: an upload's lines, the local pack's, or a bundled level's.
+  A starter level is a set of recordings, one for each line; the starter set is six levels, one per accent pattern, then pairs and phrases.
 - **Take:** one recording of the learner copying a line.
   A **guided** take shows the native curve and the live curve; a **blind** take hides both until it ends.
 - **Curve:** the tracker's output for a recording: pitch, confidence and level per 16 ms frame, and the onset.
@@ -28,7 +29,8 @@ Every screen, test, doc and name in the code uses these words with these meaning
 - **Marks:** a line's warning that its native curve is weak: low pitch confidence (little of its speech pitched) or likely music (a pitch through most of its pauses).
 - **Cut:** making an upload's lines: its speech found by Silero VAD, cut at pauses of about 300 ms into lines of about 1 to 4 s, and each line's native curve tracked, all in the clip Worker, with its progress shown and a way to stop it.
 - **Text model:** Whisper base (whisper-small as the larger option), which writes out an upload's text on the device, downloaded only once the learner agrees in the **consent dialog**, which names its size; "Not now" is kept, and `/settings` offers it again.
-- **Transcript:** an upload's text as the text model wrote it, in small pieces each with its time, matched to the lines by time each time they are shown; a line's **own text**, typed or pasted by the learner, stands over it. Text is for reading only: no score reads it.
+- **Transcript:** an upload's text as the text model wrote it, in small pieces each with its time, matched to the lines by time each time they are shown; a line's **own text**, typed or pasted by the learner, stands over it.
+  Text is for reading only: no score reads it.
 - **Readings:** the kana shown over a line's kanji, from a dictionary run on the device once the learner shows them, which the learner can edit word by word; like the text, for reading only.
 - **Stars:** per line, 0 to 3: one for reaching the clip's threshold on a guided take, two for beating it, three for reaching it blind; worked out from the line's kept takes, so a take that couldn't compare never costs one.
 - **Return:** a line coming back for a blind take on a later day, spaced out 1, 3, 7, 14 and 30 days after each blind take made when it was due that reaches its threshold, and the next day after one that does not; a line is **due back** from that day on, listed on the home screen with no penalty however long it waits, and only a blind take counts as its return.

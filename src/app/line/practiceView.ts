@@ -258,11 +258,11 @@ const nativePending = <ViewMessage>(
         ],
       )
 
-// The back link goes to the line's level, where every line of its clip
-// is, with its stars.
+// The back link goes to the line's level, where every line of it is,
+// with its stars: a clip's lines, or a starter level's recordings.
 const backOf = (clipId: string) => ({
   href: levelRouter({ clipId, maybeFind: Option.none() }),
-  text: 'This clip’s lines',
+  text: 'This level’s lines',
 })
 
 // During a blind take, in the curves' place and at their size: why
