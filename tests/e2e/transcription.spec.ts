@@ -266,11 +266,14 @@ test('practice never waits for the text: a line of the clip is copied to a score
       const { page, context } = session
       // The model's weights are held back until the take is scored, so the
       // job is still downloading the whole time.
-      const held = Promise.withResolvers<void>()
+      const held: { release: () => void } = { release: () => {} }
+      const released = new Promise<void>(resolve => {
+        held.release = resolve
+      })
       await context.route(
         url => /^\/models\/whisper-base\/.+\.onnx$/.test(url.pathname),
         async route => {
-          await held.promise
+          await released
           await route.abort()
         },
       )
@@ -302,7 +305,7 @@ test('practice never waits for the text: a line of the clip is copied to a score
       // The job ran on through it, still downloading.
       await page.getByRole('link', { name: /This level’s lines/ }).click()
       await expect(page.getByText(/^Downloading the text model:/)).toBeVisible()
-      held.resolve()
+      held.release()
 
       expectNothingSent(session, baseURL ?? '')
     })
