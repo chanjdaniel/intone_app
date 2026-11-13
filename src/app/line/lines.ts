@@ -181,7 +181,7 @@ export const practiceLineOfClip = (
 ): PracticeLine => {
   const place = clip.lines.findIndex(found => found.id === line.id)
   const name = clipLineTitle(place + 1)
-  const text = (clipLineTexts(clip)[place] ?? line.text ?? '').trim()
+  const text = (clipLineTexts(clip)[place] ?? '').trim()
   return {
     clipId: clip.id,
     lineId: line.id,

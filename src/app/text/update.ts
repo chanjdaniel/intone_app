@@ -17,7 +17,7 @@ import {
   TextJob,
   TextOffer,
   TextPurpose,
-  type TextStep,
+  TextStep,
   lineTextFieldId,
   pastedLines,
   pastedTextFieldId,
@@ -73,8 +73,8 @@ const startedJob = (
         model: textModel,
         step:
           purpose._tag === 'Download'
-            ? { _tag: 'Downloading', done: 0, total: 1 }
-            : { _tag: 'Decoding' },
+            ? TextStep.Downloading({ done: 0, total: 1 })
+            : TextStep.Decoding(),
       }),
   })
 
@@ -441,7 +441,7 @@ export const failedSetLineTexts = (
   reason: string,
 ): TextUpdate =>
   model.lineText._tag !== 'Idle' && model.lineText.clipId === clipId
-    ? refused(model, `The text was not kept. ${reason}`)
+    ? refused(model, reason)
     : unchanged(model)
 
 // Everything on the device is gone: the answer with it, and the model's

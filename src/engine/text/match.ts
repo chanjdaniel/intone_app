@@ -9,7 +9,7 @@ import type { Span } from './windows'
 // line before it. Matching runs each time a line's text is shown, so a
 // line the learner moved, split or merged gets the words of its new span.
 
-// How far outside a line a piece may start and still be its.
+// How far outside a line a piece's middle may fall and still be its.
 export const pieceReachSeconds = 0.5
 
 const middleOf = (piece: TextPiece): number => (piece.from + piece.to) / 2

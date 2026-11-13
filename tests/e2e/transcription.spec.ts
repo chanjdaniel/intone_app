@@ -197,6 +197,16 @@ test('“Not now” downloads nothing, is kept, and the settings offer the downl
     await page.goto('/upload')
     await page.locator('#upload-file').setInputFiles(clip)
     await page.waitForURL(/\/level\//, { timeout: 120_000 })
+    // Enter on the larger model's checkbox only ticks or reads it: in
+    // Chromium it would submit a form with a submit button, which would
+    // start the download unasked (frontend patterns, "Dialog sizes").
+    const dialog = page.getByRole('dialog', {
+      name: 'Download the text model?',
+    })
+    await dialog.getByRole('checkbox').focus()
+    await page.keyboard.press('Enter')
+    await expect(dialog).toBeVisible()
+    await expect(page.getByRole('progressbar')).toHaveCount(0)
     await declineTextModel(page)
     await expect(
       page.getByRole('button', { name: 'Paste your own text' }),

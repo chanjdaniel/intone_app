@@ -436,8 +436,11 @@ export const settingsTextSection = <ViewMessage>(
 }
 
 // The consent dialog: the frontend patterns' narrow width for two
-// controls, with the body, the choice and the actions in one form. It
-// opens on "Not now", so Enter never starts a download by itself.
+// controls, with the body, the choice and the actions in one form. The
+// form has no submit button, so Enter on the larger model's checkbox,
+// which in Chromium submits a form that has one, cannot start a download
+// (frontend patterns, "Dialog sizes and the pinned body"); it opens on
+// "Not now", and only pressing "Download" downloads.
 export const textDialogView = <ViewMessage>(
   dialog: Dialog.Model,
   offer: TextOffer,
@@ -477,7 +480,6 @@ export const textDialogView = <ViewMessage>(
                 h.form(
                   [
                     ...panel,
-                    h.OnSubmit(events.agree),
                     h.Class(
                       'relative flex w-[min(100%-2rem,26rem)] flex-col gap-4 rounded-lg border border-line bg-surface p-6 text-ink shadow-lg',
                     ),
@@ -535,7 +537,11 @@ export const textDialogView = <ViewMessage>(
                           ['Not now'],
                         ),
                         h.button(
-                          [h.Type('submit'), h.Class(primaryButton)],
+                          [
+                            h.Type('button'),
+                            h.OnClick(events.agree),
+                            h.Class(primaryButton),
+                          ],
                           [`Download ${modelSizeText(model)}`],
                         ),
                       ],

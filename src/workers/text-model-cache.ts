@@ -43,7 +43,7 @@ const fetched = async (
   if (!response.ok || response.body === null) {
     throw new Error(`${key} answered ${response.status}.`)
   }
-  const chunks: Array<Uint8Array> = []
+  const chunks: Array<Uint8Array<ArrayBuffer>> = []
   const reader = response.body.getReader()
   for (;;) {
     const { done, value } = await reader.read()
@@ -57,8 +57,7 @@ const fetched = async (
   if (got !== bytes) {
     throw new Error(`${key} gave ${got} bytes, where ${bytes} were listed.`)
   }
-  const parts: Array<BlobPart> = chunks.map(chunk => Uint8Array.from(chunk))
-  return new Response(new Blob(parts), {
+  return new Response(new Blob(chunks), {
     headers: {
       'Content-Type':
         response.headers.get('Content-Type') ?? 'application/octet-stream',
@@ -66,6 +65,14 @@ const fetched = async (
     },
   })
 }
+
+// Deletes every text model's files from the device, as clearing all data
+// does; a browser with no Cache API has none to delete.
+export const deleteTextModels: Effect.Effect<void> = Effect.promise(() =>
+  'caches' in globalThis
+    ? caches.delete(textModelCacheName).catch(() => false)
+    : Promise.resolve(false),
+).pipe(Effect.asVoid)
 
 // Every file of `model` in the cache, the ones already there counted as
 // done; interrupting it aborts the file being fetched.

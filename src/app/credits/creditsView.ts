@@ -1,5 +1,5 @@
 import type { Html, HtmlBuilder } from 'foldkit/html'
-import { modelCredits } from 'virtual:intone/models'
+import { type ModelId, modelCredits } from 'virtual:intone/models'
 
 import { bundledLines } from '../line/lines'
 import { pageFrame } from '../pageFrame'
@@ -46,7 +46,7 @@ const section = <ViewMessage>(
   )
 
 // What each model does in the app.
-const usedFor: Readonly<Record<string, string>> = {
+const usedFor: Readonly<Record<ModelId, string>> = {
   'swift-f0': 'Finds the pitch of your voice and of each line.',
   'silero-vad': 'Finds the speech in a clip you bring, to cut it into lines.',
   'whisper-base':
@@ -77,10 +77,7 @@ export const creditsView = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
                 [h.Class('flex flex-col gap-1')],
                 [
                   h.h3([h.Class('text-lg font-semibold')], [model.name]),
-                  h.p(
-                    [h.Class('text-base text-ink')],
-                    [usedFor[model.id] ?? ''],
-                  ),
+                  h.p([h.Class('text-base text-ink')], [usedFor[model.id]]),
                   h.p(
                     [h.Class('text-sm text-muted')],
                     [`Licence: ${model.licence}`],

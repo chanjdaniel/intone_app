@@ -228,7 +228,7 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 - `src/services/local-pack.ts` holds the manifest's Schema (`PackManifest`), finds its files among those chosen, plans the level from the pack as it was (`planPack`: a line whose file, by SHA-256, and span are unchanged keeps its id, curve and takes) and runs the import as one Stream of steps (`importPack`), tracking new lines with one clip Worker (`ClipAnalyser.tracker`); `HistoryStore.replaceClip` writes the level, its curves and files, compare-and-swap, and deletes what it stops naming.
 - A pack is a clip record with a `pack` key (its files, each by path, SHA-256, length and kept audio) and `audio: null`; each line names its `file` and may have `text`, `kana` and `source`.
   Playback, deletion, the settings and the backup read a clip's audio through `clipAudioFiles`, `lineAudioOf`, `clipHasAudio`, `clipWithoutAudio` and `clipKeepingAudioOf` (`src/services/history-records.ts`), so uploads and packs go the same way; only the line editor, which a pack's level has not, reads an upload's `audio` itself.
-- A source link is rendered by `src/app/line/sourceLink.ts` alone: `target="_blank"`, `rel="noopener noreferrer"`, never fetched; the app downloads nothing from YouTube.
+- A line's source link is rendered by `src/app/line/sourceLink.ts` alone: `target="_blank"`, `rel="noopener noreferrer"`, never fetched; the app downloads nothing from YouTube.
 - `fixtures/local-pack/` (`npm run fixtures:local-pack`) is the tests' example pack; `tests/e2e/local-pack.spec.ts` imports it in the built app.
 
 ## Text for the lines

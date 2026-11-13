@@ -1,10 +1,5 @@
 import { Context, Effect, Layer, Match, Schema, Stream } from 'effect'
-import {
-  modelCredits,
-  modelFiles,
-  modelVersions,
-  modelsRoot,
-} from 'virtual:intone/models'
+import { modelFiles, modelVersions, modelsRoot } from 'virtual:intone/models'
 import { textRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'
 
 import type { TextPiece } from '../engine/text/pieces'
@@ -31,16 +26,9 @@ import { type WorkerPort, openWorkerSession } from './worker-session'
 // only: no score reads it. Nothing here leaves the device; the only
 // requests are for the model's own files, on the app's own origin.
 
-// The two models the learner may choose, as Daniel decided (report
-// section 2): whisper-base, and whisper-small for better text.
-export { TextModelId } from './history-records'
-
-export const textModelIds: ReadonlyArray<TextModelId> = [
-  'whisper-base',
-  'whisper-small',
-]
-
-// The model as Transformers.js loads it, from the build's model list.
+// The model as Transformers.js loads it, one of the two the learner may
+// choose, as Daniel decided (report section 2): whisper-base, and
+// whisper-small for better text, from the build's model list.
 export const textModelOf = (id: TextModelId): TextModel => ({
   name: `${id}/${modelVersions[id]}`,
   files: modelFiles[id],
@@ -51,9 +39,6 @@ export const textModelBytes = (id: TextModelId): number =>
   modelFiles[id].reduce((sum, file) => sum + file.bytes, 0)
 
 export const textModelVersion = (id: TextModelId): string => modelVersions[id]
-
-export const textModelName = (id: TextModelId): string =>
-  modelCredits.find(model => model.id === id)?.name ?? id
 
 export class TranscriberError extends Schema.TaggedError<
   TranscriberError,

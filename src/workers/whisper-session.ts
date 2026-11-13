@@ -136,6 +136,8 @@ export const openWhisper = (
     }
     const vocabulary = {
       timestampBegin,
+      // Whisper's timestamp tokens step by 20 ms (its 30 s window over
+      // 1,500 positions), as Transformers.js's `time_precision` says.
       secondsPerTimestamp: 0.02,
       isSpecial: (id: number) => special.has(id),
       decode: (ids: ReadonlyArray<number>) => tokenizer.decode([...ids]),

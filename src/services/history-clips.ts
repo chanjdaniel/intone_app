@@ -105,11 +105,6 @@ export type ClipOperations = Readonly<{
   readonly undoClipEdit: (
     clipId: string,
   ) => Effect.Effect<Option.Option<ClipEntry>, HistoryError>
-  // Writes `next` over `before` (none: there must be no such clip yet),
-  // unless the clip was changed meanwhile, with `natives` and the files
-  // in `writes`; then deletes the curves and the
-  // files `before` named that nothing names any more. A local pack's
-  // import (./local-pack.ts) plans what to write.
   // Keeps an upload's transcript, over any it had, and gives the clip
   // as it is then; none when there is no such clip.
   readonly setClipTranscript: (
@@ -122,6 +117,11 @@ export type ClipOperations = Readonly<{
     clipId: string,
     texts: ReadonlyArray<Readonly<{ lineId: string; text: string }>>,
   ) => Effect.Effect<Option.Option<ClipEntry>, HistoryError>
+  // Writes `next` over `before` (none: there must be no such clip yet),
+  // unless the clip was changed meanwhile, with `natives` and the files
+  // in `writes`; then deletes the curves and the
+  // files `before` named that nothing names any more. A local pack's
+  // import (./local-pack.ts) plans what to write.
   readonly replaceClip: (
     before: Option.Option<ClipEntry>,
     next: ClipEntry,

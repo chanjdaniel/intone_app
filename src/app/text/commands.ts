@@ -61,7 +61,8 @@ export const SetLineTexts = Command.define('SetLineTexts', {
           onNone: () =>
             Message.FailedSetLineTexts({
               clipId,
-              reason: 'The clip is no longer on this device.',
+              reason:
+                'The text was not kept. The clip is no longer on this device.',
             }),
           onSome: clip =>
             Message.SucceededSetLineTexts({ clipId, clip: levelClipOf(clip) }),

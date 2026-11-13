@@ -464,7 +464,7 @@ describe('the learner’s own text', () => {
         SetLineTexts,
         Message.FailedSetLineTexts({
           clipId: 'c1',
-          reason: 'The disk is full.',
+          reason: 'The text was not kept. The disk is full.',
         }),
       ),
       model(current =>

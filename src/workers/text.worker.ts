@@ -40,8 +40,9 @@ const program = Effect.gen(function* () {
     modelsRoot: string | null
     stopping: boolean
     job: Fiber.Fiber<void> | null
-    // A download is interrupted at once, its fetch aborted; Whisper's run
-    // cannot be, so a transcription stops at its next window.
+    // A job is interrupted at once, a download's fetch aborted, until
+    // Whisper reads the clip: a run of it cannot be, so a transcription
+    // stops at its next window from then on.
     interruptible: boolean
   } = { modelsRoot: null, stopping: false, job: null, interruptible: false }
 
@@ -72,6 +73,9 @@ const program = Effect.gen(function* () {
         yield* download(modelsRoot, model)
         yield* post({ _tag: 'Progress', step: 'Preparing', done: 0, total: 1 })
         const whisper = yield* openWhisper(model)
+        // From here a run of Whisper cannot be interrupted, so a Close
+        // waits for the next window.
+        state.interruptible = false
         const pieces: Array<TextPiece> = []
         for (const [k, window] of windows.entries()) {
           yield* post({
@@ -90,10 +94,7 @@ const program = Effect.gen(function* () {
       }),
     )
 
-  const run = (
-    job: Effect.Effect<void, Readonly<{ reason: string }>>,
-    interruptible: boolean,
-  ) =>
+  const run = (job: Effect.Effect<void, Readonly<{ reason: string }>>) =>
     Effect.gen(function* () {
       if (state.job !== null) {
         return yield* post({
@@ -101,7 +102,7 @@ const program = Effect.gen(function* () {
           reason: 'The text Worker is busy.',
         })
       }
-      state.interruptible = interruptible
+      state.interruptible = true
       state.job = yield* Effect.forkIn(
         job.pipe(
           Effect.catch(error => post({ _tag: 'Failed', reason: error.reason })),
@@ -135,12 +136,11 @@ const program = Effect.gen(function* () {
               download(modelsRoot, model).pipe(
                 Effect.andThen(post({ _tag: 'Downloaded' })),
               ),
-              true,
             ),
           ),
         Transcribe: ({ model, samples, windows }) =>
           loaded(modelsRoot =>
-            run(transcribe(modelsRoot, model, samples, windows), false),
+            run(transcribe(modelsRoot, model, samples, windows)),
           ),
         Close: () =>
           Effect.sync(() => {
