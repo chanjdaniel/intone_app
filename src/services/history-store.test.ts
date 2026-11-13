@@ -264,11 +264,46 @@ describe('the history store', () => {
   )
 
   it.effect(
+    'two changes to the settings at once both land, each read and written in one transaction',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        yield* Effect.all(
+          [
+            run(store =>
+              store.updateSettings(settings => ({
+                ...settings,
+                readings: 'Shown',
+              })),
+            ),
+            run(store =>
+              store.updateSettings(settings => ({
+                ...settings,
+                textChoice: { _tag: 'Declined' },
+              })),
+            ),
+          ],
+          { concurrency: 2 },
+        )
+        expect(yield* run(store => store.settings)).toEqual({
+          keepTakeAudio: false,
+          readings: 'Shown',
+          textChoice: { _tag: 'Declined' },
+        })
+      }),
+  )
+
+  it.effect(
     'keeps a take’s audio when asked, as a WAV in the clip store, and deletes it with its take',
     () =>
       Effect.gen(function* () {
         const { run, files } = harness()
-        yield* run(store => store.setSettings({ keepTakeAudio: true }))
+        yield* run(store =>
+          store.updateSettings(settings => ({
+            ...settings,
+            keepTakeAudio: true,
+          })),
+        )
         const kept = yield* run(store => store.keep(newTake()))
         const file = audioPathOf(kept.entry.id)
         expect(kept.entry.audio).toEqual({
@@ -319,7 +354,7 @@ describe('the history store', () => {
         )
         const kept = yield* HistoryStore.use(store =>
           store
-            .setSettings({ keepTakeAudio: true })
+            .updateSettings(settings => ({ ...settings, keepTakeAudio: true }))
             .pipe(Effect.andThen(store.keep(newTake()))),
         ).pipe(Effect.provide(layer))
         expect(kept.entry.audio).toBeNull()
@@ -356,7 +391,12 @@ describe('the history store', () => {
     () =>
       Effect.gen(function* () {
         const { run, files, factory } = harness()
-        yield* run(store => store.setSettings({ keepTakeAudio: true }))
+        yield* run(store =>
+          store.updateSettings(settings => ({
+            ...settings,
+            keepTakeAudio: true,
+          })),
+        )
         yield* run(store => store.keep(newTake()))
         yield* Effect.promise(async () => {
           const database = await request(() => factory.open(databaseName))
@@ -383,7 +423,12 @@ describe('the history store', () => {
     () =>
       Effect.gen(function* () {
         const from = harness()
-        yield* from.run(store => store.setSettings({ keepTakeAudio: true }))
+        yield* from.run(store =>
+          store.updateSettings(settings => ({
+            ...settings,
+            keepTakeAudio: true,
+          })),
+        )
         const kept = yield* from.run(store => store.keep(newTake()))
         const withAudio = yield* from.run(store => store.dump(true))
         expect(withAudio.natives).toHaveLength(1)

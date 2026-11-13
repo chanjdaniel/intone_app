@@ -97,8 +97,10 @@ export type HistoryStoreShape = ClipOperations &
     // Deletes a take, its recording and its kept audio.
     readonly remove: (id: string) => Effect.Effect<void, HistoryError>
     readonly settings: Effect.Effect<Settings, HistoryError>
-    readonly setSettings: (
-      settings: Settings,
+    // Changes the settings, read and written in one transaction, so two
+    // changes at once never lose one.
+    readonly updateSettings: (
+      change: (settings: Settings) => Settings,
     ) => Effect.Effect<void, HistoryError>
     readonly dump: (
       withAudio: boolean,
@@ -391,10 +393,22 @@ export const make = (
         ),
       )
 
-    const setSettings = (next: Settings) =>
+    const updateSettings = (change: (settings: Settings) => Settings) =>
       withDatabase('The settings were not kept.', database =>
         transact(database, [stores.meta], 'readwrite', transaction => {
-          transaction.objectStore(stores.meta).put(next, settingsKey)
+          const meta = transaction.objectStore(stores.meta)
+          const current = meta.get(settingsKey)
+          current.onsuccess = () => {
+            meta.put(
+              change(
+                Option.getOrElse(
+                  decodeSettings(current.result),
+                  () => defaultSettings,
+                ),
+              ),
+              settingsKey,
+            )
+          }
           return () => undefined
         }),
       )
@@ -539,7 +553,7 @@ export const make = (
       rescore,
       remove,
       settings,
-      setSettings,
+      updateSettings,
       dump,
       restore,
       clear,

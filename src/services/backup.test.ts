@@ -68,7 +68,12 @@ const historyWith = (keepAudio: boolean) => {
     use: (store: HistoryStore['Service']) => Effect.Effect<A, E>,
   ) => HistoryStore.use(use).pipe(Effect.provide(layer))
   return Effect.gen(function* () {
-    yield* run(store => store.setSettings({ keepTakeAudio: keepAudio }))
+    yield* run(store =>
+      store.updateSettings(settings => ({
+        ...settings,
+        keepTakeAudio: keepAudio,
+      })),
+    )
     yield* run(store => store.keep(takeOf(1, 1_000)))
     yield* run(store => store.keep(takeOf(2, 2_000)))
     return { run, files }

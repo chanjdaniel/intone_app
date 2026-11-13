@@ -203,7 +203,12 @@ describe('clips in the history', () => {
     () =>
       Effect.gen(function* () {
         const { run, files, factory } = harness()
-        yield* run(store => store.setSettings({ keepTakeAudio: true }))
+        yield* run(store =>
+          store.updateSettings(settings => ({
+            ...settings,
+            keepTakeAudio: true,
+          })),
+        )
         const clip = yield* run(store => store.addClip(newClip()))
         const other = yield* run(store =>
           store.addClip(

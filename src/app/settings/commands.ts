@@ -113,11 +113,10 @@ export const SetKeepTakeAudio = Command.define('SetKeepTakeAudio', {
   messages: [Message.SucceededSetKeepTakeAudio, Message.FailedSetKeepTakeAudio],
   execute: ({ keep }) =>
     HistoryStore.use(history =>
-      history.settings.pipe(
-        Effect.flatMap(settings =>
-          history.setSettings({ ...settings, keepTakeAudio: keep }),
-        ),
-      ),
+      history.updateSettings(settings => ({
+        ...settings,
+        keepTakeAudio: keep,
+      })),
     ).pipe(
       Effect.as(Message.SucceededSetKeepTakeAudio({ keep })),
       Effect.provide(HistoryStore.layer),

@@ -38,11 +38,7 @@ export const LoadReadingsChoice = Command.define('LoadReadingsChoice', {
 })
 
 const changeSettings = (change: (settings: Settings) => Settings) =>
-  HistoryStore.use(history =>
-    history.settings.pipe(
-      Effect.flatMap(settings => history.setSettings(change(settings))),
-    ),
-  )
+  HistoryStore.use(history => history.updateSettings(change))
 
 export const SetReadingsChoice = Command.define('SetReadingsChoice', {
   args: { shown: ReadingsShown },

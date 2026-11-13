@@ -31,11 +31,7 @@ export const SetTextChoice = Command.define('SetTextChoice', {
   messages: [Message.SucceededSetTextChoice, Message.FailedSetTextChoice],
   execute: ({ choice }) =>
     HistoryStore.use(history =>
-      history.settings.pipe(
-        Effect.flatMap(settings =>
-          history.setSettings({ ...settings, textChoice: choice }),
-        ),
-      ),
+      history.updateSettings(settings => ({ ...settings, textChoice: choice })),
     ).pipe(
       Effect.as(Message.SucceededSetTextChoice()),
       Effect.provide(HistoryStore.layer),
