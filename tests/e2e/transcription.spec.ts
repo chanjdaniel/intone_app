@@ -7,7 +7,7 @@ import {
   readModelList,
   servedModelFiles,
 } from '../../build/models.ts'
-import { type Session, report, withPage } from './take-session.ts'
+import { type Session, launch, report, withPage } from './take-session.ts'
 import { declineTextModel } from './text-offer.ts'
 
 // The text of a clip the learner brings, in the built app: the download
@@ -16,9 +16,12 @@ import { declineTextModel } from './text-offer.ts'
 // matched to the lines, and every model file is fetched once; after a
 // reload a second transcription fetches no model file at all, from the
 // browser cache Transformers.js keeps; a line's own text is typed and
-// kept; and nothing leaves the device: no request to another origin, and
-// none with a body. Declining leaves the clip's lines to practise, as
-// uploads.spec.ts shows with a scored take after "Not now".
+// kept; once the files are gone, the download is asked again with its
+// size; a line of the clip is copied to a score while the download is
+// held under way, so practice never waits for the text; and nothing
+// leaves the device: no request to another origin, and none with a body.
+// Declining leaves the clip's lines to practise, as uploads.spec.ts shows
+// with a scored take after "Not now".
 
 const root = join(import.meta.dirname, '..', '..')
 const clip = join(root, 'fixtures', 'real', 'gongitsune.wav')
@@ -247,4 +250,63 @@ test('“Not now” downloads nothing, is kept, and the settings offer the downl
     expectNothingSent(session, baseURL ?? '')
     expect(session.problems).toStrictEqual([])
   })
+})
+
+test('practice never waits for the text: a line of the clip is copied to a score while its download is under way', async ({
+  playwright,
+  baseURL,
+}) => {
+  test.setTimeout(240_000)
+  const model = await whisperBase()
+  // The take copies line 1 in the reader's own voice: the fake microphone
+  // plays the clip from its start, where line 1 is.
+  const browser = await launch(playwright, clip)
+  try {
+    await withPage(browser, async session => {
+      const { page, context } = session
+      // The model's weights are held back until the take is scored, so the
+      // job is still downloading the whole time.
+      const held = Promise.withResolvers<void>()
+      await context.route(
+        url => /^\/models\/whisper-base\/.+\.onnx$/.test(url.pathname),
+        async route => {
+          await held.promise
+          await route.abort()
+        },
+      )
+      await page.goto('/upload')
+      await page.locator('#upload-file').setInputFiles(clip)
+      await page.waitForURL(/\/level\//, { timeout: 120_000 })
+      await page
+        .getByRole('dialog', { name: 'Download the text model?' })
+        .getByRole('button', { name: `Download ${model.megabytes} MB` })
+        .click()
+      await expect(page.getByText(/^Downloading the text model:/)).toBeVisible()
+
+      await page
+        .getByRole('link', { name: /^Line 1\b/ })
+        .first()
+        .click()
+      await page.getByRole('button', { name: 'Record', exact: true }).click()
+      await expect(
+        page.getByRole('heading', { name: 'Recording' }),
+      ).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByRole('timer')).toHaveText(/^0:0[4-9]/, {
+        timeout: 30_000,
+      })
+      await page.getByRole('button', { name: 'Stop' }).click()
+      await expect(page.getByText(/% match to this clip/)).toBeVisible({
+        timeout: 30_000,
+      })
+
+      // The job ran on through it, still downloading.
+      await page.getByRole('link', { name: /This level’s lines/ }).click()
+      await expect(page.getByText(/^Downloading the text model:/)).toBeVisible()
+      held.resolve()
+
+      expectNothingSent(session, baseURL ?? '')
+    })
+  } finally {
+    await browser.close()
+  }
 })

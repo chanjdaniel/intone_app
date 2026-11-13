@@ -251,7 +251,7 @@ An asynchronous acquire in a Mount that must stop on unmount uses `Effect.acquir
 - The transcript is kept with the clip (`ClipEntry.transcript`), its pieces matched to the lines by time each time they are read (`src/engine/text/match.ts`, `clipLineTexts`), so a moved, split or merged line gets the words of its new span; a line's own text (`ClipLine.text`), typed under its row or pasted for the whole clip on its level, stands over it, and a moved line keeps it.
 - No score reads the text: `src/services/text-and-score.test.ts` holds that a wrong transcript or the learner's text leaves a line's native and every score of it as they were.
 - `/credits` (`src/app/credits/creditsView.ts`) names every model from `modelCredits` and the bundled recordings.
-- `tests/e2e/transcription.spec.ts` writes a CC0 clip out in the built app, each model file fetched once and none after a reload, and nothing sent; `npm run text:study` (`scripts/transcription-study.ts`) measures character error, the matching and the speed on WebAssembly and WebGPU into `docs/transcription-study.md`.
+- `tests/e2e/transcription.spec.ts` writes a CC0 clip out in the built app, each model file fetched once and none after a reload, the dialog asked again once the files are gone, a line of the clip scored while the download is held under way, and nothing sent; `npm run text:study` (`scripts/transcription-study.ts`) measures character error, the matching and the speed on WebAssembly and WebGPU into `docs/transcription-study.md`.
 
 ## Readings
 
