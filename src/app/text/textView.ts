@@ -363,14 +363,22 @@ export const levelTextSection = <ViewMessage>(
   )
 }
 
-const choiceText = (maybeChoice: Option.Option<TextChoice>): string =>
+// An agreed model is not kept while it first downloads, or when its
+// files are gone (a backup restored on another device, or files the
+// browser evicted), so it is offered again with its size.
+const choiceText = (
+  maybeChoice: Option.Option<TextChoice>,
+  modelKept: boolean,
+): string =>
   Option.match(maybeChoice, {
     onNone: () =>
       'Intone can write out the text of the clips you bring, on this device, after a one-time download.',
     onSome: choice =>
       choice._tag === 'Declined'
         ? 'You said not now to the text model’s download, so your clips are not written out. You can still type or paste their text.'
-        : `Your clips’ text is written out on this device by ${modelTitle(choice.model)}, a ${modelSizeText(choice.model)} download the browser keeps.`,
+        : modelKept
+          ? `Your clips’ text is written out on this device by ${modelTitle(choice.model)}, a ${modelSizeText(choice.model)} download the browser keeps.`
+          : `You agreed to ${modelTitle(choice.model)}, a ${modelSizeText(choice.model)} download, but it is not on this device, so your clips are not written out until it downloads.`,
   })
 
 // The settings' section: the answer given, and the download offered
@@ -383,7 +391,9 @@ export const settingsTextSection = <ViewMessage>(
 ): Html => {
   const maybeChoice =
     choice._tag === 'Read' ? choice.maybeChoice : Option.none<TextChoice>()
-  const agreed = Option.exists(maybeChoice, found => found._tag === 'Agreed')
+  const modelKept = choice._tag === 'Read' && choice.modelKept
+  const agreedAndKept =
+    modelKept && Option.exists(maybeChoice, found => found._tag === 'Agreed')
   return h.section(
     [h.AriaLabelledBy('text-model-heading'), h.Class('card')],
     [
@@ -391,7 +401,10 @@ export const settingsTextSection = <ViewMessage>(
         [h.Id('text-model-heading'), h.Class('text-xl font-bold')],
         ['Text for your lines'],
       ),
-      h.p([h.Class('text-base text-ink')], [choiceText(maybeChoice)]),
+      h.p(
+        [h.Class('text-base text-ink')],
+        [choiceText(maybeChoice, modelKept)],
+      ),
       h.p(
         [h.Class('text-sm text-muted')],
         [
@@ -407,11 +420,11 @@ export const settingsTextSection = <ViewMessage>(
                 h.Type('button'),
                 h.OnClick(events.chooseModel),
                 h.Class(
-                  `${agreed ? 'button-secondary' : 'button-primary'} self-start`,
+                  `${agreedAndKept ? 'button-secondary' : 'button-primary'} self-start`,
                 ),
               ],
               [
-                agreed
+                agreedAndKept
                   ? 'Choose another text model'
                   : 'Download the text model',
               ],

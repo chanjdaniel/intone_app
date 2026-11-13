@@ -55,8 +55,8 @@ const mb = (bytes: number): string => `${Math.round(bytes / 1_000_000)} MB`
 const baseSize = mb(textModelBytes('whisper-base'))
 const smallSize = mb(textModelBytes('whisper-small'))
 
-const read = (maybeChoice: Option.Option<TextChoice>) =>
-  TextChoiceState.Read({ maybeChoice, modelKept: true })
+const read = (maybeChoice: Option.Option<TextChoice>, modelKept = true) =>
+  TextChoiceState.Read({ maybeChoice, modelKept })
 
 const onLevel = (
   clip: LevelClip = sampleClip(3),
@@ -355,6 +355,29 @@ describe('the settings’ text model', () => {
           'You said not now to the text model’s download, so your clips are not written out. You can still type or paste their text.',
         ),
       ).toExist(),
+      click(role('button', { name: 'Download the text model' })),
+      ...dialogShown,
+      expect(role('button', { name: `Download ${baseSize}` })).toExist(),
+    )
+  })
+
+  test('says an agreed model whose files are not on this device must download, with its size, and offers it', () => {
+    scene(
+      { update, view },
+      given(
+        settingsWith(
+          read(Option.some({ _tag: 'Agreed', model: 'whisper-base' }), false),
+        ),
+      ),
+      expect(
+        text(
+          `You agreed to Whisper base, a ${baseSize} download, but it is not on this device, so your clips are not written out until it downloads.`,
+        ),
+      ).toExist(),
+      expect(text(/download the browser keeps/)).toBeAbsent(),
+      expect(
+        role('button', { name: 'Choose another text model' }),
+      ).toBeAbsent(),
       click(role('button', { name: 'Download the text model' })),
       ...dialogShown,
       expect(role('button', { name: `Download ${baseSize}` })).toExist(),

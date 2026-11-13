@@ -12,6 +12,7 @@ This file says how it works, what was chosen and why, and what it measured; `doc
   Declining leaves practice as it was: `tests/e2e/uploads.spec.ts` says "Not now" and then practises a line of the clip to a score, with no request for a model file.
 - Agreeing keeps the model chosen, and later uploads are written out at once with it while its files are on the device.
   When they are not, as after a backup restored on another device or a store the browser evicted, the dialog asks again, with the size, before anything downloads.
+  `/settings` then says the model agreed to is not on this device, with its size, and offers "Download the text model" rather than "Choose another text model".
   The job runs in the background, on any screen: the level shows its step ("Downloading the text model: 30 of 75 MB.", "Writing out the text: part 2 of 4.") with a bar and a Stop, and says "It runs in the background: practise any line meanwhile."
 - Each line of the level is then named by its text, with its number and times under it, and its practice screen is titled by it.
   Under each row, "Edit the text" (or "Add its text") opens a field for that line; "Paste your own text" takes one line of text for each line of the clip, in order, and refuses a count that differs, saying both counts.
