@@ -176,6 +176,21 @@ test('a CC0 clip is written out on the device once the learner agrees, each mode
     })
     expect(cached.slice().sort()).toStrictEqual(model.paths.slice().sort())
 
+    // The answer kept, but the model's files gone, as after a backup
+    // restored on another device or a store the browser evicted: writing
+    // the clip out offers the download again, with its size, and fetches
+    // nothing before the learner agrees.
+    await page.evaluate(() => caches.delete('intone-text-models'))
+    const beforeEviction = session.requests.length
+    await page.reload()
+    await page.getByRole('button', { name: 'Write out the text again' }).click()
+    await expect(dialog).toContainText(
+      `It needs a one-time download of ${model.megabytes} MB, which the browser keeps. Your clip never leaves this device.`,
+    )
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    expect(modelRequests(session, beforeEviction)).toStrictEqual([])
+
     expectNothingSent(session, baseURL ?? '')
     expect(session.problems).toStrictEqual([])
     await report(testInfo, 'transcription', {

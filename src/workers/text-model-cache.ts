@@ -74,6 +74,26 @@ export const deleteTextModels: Effect.Effect<void> = Effect.promise(() =>
     : Promise.resolve(false),
 ).pipe(Effect.asVoid)
 
+// Whether every file of `model` is in the cache, so a job with it
+// downloads nothing; a browser with no Cache API, or a store that cannot
+// be read, has none.
+export const isTextModelKept = (
+  modelsRoot: string,
+  model: TextModel,
+): Effect.Effect<boolean> =>
+  Effect.promise(async () => {
+    if (!('caches' in globalThis)) {
+      return false
+    }
+    const cache = await caches.open(textModelCacheName)
+    const found = await Promise.all(
+      model.files.map(file =>
+        cache.match(cacheKeyOf(modelsRoot, model, file.path)),
+      ),
+    )
+    return found.every(response => response !== undefined)
+  }).pipe(Effect.catchDefect(() => Effect.succeed(false)))
+
 // Every file of `model` in the cache, the ones already there counted as
 // done; interrupting it aborts the file being fetched.
 export const ensureTextModel = (

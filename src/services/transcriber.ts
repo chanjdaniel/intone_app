@@ -4,6 +4,7 @@ import { textRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'
 
 import type { TextPiece } from '../engine/text/pieces'
 import { type Span, textWindows } from '../engine/text/windows'
+import { isTextModelKept } from '../workers/text-model-cache'
 import {
   type Device,
   FromText,
@@ -170,6 +171,9 @@ export class Transcriber extends Context.Service<
       file: Blob,
       lines: ReadonlyArray<Span>,
     ) => Stream.Stream<TextEvent | TextDone, TranscriberError>
+    // Whether every file of the model is already on this device, so a
+    // job with it downloads nothing.
+    readonly isKept: (id: TextModelId) => Effect.Effect<boolean>
   }
 >()('intone/services/Transcriber') {
   // The browser's decoder and Whisper in the text Worker, from the app's
@@ -187,11 +191,13 @@ export class Transcriber extends Context.Service<
     return Transcriber.of({
       download: downloadWith(browser),
       transcribe: transcribeWith(browser),
+      isKept: id => isTextModelKept(modelsRoot, textModelOf(id)),
     })
   })
 
   // Answers each request with the events `respond` gives it, and fails
-  // with its error, with no browser, Worker or model.
+  // with its error, with no browser, Worker or model; a model is on the
+  // device when `kept` says so.
   static readonly layerTest = (
     respond: (
       request:
@@ -203,6 +209,7 @@ export class Transcriber extends Context.Service<
             lines: ReadonlyArray<Span>
           }>,
     ) => ReadonlyArray<TextEvent | TextDone> | TranscriberError,
+    kept: (id: TextModelId) => boolean = () => true,
   ): Layer.Layer<Transcriber> => {
     const answered = (answer: ReturnType<typeof respond>) =>
       answer instanceof TranscriberError
@@ -214,6 +221,7 @@ export class Transcriber extends Context.Service<
         download: id => answered(respond({ _tag: 'Download', id })),
         transcribe: (id, file, lines) =>
           answered(respond({ _tag: 'Transcribe', id, file, lines })),
+        isKept: id => Effect.succeed(kept(id)),
       }),
     )
   }

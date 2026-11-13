@@ -9,11 +9,14 @@ import { TextChoice, TextModelId } from '../../services/history-records'
 // a line's or a whole clip's text as the learner types or pastes it.
 // Practice never waits on any of it, and no score reads the text.
 
-// What the learner said to the download, read from the device once, when
-// the app opens.
+// What the learner said to the download, read from the device each time
+// a screen that uses it opens (/upload, a level, the settings), with
+// whether the agreed model's files are all on this device: an answer
+// restored from a backup, or one whose files the browser evicted, would
+// otherwise start a download no dialog had sized.
 export const TextChoiceState = defineTaggedUnion({
   NotRead: {},
-  Read: { maybeChoice: Schema.Option(TextChoice) },
+  Read: { maybeChoice: Schema.Option(TextChoice), modelKept: Schema.Boolean },
 })
 export type TextChoiceState = typeof TextChoiceState.Type
 

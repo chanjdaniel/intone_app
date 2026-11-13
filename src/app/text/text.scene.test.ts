@@ -56,7 +56,7 @@ const baseSize = mb(textModelBytes('whisper-base'))
 const smallSize = mb(textModelBytes('whisper-small'))
 
 const read = (maybeChoice: Option.Option<TextChoice>) =>
-  TextChoiceState.Read({ maybeChoice })
+  TextChoiceState.Read({ maybeChoice, modelKept: true })
 
 const onLevel = (
   clip: LevelClip = sampleClip(3),

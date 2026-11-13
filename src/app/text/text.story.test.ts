@@ -40,12 +40,12 @@ import {
 // and a result for a job stopped changes nothing; the learner's own text
 // is kept line by line, or pasted one line of text for each line.
 
-const read = (maybeChoice: Option.Option<TextChoice>) =>
-  TextChoiceState.Read({ maybeChoice })
+const read = (maybeChoice: Option.Option<TextChoice>, modelKept = true) =>
+  TextChoiceState.Read({ maybeChoice, modelKept })
 
 const onLevel = (
   clip: LevelClip = sampleClip(3),
-  choice = read(Option.none()),
+  choice: TextChoiceState = read(Option.none()),
 ): Model => ({
   ...initialModel(
     AppRoute.Level({ clipId: clip.id, maybeFind: Option.none() }),
@@ -146,7 +146,7 @@ describe('the download’s consent', () => {
       model(current => {
         expect(current.textJob).toStrictEqual(TextJob.Idle())
         expect(current.textChoice).toStrictEqual(
-          read(Option.some({ _tag: 'Declined' })),
+          read(Option.some({ _tag: 'Declined' }), false),
         )
       }),
     )
@@ -209,6 +209,78 @@ describe('the download’s consent', () => {
           purpose: transcribing(),
           model: 'whisper-base',
         })
+      }),
+    )
+  })
+
+  test('an agreed model whose files are not on this device, as after a backup restored on another, is offered again with its size, and nothing downloads', () => {
+    story(
+      update,
+      given(
+        uploading(
+          read(Option.some({ _tag: 'Agreed', model: 'whisper-small' }), false),
+        ),
+      ),
+      message(Message.SucceededUpload({ jobNumber: 1, clipId: 'c1' })),
+      shown,
+      Command.resolve(OpenLevel, Message.CompletedOpenLevel()),
+      model(current => {
+        expect(current.textDialog.isOpen).toBe(true)
+        expect(current.textOffer).toStrictEqual(
+          TextOffer.Open({ purpose: transcribing(), model: 'whisper-small' }),
+        )
+        expect(current.textJob).toStrictEqual(TextJob.Idle())
+      }),
+    )
+  })
+
+  test('writing a clip out asks again when the agreed model is not on this device, and not once a job has fetched it', () => {
+    story(
+      update,
+      given(
+        onLevel(
+          sampleClip(3),
+          read(Option.some({ _tag: 'Agreed', model: 'whisper-base' }), false),
+        ),
+      ),
+      message(Message.ClickedWriteOutText()),
+      shown,
+      model(current => {
+        expect(current.textDialog.isOpen).toBe(true)
+        expect(current.textJob).toStrictEqual(TextJob.Idle())
+      }),
+      message(Message.SubmittedTextDownload()),
+      Command.resolve(SetTextChoice, Message.SucceededSetTextChoice()),
+      closed,
+      message(
+        Message.SucceededTextJob({ jobNumber: 1, maybeClip: Option.none() }),
+      ),
+      message(Message.ClickedWriteOutText()),
+      model(current => {
+        expect(current.textDialog.isOpen).toBe(false)
+        expect(current.textJob).toMatchObject({
+          _tag: 'Working',
+          jobNumber: 2,
+          model: 'whisper-base',
+        })
+      }),
+    )
+  })
+
+  test('the answer is read with whether its model is on this device', () => {
+    story(
+      update,
+      given(onLevel(sampleClip(3), TextChoiceState.NotRead())),
+      message(
+        Message.SucceededLoadTextChoice({
+          maybeChoice: Option.some({ _tag: 'Agreed', model: 'whisper-base' }),
+          modelKept: false,
+        }),
+      ),
+      model(current => {
+        expect(current.textChoice).toStrictEqual(
+          read(Option.some({ _tag: 'Agreed', model: 'whisper-base' }), false),
+        )
       }),
     )
   })
@@ -360,7 +432,7 @@ describe('the job in the background', () => {
       Command.resolve(LoadSettings, Message.FailedLoadSettings({ reason: '' })),
       model(current => {
         expect(current.textJob).toStrictEqual(TextJob.Idle())
-        expect(current.textChoice).toStrictEqual(read(Option.none()))
+        expect(current.textChoice).toStrictEqual(read(Option.none(), false))
       }),
     )
   })

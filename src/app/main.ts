@@ -516,8 +516,8 @@ const updateMessage = (model: Model, message: Message) =>
       ),
     FailedClearAllData: ({ reason }) =>
       SettingsUpdate.failedClearAllData(model, reason),
-    SucceededLoadTextChoice: ({ maybeChoice }) =>
-      TextUpdate.succeededLoadTextChoice(model, maybeChoice),
+    SucceededLoadTextChoice: ({ maybeChoice, modelKept }) =>
+      TextUpdate.succeededLoadTextChoice(model, maybeChoice, modelKept),
     FailedLoadTextChoice: () => TextUpdate.failedLoadTextChoice(model),
     ClickedWriteOutText: () => TextUpdate.clickedWriteOutText(model),
     ClickedChooseTextModel: () => TextUpdate.clickedChooseTextModel(model),

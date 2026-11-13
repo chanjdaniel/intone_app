@@ -225,7 +225,10 @@ const textLevel = (clip: LevelClip): Model => ({
   ...initialModel(
     AppRoute.Level({ clipId: clip.id, maybeFind: Option.none() }),
   ),
-  textChoice: TextChoiceState.Read({ maybeChoice: Option.none() }),
+  textChoice: TextChoiceState.Read({
+    maybeChoice: Option.none(),
+    modelKept: false,
+  }),
   level: LevelPage.Ready({
     stars: LevelStars.Ready({ lines: [] }),
     clip,
@@ -421,7 +424,7 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
         `settings, text ${Option.match(maybeChoice, { onNone: () => 'unasked', onSome: choice => choice._tag })}`,
         {
           ...initialModel(AppRoute.Settings()),
-          textChoice: TextChoiceState.Read({ maybeChoice }),
+          textChoice: TextChoiceState.Read({ maybeChoice, modelKept: true }),
           textJob: TextJob.Failed({
             purpose: TextPurpose.Download(),
             model: 'whisper-base',

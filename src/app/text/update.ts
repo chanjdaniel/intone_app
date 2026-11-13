@@ -43,6 +43,14 @@ const agreedModel = (model: Model): Option.Option<TextModelId> =>
       )
     : Option.none()
 
+// The agreed model, when its files are all on this device, so a job with
+// it downloads nothing; an agreed model not here is offered again, with
+// its size, before anything downloads.
+const keptModel = (model: Model): Option.Option<TextModelId> =>
+  model.textChoice._tag === 'Read' && model.textChoice.modelKept
+    ? agreedModel(model)
+    : Option.none()
+
 const isDeclined = (model: Model): boolean =>
   model.textChoice._tag === 'Read' &&
   Option.exists(
@@ -53,10 +61,14 @@ const isDeclined = (model: Model): boolean =>
 const isWorking = (model: Model, jobNumber: number): boolean =>
   model.textJob._tag === 'Working' && model.textJob.jobNumber === jobNumber
 
+// The model is not on the device until a job has fetched it.
 const withChoice = (model: Model, choice: TextChoice): Model =>
   modifyFields(model, {
     textChoice: () =>
-      TextChoiceState.Read({ maybeChoice: Option.some(choice) }),
+      TextChoiceState.Read({
+        maybeChoice: Option.some(choice),
+        modelKept: false,
+      }),
   })
 
 const startedJob = (
@@ -81,9 +93,10 @@ const startedJob = (
 export const succeededLoadTextChoice = (
   model: Model,
   maybeChoice: Option.Option<TextChoice>,
+  modelKept: boolean,
 ): TextUpdate => ({
   model: modifyFields(model, {
-    textChoice: () => TextChoiceState.Read({ maybeChoice }),
+    textChoice: () => TextChoiceState.Read({ maybeChoice, modelKept }),
   }),
 })
 
@@ -91,7 +104,8 @@ export const succeededLoadTextChoice = (
 // asked, and nothing downloads unasked.
 export const failedLoadTextChoice = (model: Model): TextUpdate => ({
   model: modifyFields(model, {
-    textChoice: () => TextChoiceState.Read({ maybeChoice: Option.none() }),
+    textChoice: () =>
+      TextChoiceState.Read({ maybeChoice: Option.none(), modelKept: false }),
   }),
 })
 
@@ -144,28 +158,28 @@ const offered = (model: Model, purpose: TextPurpose): TextUpdate =>
   )
 
 // A clip's level asks for its text: written out at once with the model
-// agreed to, else the download is offered.
+// agreed to when it is on this device, else the download is offered.
 export const clickedWriteOutText = (model: Model): TextUpdate => {
   const page = model.level
   if (page._tag !== 'Ready' || model.textJob._tag === 'Working') {
     return unchanged(model)
   }
   const purpose = TextPurpose.Transcribe({ clipId: page.clip.id })
-  return Option.match(agreedModel(model), {
+  return Option.match(keptModel(model), {
     onNone: () => offered(model, purpose),
     onSome: textModel => ({ model: startedJob(model, purpose, textModel) }),
   })
 }
 
 // An upload's level has just opened: its text is written out with the
-// model agreed to, or the download offered, unless the learner said not
-// now, or a job is running.
+// model agreed to when it is on this device, or the download offered,
+// unless the learner said not now, or a job is running.
 export const offeredUploadText = (model: Model, clipId: string): TextUpdate => {
   if (model.textJob._tag === 'Working' || isDeclined(model)) {
     return unchanged(model)
   }
   const purpose = TextPurpose.Transcribe({ clipId })
-  return Option.match(agreedModel(model), {
+  return Option.match(keptModel(model), {
     onNone: () =>
       model.textChoice._tag === 'Read'
         ? offered(model, purpose)
@@ -253,6 +267,15 @@ export const succeededTextJob = (
   return {
     model: modifyFields(model, {
       textJob: () => TextJob.Done({ purpose: job.purpose, model: job.model }),
+      // The job fetched its model's files, if they were not here.
+      textChoice: choice =>
+        choice._tag === 'Read' &&
+        Option.exists(
+          choice.maybeChoice,
+          answer => answer._tag === 'Agreed' && answer.model === job.model,
+        )
+          ? modifyFields(choice, { modelKept: () => true })
+          : choice,
       level: page =>
         Option.match(maybeClip, {
           onNone: () => page,
@@ -448,7 +471,8 @@ export const failedSetLineTexts = (
 // files, so a job under way stops.
 export const clearedAllData = (model: Model): Model =>
   modifyFields(model, {
-    textChoice: () => TextChoiceState.Read({ maybeChoice: Option.none() }),
+    textChoice: () =>
+      TextChoiceState.Read({ maybeChoice: Option.none(), modelKept: false }),
     textJob: () => TextJob.Idle(),
     lineText: () => LineTextEdit.Idle(),
   })

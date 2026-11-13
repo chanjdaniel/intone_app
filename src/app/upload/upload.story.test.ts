@@ -215,7 +215,10 @@ describe('the cut', () => {
       Command.expectExact(LoadLevel({ clipId: 'c1' }), LoadTextChoice()),
       Command.resolve(
         LoadTextChoice,
-        Message.SucceededLoadTextChoice({ maybeChoice: Option.none() }),
+        Message.SucceededLoadTextChoice({
+          maybeChoice: Option.none(),
+          modelKept: false,
+        }),
       ),
       Command.resolve(
         LoadLevel,

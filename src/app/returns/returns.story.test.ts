@@ -75,7 +75,10 @@ describe('the lines due back', () => {
       message(Message.ChangedUrl({ url: url('/upload') })),
       Command.resolve(
         LoadTextChoice,
-        Message.SucceededLoadTextChoice({ maybeChoice: Option.none() }),
+        Message.SucceededLoadTextChoice({
+          maybeChoice: Option.none(),
+          modelKept: false,
+        }),
       ),
       message(Message.ChangedUrl({ url: url('/') })),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),
@@ -84,7 +87,10 @@ describe('the lines due back', () => {
       message(Message.ChangedUrl({ url: url('/upload') })),
       Command.resolve(
         LoadTextChoice,
-        Message.SucceededLoadTextChoice({ maybeChoice: Option.none() }),
+        Message.SucceededLoadTextChoice({
+          maybeChoice: Option.none(),
+          modelKept: false,
+        }),
       ),
       message(Message.ChangedUrl({ url: url('/') })),
       Command.resolve(LoadClips, Message.SucceededLoadClips({ clips: [] })),

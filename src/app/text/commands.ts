@@ -3,6 +3,7 @@ import { Command, Dom } from 'foldkit'
 
 import { TextChoice } from '../../services/history-records'
 import { HistoryStore } from '../../services/history-store'
+import { Transcriber } from '../../services/transcriber'
 import { levelClipOf } from '../level/level'
 import { Message } from '../message'
 
@@ -10,15 +11,22 @@ import { Message } from '../message'
 // their answer to the text model's download, kept with the settings, and
 // the text they give a line. Nothing here sends anything anywhere.
 
+// The answer, with whether the agreed model's files are on this device.
 export const LoadTextChoice = Command.define('LoadTextChoice', {
   messages: [Message.SucceededLoadTextChoice, Message.FailedLoadTextChoice],
-  execute: HistoryStore.use(history => history.settings).pipe(
-    Effect.map(settings =>
-      Message.SucceededLoadTextChoice({
-        maybeChoice: Option.fromNullishOr(settings.textChoice),
-      }),
-    ),
-    Effect.provide(HistoryStore.layer),
+  execute: Effect.gen(function* () {
+    const settings = yield* HistoryStore.use(history => history.settings)
+    const maybeChoice = Option.fromNullishOr(settings.textChoice)
+    const modelKept = yield* Option.match(maybeChoice, {
+      onNone: () => Effect.succeed(false),
+      onSome: choice =>
+        choice._tag === 'Agreed'
+          ? Transcriber.use(transcriber => transcriber.isKept(choice.model))
+          : Effect.succeed(false),
+    })
+    return Message.SucceededLoadTextChoice({ maybeChoice, modelKept })
+  }).pipe(
+    Effect.provide([HistoryStore.layer, Transcriber.layer]),
     Effect.catch(error =>
       Effect.succeed(Message.FailedLoadTextChoice({ reason: error.reason })),
     ),

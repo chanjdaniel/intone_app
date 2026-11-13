@@ -266,7 +266,10 @@ export const Message = defineMessageUnion({
   FailedClearAllData: { reason: Schema.String },
 
   // The text of the learner's clips.
-  SucceededLoadTextChoice: { maybeChoice: Schema.Option(TextChoice) },
+  SucceededLoadTextChoice: {
+    maybeChoice: Schema.Option(TextChoice),
+    modelKept: Schema.Boolean,
+  },
   FailedLoadTextChoice: { reason: Schema.String },
   ClickedWriteOutText: {},
   ClickedChooseTextModel: {},

@@ -52,7 +52,10 @@ describe('/settings', () => {
       ),
       Command.resolve(
         LoadTextChoice,
-        Message.SucceededLoadTextChoice({ maybeChoice: Option.none() }),
+        Message.SucceededLoadTextChoice({
+          maybeChoice: Option.none(),
+          modelKept: false,
+        }),
       ),
       model(current => {
         expect(current.maybeSettingsNotice).toStrictEqual(Option.none())
