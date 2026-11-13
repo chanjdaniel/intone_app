@@ -4,8 +4,10 @@ import { Calendar, Command, File } from 'foldkit'
 import { reasonOf } from '../../engine/reason'
 import { clipHasAudio } from '../../services/history-records'
 import { HistoryError, HistoryStore } from '../../services/history-store'
+import { deleteTextModels } from '../../workers/text-model-cache'
 import { isoDayOf } from '../history/format'
 import { Message } from '../message'
+import { saveFile } from '../saveFile'
 import { forgetTakeAudio } from '../take/takeAudio'
 import type { Browser, Persistence, StorageFacts } from './settings'
 
@@ -111,7 +113,10 @@ export const SetKeepTakeAudio = Command.define('SetKeepTakeAudio', {
   messages: [Message.SucceededSetKeepTakeAudio, Message.FailedSetKeepTakeAudio],
   execute: ({ keep }) =>
     HistoryStore.use(history =>
-      history.setSettings({ keepTakeAudio: keep }),
+      history.updateSettings(settings => ({
+        ...settings,
+        keepTakeAudio: keep,
+      })),
     ).pipe(
       Effect.as(Message.SucceededSetKeepTakeAudio({ keep })),
       Effect.provide(HistoryStore.layer),
@@ -130,32 +135,6 @@ const loadBackupCode = Effect.tryPromise({
       reason: 'The backup code did not load. Reload the page and try again.',
     }),
 })
-
-// Hands `bytes` to the browser as a file to save, named `fileName`.
-const saveFile = (bytes: Uint8Array, fileName: string): Effect.Effect<void> =>
-  Effect.acquireUseRelease(
-    Effect.sync(() =>
-      URL.createObjectURL(
-        new Blob([Uint8Array.from(bytes)], { type: 'application/zip' }),
-      ),
-    ),
-    url =>
-      Effect.sync(() => {
-        const link = document.createElement('a')
-        link.href = url
-        link.download = fileName
-        link.hidden = true
-        document.body.append(link)
-        link.click()
-        link.remove()
-      }),
-    // NOTE: the browser reads the file from its URL after the click
-    // returns, so the URL is let go a moment later.
-    url =>
-      Effect.sleep('1 second').pipe(
-        Effect.andThen(Effect.sync(() => URL.revokeObjectURL(url))),
-      ),
-  )
 
 // Makes the backup file, the kept audio in it only when `includeAudio`,
 // and hands it to the browser to save on the device.
@@ -178,7 +157,7 @@ export const SaveBackup = Command.define('SaveBackup', {
       const fileName = backupFileName(
         isoDayOf(Calendar.fromDateLocal(new Date(exportedAt))),
       )
-      yield* Effect.forkDetach(saveFile(bytes, fileName))
+      yield* Effect.forkDetach(saveFile(bytes, fileName, 'application/zip'))
       return Message.SucceededSaveBackup({
         fileName,
         takes: dump.takes.length,
@@ -228,6 +207,8 @@ export const ClearAllData = Command.define('ClearAllData', {
   messages: [Message.SucceededClearAllData, Message.FailedClearAllData],
   execute: HistoryStore.use(history => history.clear).pipe(
     Effect.andThen(forgetTakeAudio),
+    // The text model's files go too: everything Intone keeps here.
+    Effect.andThen(deleteTextModels),
     Effect.as(Message.SucceededClearAllData()),
     Effect.provide(HistoryStore.layer),
     Effect.catch(error =>

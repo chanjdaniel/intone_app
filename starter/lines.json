@@ -1,0 +1,1565 @@
+{
+  "version": 1,
+  "levels": [
+    {
+      "id": "starter-heiban",
+      "kind": "Heiban",
+      "name": "Heiban: flat",
+      "about": "Low on the first mora, then high to the end, the particle too: no fall."
+    },
+    {
+      "id": "starter-atamadaka",
+      "kind": "Atamadaka",
+      "name": "Atamadaka: falls after the first",
+      "about": "High on the first mora, then low from the second."
+    },
+    {
+      "id": "starter-nakadaka",
+      "kind": "Nakadaka",
+      "name": "Nakadaka: falls inside the word",
+      "about": "Rises after the first mora and falls before the word ends."
+    },
+    {
+      "id": "starter-odaka",
+      "kind": "Odaka",
+      "name": "Odaka: falls onto the particle",
+      "about": "Sounds flat on its own: the fall comes after the last mora, so the particle is low."
+    },
+    {
+      "id": "starter-pairs",
+      "kind": "Pairs",
+      "name": "Pairs: the same kana, another accent",
+      "about": "Words written alike in kana, told apart by where they fall."
+    },
+    {
+      "id": "starter-phrases",
+      "kind": "Phrases",
+      "name": "Phrases: two words together",
+      "about": "A word and its particle, then a verb in its ます form."
+    }
+  ],
+  "lines": [
+    {
+      "id": "mizu-ga",
+      "level": "starter-heiban",
+      "text": "水が",
+      "kana": "みずが",
+      "words": [
+        {
+          "text": "水",
+          "kana": "みず",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "tori-ga",
+      "level": "starter-heiban",
+      "text": "鳥が",
+      "kana": "とりが",
+      "words": [
+        {
+          "text": "鳥",
+          "kana": "とり",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "sakura-ga",
+      "level": "starter-heiban",
+      "text": "桜が",
+      "kana": "さくらが",
+      "words": [
+        {
+          "text": "桜",
+          "kana": "さくら",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0,
+            1
+          ]
+        }
+      ],
+      "flag": "桜 (さくら): UniDic gives 0, Wiktionary gives 0 and 1; the list states 0.",
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "namae-ga",
+      "level": "starter-heiban",
+      "text": "名前が",
+      "kana": "なまえが",
+      "words": [
+        {
+          "text": "名前",
+          "kana": "なまえ",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "gakkou-ga",
+      "level": "starter-heiban",
+      "seed": true,
+      "text": "学校が",
+      "kana": "がっこうが",
+      "words": [
+        {
+          "text": "学校",
+          "kana": "がっこう",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "tomodachi-ga",
+      "level": "starter-heiban",
+      "text": "友達が",
+      "kana": "ともだちが",
+      "words": [
+        {
+          "text": "友達",
+          "kana": "ともだち",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "neko-ga",
+      "level": "starter-atamadaka",
+      "seed": true,
+      "text": "猫が",
+      "kana": "ねこが",
+      "words": [
+        {
+          "text": "猫",
+          "kana": "ねこ",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "aki-ga",
+      "level": "starter-atamadaka",
+      "text": "秋が",
+      "kana": "あきが",
+      "words": [
+        {
+          "text": "秋",
+          "kana": "あき",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "inochi-ga",
+      "level": "starter-atamadaka",
+      "text": "命が",
+      "kana": "いのちが",
+      "words": [
+        {
+          "text": "命",
+          "kana": "いのち",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "midori-ga",
+      "level": "starter-atamadaka",
+      "text": "緑が",
+      "kana": "みどりが",
+      "words": [
+        {
+          "text": "緑",
+          "kana": "みどり",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "keizai-ga",
+      "level": "starter-atamadaka",
+      "text": "経済が",
+      "kana": "けいざいが",
+      "words": [
+        {
+          "text": "経済",
+          "kana": "けいざい",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "genkan-ga",
+      "level": "starter-atamadaka",
+      "text": "玄関が",
+      "kana": "げんかんが",
+      "words": [
+        {
+          "text": "玄関",
+          "kana": "げんかん",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "kinou-ga",
+      "level": "starter-nakadaka",
+      "seed": true,
+      "text": "昨日が",
+      "kana": "きのうが",
+      "words": [
+        {
+          "text": "昨日",
+          "kana": "きのう",
+          "accentType": 2,
+          "particle": "が",
+          "unidic": [
+            2,
+            0
+          ],
+          "wiktionary": [
+            2,
+            0
+          ]
+        }
+      ],
+      "flag": "昨日 (きのう): UniDic gives 2 and 0, Wiktionary gives 2 and 0; the list states 2.",
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "hitori-ga",
+      "level": "starter-nakadaka",
+      "text": "一人が",
+      "kana": "ひとりが",
+      "words": [
+        {
+          "text": "一人",
+          "kana": "ひとり",
+          "accentType": 2,
+          "particle": "が",
+          "unidic": [
+            2
+          ],
+          "wiktionary": [
+            2
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "mizuumi-ga",
+      "level": "starter-nakadaka",
+      "text": "湖が",
+      "kana": "みずうみが",
+      "words": [
+        {
+          "text": "湖",
+          "kana": "みずうみ",
+          "accentType": 3,
+          "particle": "が",
+          "unidic": [
+            3
+          ],
+          "wiktionary": [
+            3
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "sensei-ga",
+      "level": "starter-nakadaka",
+      "text": "先生が",
+      "kana": "せんせいが",
+      "words": [
+        {
+          "text": "先生",
+          "kana": "せんせい",
+          "accentType": 3,
+          "particle": "が",
+          "unidic": [
+            3
+          ],
+          "wiktionary": [
+            3
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "yama-ga",
+      "level": "starter-odaka",
+      "text": "山が",
+      "kana": "やまが",
+      "words": [
+        {
+          "text": "山",
+          "kana": "やま",
+          "accentType": 2,
+          "particle": "が",
+          "unidic": [
+            2
+          ],
+          "wiktionary": [
+            2
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "inu-ga",
+      "level": "starter-odaka",
+      "text": "犬が",
+      "kana": "いぬが",
+      "words": [
+        {
+          "text": "犬",
+          "kana": "いぬ",
+          "accentType": 2,
+          "particle": "が",
+          "unidic": [
+            2
+          ],
+          "wiktionary": [
+            2
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "otoko-ga",
+      "level": "starter-odaka",
+      "text": "男が",
+      "kana": "おとこが",
+      "words": [
+        {
+          "text": "男",
+          "kana": "おとこ",
+          "accentType": 3,
+          "particle": "が",
+          "unidic": [
+            3
+          ],
+          "wiktionary": [
+            3
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "yasumi-ga",
+      "level": "starter-odaka",
+      "text": "休みが",
+      "kana": "やすみが",
+      "words": [
+        {
+          "text": "休み",
+          "kana": "やすみ",
+          "accentType": 3,
+          "particle": "が",
+          "unidic": [
+            3,
+            2
+          ],
+          "wiktionary": [
+            3
+          ]
+        }
+      ],
+      "flag": "休み (やすみ): UniDic gives 3 and 2, Wiktionary gives 3; the list states 3.",
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "otouto-ga",
+      "level": "starter-odaka",
+      "seed": true,
+      "text": "弟が",
+      "kana": "おとうとが",
+      "words": [
+        {
+          "text": "弟",
+          "kana": "おとうと",
+          "accentType": 4,
+          "particle": "が",
+          "unidic": [
+            4
+          ],
+          "wiktionary": [
+            4
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "imouto-ga",
+      "level": "starter-odaka",
+      "text": "妹が",
+      "kana": "いもうとが",
+      "words": [
+        {
+          "text": "妹",
+          "kana": "いもうと",
+          "accentType": 4,
+          "particle": "が",
+          "unidic": [
+            4
+          ],
+          "wiktionary": [
+            4
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "ame-ga-suki",
+      "level": "starter-pairs",
+      "seed": true,
+      "text": "雨が好き",
+      "kana": "あめがすき",
+      "words": [
+        {
+          "text": "雨",
+          "kana": "あめ",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        },
+        {
+          "text": "好き",
+          "kana": "すき",
+          "accentType": 2,
+          "unidic": [
+            2,
+            1
+          ],
+          "wiktionary": [
+            2
+          ]
+        }
+      ],
+      "flag": "好き (すき): UniDic gives 2 and 1, Wiktionary gives 2; the list states 2.",
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "ame-candy-ga-suki",
+      "level": "starter-pairs",
+      "seed": true,
+      "text": "飴が好き",
+      "kana": "あめがすき",
+      "words": [
+        {
+          "text": "飴",
+          "kana": "あめ",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        },
+        {
+          "text": "好き",
+          "kana": "すき",
+          "accentType": 2,
+          "unidic": [
+            2,
+            1
+          ],
+          "wiktionary": [
+            2
+          ]
+        }
+      ],
+      "flag": "好き (すき): UniDic gives 2 and 1, Wiktionary gives 2; the list states 2.",
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "hashi-bridge-ga",
+      "level": "starter-pairs",
+      "text": "橋が",
+      "kana": "はしが",
+      "words": [
+        {
+          "text": "橋",
+          "kana": "はし",
+          "accentType": 2,
+          "particle": "が",
+          "unidic": [
+            2
+          ],
+          "wiktionary": [
+            2
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "hashi-chopsticks-ga",
+      "level": "starter-pairs",
+      "text": "箸が",
+      "kana": "はしが",
+      "words": [
+        {
+          "text": "箸",
+          "kana": "はし",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "hashi-edge-ga",
+      "level": "starter-pairs",
+      "text": "端が",
+      "kana": "はしが",
+      "words": [
+        {
+          "text": "端",
+          "kana": "はし",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "hana-flower-ga",
+      "level": "starter-pairs",
+      "text": "花が",
+      "kana": "はなが",
+      "words": [
+        {
+          "text": "花",
+          "kana": "はな",
+          "accentType": 2,
+          "particle": "が",
+          "unidic": [
+            2
+          ],
+          "wiktionary": [
+            2
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "hana-nose-ga",
+      "level": "starter-pairs",
+      "text": "鼻が",
+      "kana": "はなが",
+      "words": [
+        {
+          "text": "鼻",
+          "kana": "はな",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "kaki-persimmon-ga",
+      "level": "starter-pairs",
+      "text": "柿が",
+      "kana": "かきが",
+      "words": [
+        {
+          "text": "柿",
+          "kana": "かき",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "kaki-oyster-ga",
+      "level": "starter-pairs",
+      "text": "牡蠣が",
+      "kana": "かきが",
+      "words": [
+        {
+          "text": "牡蠣",
+          "kana": "かき",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "kami-god-ga",
+      "level": "starter-pairs",
+      "text": "神が",
+      "kana": "かみが",
+      "words": [
+        {
+          "text": "神",
+          "kana": "かみ",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "kami-paper-ga",
+      "level": "starter-pairs",
+      "text": "紙が",
+      "kana": "かみが",
+      "words": [
+        {
+          "text": "紙",
+          "kana": "かみ",
+          "accentType": 2,
+          "particle": "が",
+          "unidic": [
+            2
+          ],
+          "wiktionary": [
+            2
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "sake-drink-ga",
+      "level": "starter-pairs",
+      "text": "酒が",
+      "kana": "さけが",
+      "words": [
+        {
+          "text": "酒",
+          "kana": "さけ",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "sake-salmon-ga",
+      "level": "starter-pairs",
+      "text": "鮭が",
+      "kana": "さけが",
+      "words": [
+        {
+          "text": "鮭",
+          "kana": "さけ",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "kumo-cloud-ga",
+      "level": "starter-pairs",
+      "text": "雲が",
+      "kana": "くもが",
+      "words": [
+        {
+          "text": "雲",
+          "kana": "くも",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "kurono-takehiro"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      },
+      "note": "雲 and 蜘蛛 are both atamadaka in Tokyo, in UniDic and in Wiktionary, so they are no minimal pair there, as the plan supposed; Kansai tells them apart. Keep, reject or note them as a pair."
+    },
+    {
+      "id": "kumo-spider-ga",
+      "level": "starter-pairs",
+      "text": "蜘蛛が",
+      "kana": "くもが",
+      "words": [
+        {
+          "text": "蜘蛛",
+          "kana": "くも",
+          "accentType": 1,
+          "particle": "が",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        }
+      ],
+      "recording": {
+        "kind": "Voicevox",
+        "voice": "meimei-himari"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      },
+      "note": "雲 and 蜘蛛 are both atamadaka in Tokyo, in UniDic and in Wiktionary, so they are no minimal pair there, as the plan supposed; Kansai tells them apart. Keep, reject or note them as a pair."
+    },
+    {
+      "id": "hashi-o-watarimasu",
+      "level": "starter-phrases",
+      "text": "橋を渡ります",
+      "kana": "はしをわたります",
+      "words": [
+        {
+          "text": "橋",
+          "kana": "はし",
+          "accentType": 2,
+          "particle": "を",
+          "unidic": [
+            2
+          ],
+          "wiktionary": [
+            2
+          ]
+        },
+        {
+          "text": "渡ります",
+          "kana": "わたります",
+          "accentType": 4,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Zsrtrgh-橋を渡ります.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E6%A9%8B%E3%82%92%E6%B8%A1%E3%82%8A%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/8/80/LL-Q5287_%28jpn%29-Zsrtrgh-%E6%A9%8B%E3%82%92%E6%B8%A1%E3%82%8A%E3%81%BE%E3%81%99.wav",
+        "bytes": 139052,
+        "sha256": "760e1c219c55660693511f034203f84b99761a501581194f27a29c6a973fae60",
+        "author": "Zsrtrgh",
+        "licence": "CC0",
+        "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "tokei-ga-ugokimasu",
+      "level": "starter-phrases",
+      "text": "時計が動きます",
+      "kana": "とけいがうごきます",
+      "words": [
+        {
+          "text": "時計",
+          "kana": "とけい",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        },
+        {
+          "text": "動きます",
+          "kana": "うごきます",
+          "accentType": 4,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Fukujinzuke-時計が動きます.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E6%99%82%E8%A8%88%E3%81%8C%E5%8B%95%E3%81%8D%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/8/8d/LL-Q5287_%28jpn%29-Fukujinzuke-%E6%99%82%E8%A8%88%E3%81%8C%E5%8B%95%E3%81%8D%E3%81%BE%E3%81%99.wav",
+        "bytes": 165676,
+        "sha256": "caf213215f8fc1765551a6d2b49eb2dda61176443b3724b5f238fd4e341664be",
+        "author": "Fukujinzuke",
+        "licence": "CC BY 4.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "kusuri-o-nomimasu",
+      "level": "starter-phrases",
+      "text": "薬を飲みます",
+      "kana": "くすりをのみます",
+      "words": [
+        {
+          "text": "薬",
+          "kana": "くすり",
+          "accentType": 0,
+          "particle": "を",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        },
+        {
+          "text": "飲みます",
+          "kana": "のみます",
+          "accentType": 3,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Zsrtrgh-薬を飲みます.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E8%96%AC%E3%82%92%E9%A3%B2%E3%81%BF%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/1/13/LL-Q5287_%28jpn%29-Zsrtrgh-%E8%96%AC%E3%82%92%E9%A3%B2%E3%81%BF%E3%81%BE%E3%81%99.wav",
+        "bytes": 130604,
+        "sha256": "f2c7dd81da51f676db27fa8b6698501e9ad6b79578a44c70cb218477fe5d69a1",
+        "author": "Zsrtrgh",
+        "licence": "CC0",
+        "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "michi-o-arukimasu",
+      "level": "starter-phrases",
+      "text": "道を歩きます",
+      "kana": "みちをあるきます",
+      "words": [
+        {
+          "text": "道",
+          "kana": "みち",
+          "accentType": 0,
+          "particle": "を",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        },
+        {
+          "text": "歩きます",
+          "kana": "あるきます",
+          "accentType": 4,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Fukujinzuke-道を歩きます.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E9%81%93%E3%82%92%E6%AD%A9%E3%81%8D%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/d/d8/LL-Q5287_%28jpn%29-Fukujinzuke-%E9%81%93%E3%82%92%E6%AD%A9%E3%81%8D%E3%81%BE%E3%81%99.wav",
+        "bytes": 155692,
+        "sha256": "00d39f3e19f1a85f1dbad97712eebf6114f9df6b76b34dde175ab4e19b658921",
+        "author": "Fukujinzuke",
+        "licence": "CC BY 4.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "densha-ni-norimasu",
+      "level": "starter-phrases",
+      "text": "電車に乗ります",
+      "kana": "でんしゃにのります",
+      "words": [
+        {
+          "text": "電車",
+          "kana": "でんしゃ",
+          "accentType": 0,
+          "particle": "に",
+          "unidic": [
+            0,
+            1
+          ],
+          "wiktionary": [
+            0,
+            1
+          ]
+        },
+        {
+          "text": "乗ります",
+          "kana": "のります",
+          "accentType": 3,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "flag": "電車 (でんしゃ): UniDic gives 0 and 1, Wiktionary gives 0 and 1; the list states 0.",
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Zsrtrgh-電車に乗ります.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E9%9B%BB%E8%BB%8A%E3%81%AB%E4%B9%97%E3%82%8A%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/2/2d/LL-Q5287_%28jpn%29-Zsrtrgh-%E9%9B%BB%E8%BB%8A%E3%81%AB%E4%B9%97%E3%82%8A%E3%81%BE%E3%81%99.wav",
+        "bytes": 135980,
+        "sha256": "bacc2e144e48c49726e54cf3aa79edf77804835ad186e4036057bef6afb0a36b",
+        "author": "Zsrtrgh",
+        "licence": "CC0",
+        "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "kutsu-o-hakimasu",
+      "level": "starter-phrases",
+      "text": "靴をはきます",
+      "kana": "くつをはきます",
+      "words": [
+        {
+          "text": "靴",
+          "kana": "くつ",
+          "accentType": 2,
+          "particle": "を",
+          "unidic": [
+            2
+          ],
+          "wiktionary": [
+            2
+          ]
+        },
+        {
+          "text": "はきます",
+          "kana": "はきます",
+          "accentType": 3,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Fukujinzuke-靴をはきます.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E9%9D%B4%E3%82%92%E3%81%AF%E3%81%8D%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/a/a3/LL-Q5287_%28jpn%29-Fukujinzuke-%E9%9D%B4%E3%82%92%E3%81%AF%E3%81%8D%E3%81%BE%E3%81%99.wav",
+        "bytes": 118316,
+        "sha256": "9efa588d5a386820ccd9805bd9b6daa979f77055f7ae6ad3b06dfd068e3aad8f",
+        "author": "Fukujinzuke",
+        "licence": "CC BY 4.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "eki-ni-tsukimasu",
+      "level": "starter-phrases",
+      "text": "駅に着きます",
+      "kana": "えきにつきます",
+      "words": [
+        {
+          "text": "駅",
+          "kana": "えき",
+          "accentType": 1,
+          "particle": "に",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        },
+        {
+          "text": "着きます",
+          "kana": "つきます",
+          "accentType": 3,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Zsrtrgh-駅に着きます.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E9%A7%85%E3%81%AB%E7%9D%80%E3%81%8D%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/4/47/LL-Q5287_%28jpn%29-Zsrtrgh-%E9%A7%85%E3%81%AB%E7%9D%80%E3%81%8D%E3%81%BE%E3%81%99.wav",
+        "bytes": 140076,
+        "sha256": "54eea4a1f9b826124758693ff823a01f1b7dc53d9e26005735d715e6bdfddc21",
+        "author": "Zsrtrgh",
+        "licence": "CC0",
+        "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "sensei-ni-kikimasu",
+      "level": "starter-phrases",
+      "text": "先生に聞きます",
+      "kana": "せんせいにききます",
+      "words": [
+        {
+          "text": "先生",
+          "kana": "せんせい",
+          "accentType": 3,
+          "particle": "に",
+          "unidic": [
+            3
+          ],
+          "wiktionary": [
+            3
+          ]
+        },
+        {
+          "text": "聞きます",
+          "kana": "ききます",
+          "accentType": 3,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Fukujinzuke-先生に聞きます.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E5%85%88%E7%94%9F%E3%81%AB%E8%81%9E%E3%81%8D%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/b/b0/LL-Q5287_%28jpn%29-Fukujinzuke-%E5%85%88%E7%94%9F%E3%81%AB%E8%81%9E%E3%81%8D%E3%81%BE%E3%81%99.wav",
+        "bytes": 181292,
+        "sha256": "05c9149f9a47a61fb019ed6230dd77847ce3564bad21d2ecf442d908e46611fa",
+        "author": "Fukujinzuke",
+        "licence": "CC BY 4.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "megane-o-kakemasu",
+      "level": "starter-phrases",
+      "text": "眼鏡をかけます",
+      "kana": "めがねをかけます",
+      "words": [
+        {
+          "text": "眼鏡",
+          "kana": "めがね",
+          "accentType": 1,
+          "particle": "を",
+          "unidic": [
+            1
+          ],
+          "wiktionary": [
+            1
+          ]
+        },
+        {
+          "text": "かけます",
+          "kana": "かけます",
+          "accentType": 3,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Zsrtrgh-眼鏡をかけます.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E7%9C%BC%E9%8F%A1%E3%82%92%E3%81%8B%E3%81%91%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/9/93/LL-Q5287_%28jpn%29-Zsrtrgh-%E7%9C%BC%E9%8F%A1%E3%82%92%E3%81%8B%E3%81%91%E3%81%BE%E3%81%99.wav",
+        "bytes": 143660,
+        "sha256": "88d9ab0a840f0bbbc5bf203c333c25b3a62ea9d345ab42114eb5a2cffd50dda5",
+        "author": "Zsrtrgh",
+        "licence": "CC0",
+        "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "daigaku-ni-hairimasu",
+      "level": "starter-phrases",
+      "text": "大学に入ります",
+      "kana": "だいがくにはいります",
+      "words": [
+        {
+          "text": "大学",
+          "kana": "だいがく",
+          "accentType": 0,
+          "particle": "に",
+          "unidic": [
+            0
+          ],
+          "wiktionary": [
+            0
+          ]
+        },
+        {
+          "text": "入ります",
+          "kana": "はいります",
+          "accentType": 4,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Fukujinzuke-大学に入ります.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E5%A4%A7%E5%AD%A6%E3%81%AB%E5%85%A5%E3%82%8A%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/5/5f/LL-Q5287_%28jpn%29-Fukujinzuke-%E5%A4%A7%E5%AD%A6%E3%81%AB%E5%85%A5%E3%82%8A%E3%81%BE%E3%81%99.wav",
+        "bytes": 169260,
+        "sha256": "0c3dc01bebd38ec896f6645cec3e47a4ca6bd0589651eab55c36927c48adc824",
+        "author": "Fukujinzuke",
+        "licence": "CC BY 4.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "omatsuri-ga-arimasu",
+      "level": "starter-phrases",
+      "text": "お祭りがあります",
+      "kana": "おまつりがあります",
+      "words": [
+        {
+          "text": "お祭り",
+          "kana": "おまつり",
+          "accentType": 0,
+          "particle": "が",
+          "unidic": [],
+          "wiktionary": [
+            0
+          ]
+        },
+        {
+          "text": "あります",
+          "kana": "あります",
+          "accentType": 3,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "flag": "お祭り (おまつり): UniDic has no entry for it, Wiktionary gives 0; the list states 0.",
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Zsrtrgh-お祭りがあります.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E3%81%8A%E7%A5%AD%E3%82%8A%E3%81%8C%E3%81%82%E3%82%8A%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/b/bb/LL-Q5287_%28jpn%29-Zsrtrgh-%E3%81%8A%E7%A5%AD%E3%82%8A%E3%81%8C%E3%81%82%E3%82%8A%E3%81%BE%E3%81%99.wav",
+        "bytes": 145964,
+        "sha256": "58c1c1a157924195ff50e9b58f8c702f85407bc20fd9410a8836f54d6753bf86",
+        "author": "Zsrtrgh",
+        "licence": "CC0",
+        "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    },
+    {
+      "id": "koohii-o-iremasu",
+      "level": "starter-phrases",
+      "text": "コーヒーを入れます",
+      "kana": "コーヒーをいれます",
+      "words": [
+        {
+          "text": "コーヒー",
+          "kana": "コーヒー",
+          "accentType": 3,
+          "particle": "を",
+          "unidic": [
+            3
+          ],
+          "wiktionary": [
+            3
+          ]
+        },
+        {
+          "text": "入れます",
+          "kana": "いれます",
+          "accentType": 3,
+          "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+        }
+      ],
+      "recording": {
+        "kind": "Commons",
+        "file": "File:LL-Q5287 (jpn)-Fukujinzuke-コーヒーを入れます.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E3%82%B3%E3%83%BC%E3%83%92%E3%83%BC%E3%82%92%E5%85%A5%E3%82%8C%E3%81%BE%E3%81%99.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/7/74/LL-Q5287_%28jpn%29-Fukujinzuke-%E3%82%B3%E3%83%BC%E3%83%92%E3%83%BC%E3%82%92%E5%85%A5%E3%82%8C%E3%81%BE%E3%81%99.wav",
+        "bytes": 162860,
+        "sha256": "d60aa398b1a7345b0a0ee52db7271ba917f87ef7b626a658600a10e3afd39f31",
+        "author": "Fukujinzuke",
+        "licence": "CC BY 4.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
+      },
+      "review": {
+        "verdict": "unreviewed"
+      }
+    }
+  ]
+}

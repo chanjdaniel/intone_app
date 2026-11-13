@@ -60,7 +60,7 @@ describe('the practice screen of a line of the learner’s clip', () => {
       Mount.resolve(DrawCurvePair, Message.CompletedDrawCurvePair()),
       expect(role('heading', { name: 'Line 2', level: 1 })).toExist(),
       expect(text('reading.mp3, 0:03.5 to 0:06.2')).toExist(),
-      expect(role('link', { name: /This clip’s lines/ })).toHaveAttr(
+      expect(role('link', { name: /This level’s lines/ })).toHaveAttr(
         'href',
         '/level/c1',
       ),

@@ -18,6 +18,7 @@ import {
   initialModel,
   update,
 } from './main'
+import { LoadReadingsChoice } from './readings/commands'
 import { LoadDueLines } from './returns/commands'
 import { DuePage } from './returns/returns'
 import { ForgetTakeAudio } from './take/commands'
@@ -127,6 +128,11 @@ describe('update', () => {
   })
 })
 
+const readingsChoiceNone = Command.resolve(
+  LoadReadingsChoice,
+  Message.SucceededLoadReadingsChoice({ maybeShown: Option.none() }),
+)
+
 describe('opening a line', () => {
   const line = AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })
   const placeLoaded = Message.SucceededLoadLinePlace({
@@ -159,6 +165,7 @@ describe('opening a line', () => {
         name: LoadLinePlace.name,
         args: { clipId: 'ame-ga-suki', lineId: '1' },
       },
+      { name: LoadReadingsChoice.name, args: undefined },
     ])
   })
 
@@ -170,7 +177,9 @@ describe('opening a line', () => {
       Command.expectExact(
         LoadNativeCurve({ clipId: 'ame-ga-suki', lineId: '9' }),
         LoadLinePlace({ clipId: 'ame-ga-suki', lineId: '9' }),
+        LoadReadingsChoice(),
       ),
+      readingsChoiceNone,
       Command.resolve(
         LoadNativeCurve,
         Message.FailedLoadNativeCurve({
@@ -216,6 +225,7 @@ describe('opening a line', () => {
         }),
       ),
       Command.resolve(LoadLinePlace, placeLoaded),
+      readingsChoiceNone,
       message(Message.ClickedRetryNativeCurve()),
       Command.resolve(
         LoadNativeCurve,

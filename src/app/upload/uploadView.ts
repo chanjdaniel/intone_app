@@ -68,12 +68,7 @@ const working = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   h.section(
-    [
-      h.AriaLabelledBy('upload-working'),
-      h.Class(
-        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
-      ),
-    ],
+    [h.AriaLabelledBy('upload-working'), h.Class('card')],
     [
       h.h2(
         [
@@ -92,7 +87,7 @@ const working = <ViewMessage>(
           ...(job.step._tag === 'Keeping'
             ? [h.Disabled(true)]
             : [h.OnClick(events.cancel)]),
-          h.Class('button-secondary self-start disabled:text-muted'),
+          h.Class('button-secondary self-start'),
         ],
         ['Stop'],
       ),

@@ -2,6 +2,10 @@ import { Option } from 'effect'
 import { Mount, expect, given, scene, text } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
+import { Dialog } from '@foldkit/ui'
+
+import { wordsOf } from '../engine/text/readings'
+import type { TextChoice } from '../services/history-records'
 import {
   ClipWaveform,
   EditSaving,
@@ -19,7 +23,7 @@ import {
   levelClipOfBundled,
 } from './level/level'
 import { sampleClip, samplePack } from './level/testClips'
-import { bundledClips } from './line/lines'
+import { bundledClips, starterLevels } from './line/lines'
 import { NativeCurve } from './line/native'
 import { LinePlace } from './line/place'
 import {
@@ -30,8 +34,21 @@ import {
   update,
   view,
 } from './main'
+import {
+  LineReadingsState,
+  ReadingFixForm,
+  ReadingsChoice,
+  ReadingsTool,
+  shownWordsOf,
+} from './readings/readings'
 import { ReturnNote } from './returns/lineReturn'
 import { DuePage } from './returns/returns'
+import {
+  ReviewExported,
+  ReviewPage,
+  ReviewPlay,
+  ReviewSave,
+} from './review/review'
 import { DrawCurvePair } from './take/curvePair'
 import {
   type FinishedTake,
@@ -48,6 +65,14 @@ import {
   sampleLine,
   sampleScore,
 } from './take/testCurves'
+import {
+  LineTextEdit,
+  TextChoiceState,
+  TextFormStatus,
+  TextJob,
+  TextPurpose,
+  TextStep,
+} from './text/text'
 import { PackJob, PackStep, UploadJob, UploadStep } from './upload/upload'
 
 // The app claims only what it compared (report section 3): no screen
@@ -56,6 +81,8 @@ import { PackJob, PackStep, UploadJob, UploadStep } from './upload/upload'
 // built bundle's strings, labels included.
 
 const line = AppRoute.Line({ clipId: 'ame-ga-suki', lineId: '1' })
+const readingsLine = { clipId: 'ame-ga-suki', lineId: '1', text: '雨が好き' }
+const shownReadings = ReadingsChoice.Read({ maybeShown: Option.some('Shown') })
 
 const finishedWith = (score: TakeScore): FinishedTake => ({
   takeNumber: 1,
@@ -161,6 +188,30 @@ const gamified =
   /leaderboard|\bcoins?\b|\bshops?\b|\blives\b|\bhearts?\b|streak/i
 
 const bundledLevel = levelClipOfBundled(bundledClips[0]!)
+const starterLevel = levelClipOfBundled(starterLevels[0]!)
+
+// The review page with a verdict of each kind on its first lines.
+const [firstStarter, secondStarter, thirdStarter] = starterLevels.flatMap(
+  level => level.lines,
+)
+const reviewOf = (exported: ReviewExported, save: ReviewSave): Model => ({
+  ...initialModel(AppRoute.Review()),
+  review: ReviewPage.Ready({
+    draft: {
+      reviewer: '',
+      verdicts: [
+        { lineId: firstStarter!.lineId, verdict: 'accept', note: 'n' },
+        { lineId: secondStarter!.lineId, verdict: 'reject' },
+        { lineId: thirdStarter!.lineId, verdict: 'correct', accentType: 1 },
+      ],
+    },
+    save,
+    play: ReviewPlay.Playing({ lineId: firstStarter!.lineId, playNumber: 1 }),
+    playsStarted: 1,
+    exported,
+    maybePlayFailure: Option.some('It did not load.'),
+  }),
+})
 
 const ready = NativeCurve.Ready({
   clipId: 'ame-ga-suki',
@@ -168,6 +219,23 @@ const ready = NativeCurve.Ready({
   line: sampleLine,
   curve: sampleCurve,
   features: sampleFeatures,
+})
+
+const textLevel = (clip: LevelClip): Model => ({
+  ...initialModel(
+    AppRoute.Level({ clipId: clip.id, maybeFind: Option.none() }),
+  ),
+  textChoice: TextChoiceState.Read({
+    maybeChoice: Option.none(),
+    modelKept: false,
+  }),
+  level: LevelPage.Ready({
+    stars: LevelStars.Ready({ lines: [] }),
+    clip,
+    shownRows: 50,
+    deleting: DeleteState.Idle(),
+    editor: initialEditor(clip),
+  }),
 })
 
 const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
@@ -298,6 +366,128 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
     false,
   ],
   ['not found', initialModel(AppRoute.NotFound({ path: '/nope' })), false],
+  ['credits', initialModel(AppRoute.Credits()), false],
+  // The text: the consent dialog open, each step of the job, a failure,
+  // a written-out level, a line's own text and a pasted one, the settings.
+  ...[
+    ...[
+      TextStep.Decoding(),
+      TextStep.Downloading({ done: 1, total: 2 }),
+      TextStep.Preparing(),
+      TextStep.Transcribing({ done: 1, total: 2 }),
+      TextStep.Keeping(),
+    ].map(step => ({
+      ...textLevel(sampleClip(3)),
+      textJob: TextJob.Working({
+        jobNumber: 1,
+        purpose: TextPurpose.Transcribe({ clipId: 'c1' }),
+        model: 'whisper-base' as const,
+        step,
+      }),
+    })),
+    {
+      ...textLevel(sampleClip(3)),
+      textJob: TextJob.Failed({
+        purpose: TextPurpose.Transcribe({ clipId: 'c1' }),
+        model: 'whisper-base',
+        reason: 'gone',
+      }),
+    },
+    {
+      ...textLevel({
+        ...sampleClip(3),
+        maybeWrittenBy: Option.some('whisper-small' as const),
+      }),
+      lineText: LineTextEdit.OneLine({
+        clipId: 'c1',
+        lineId: '1',
+        draft: '雨',
+        status: TextFormStatus.Refused({ reason: 'gone' }),
+      }),
+    },
+    {
+      ...textLevel(sampleClip(3)),
+      lineText: LineTextEdit.WholeClip({
+        clipId: 'c1',
+        draft: '雨',
+        status: TextFormStatus.Saving(),
+      }),
+    },
+  ].map((model, k) => [`level, text ${k}`, model, false] as const),
+  ...[
+    Option.none(),
+    Option.some<TextChoice>({ _tag: 'Declined' }),
+    Option.some<TextChoice>({ _tag: 'Agreed', model: 'whisper-base' }),
+  ].map(
+    maybeChoice =>
+      [
+        `settings, text ${Option.match(maybeChoice, { onNone: () => 'unasked', onSome: choice => choice._tag })}`,
+        {
+          ...initialModel(AppRoute.Settings()),
+          textChoice: TextChoiceState.Read({ maybeChoice, modelKept: true }),
+          textJob: TextJob.Failed({
+            purpose: TextPurpose.Download(),
+            model: 'whisper-base',
+            reason: 'gone',
+          }),
+        },
+        false,
+      ] as const,
+  ),
+  // A line's readings: offered with their size, loading, shown, one of
+  // them the learner's, failed, and the form that edits them.
+  ...[
+    { readingsChoice: ReadingsChoice.Read({ maybeShown: Option.none() }) },
+    { readingsChoice: shownReadings },
+    {
+      readingsChoice: shownReadings,
+      readingsTool: ReadingsTool.Failed({ reason: 'gone' }),
+    },
+    {
+      readingsChoice: shownReadings,
+      readingsTool: ReadingsTool.Acquired(),
+      readings: LineReadingsState.Failed({ ...readingsLine, reason: 'gone' }),
+    },
+    {
+      readingsChoice: shownReadings,
+      readingsTool: ReadingsTool.Acquired(),
+      readings: LineReadingsState.Ready({
+        ...readingsLine,
+        words: shownWordsOf(
+          '雨が好き',
+          wordsOf('雨が好き', [
+            { surface: '雨', reading: 'アメ' },
+            { surface: 'が', reading: 'ガ' },
+            { surface: '好き', reading: 'スキ' },
+          ]),
+          Option.some({
+            text: '雨が好き',
+            fixes: [{ from: 0, to: 1, kana: 'あま' }],
+          }),
+        ),
+      }),
+      readingFix: ReadingFixForm.Open({
+        ...readingsLine,
+        drafts: [
+          {
+            from: 0,
+            to: 1,
+            surface: '雨',
+            draft: 'x',
+            maybeDictionaryKana: Option.some('あめ'),
+          },
+        ],
+        status: TextFormStatus.Refused({ reason: 'gone' }),
+      }),
+    },
+  ].map(
+    (readings, k) =>
+      [
+        `line, readings ${k}`,
+        { ...initialModel(line), ...readings },
+        false,
+      ] as const,
+  ),
   [
     'line loading',
     {
@@ -317,6 +507,57 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
         reason: 'gone',
       }),
     },
+    false,
+  ],
+  [
+    'a starter level',
+    {
+      ...initialModel(
+        AppRoute.Level({ clipId: starterLevel.id, maybeFind: Option.none() }),
+      ),
+      level: LevelPage.Ready({
+        stars: LevelStars.Ready({ lines: [] }),
+        clip: starterLevel,
+        shownRows: 50,
+        deleting: DeleteState.Idle(),
+        editor: initialEditor(starterLevel),
+      }),
+    },
+    false,
+  ],
+  ['the credits', initialModel(AppRoute.Credits()), false],
+  [
+    'the review, loading',
+    { ...initialModel(AppRoute.Review()), review: ReviewPage.Loading() },
+    false,
+  ],
+  [
+    'the review, unread',
+    {
+      ...initialModel(AppRoute.Review()),
+      review: ReviewPage.Failed({ reason: 'Blocked.' }),
+    },
+    false,
+  ],
+  [
+    'the review, a verdict of each kind, saved',
+    reviewOf(
+      ReviewExported.Saved({ fileName: 'r.json', verdicts: 3 }),
+      ReviewSave.Kept(),
+    ),
+    false,
+  ],
+  [
+    'the review, keeping',
+    reviewOf(ReviewExported.Nothing(), ReviewSave.Saving({ again: true })),
+    false,
+  ],
+  [
+    'the review, not kept and not saved',
+    reviewOf(
+      ReviewExported.Refused({ reason: 'No line has a verdict yet.' }),
+      ReviewSave.Failed({ reason: 'Full.' }),
+    ),
     false,
   ],
   [
@@ -372,6 +613,23 @@ const screens: ReadonlyArray<readonly [string, Model, boolean]> = [
 const drawn = Mount.resolve(DrawCurvePair, Message.CompletedDrawCurvePair())
 
 describe('the wording', () => {
+  test('never says "accuracy" or that a take is correct: the text model’s consent dialog', () => {
+    scene(
+      { update, view },
+      given(
+        update(textLevel(sampleClip(3)), Message.ClickedWriteOutText()).model,
+      ),
+      Mount.resolve(
+        Dialog.AcquireResources,
+        Dialog.Message.SucceededAcquireResources(),
+      ),
+      expect(text(/Download the text model\?/)).toExist(),
+      expect(text(/accura/i)).toBeAbsent(),
+      expect(text(/\b(in)?correct/i)).toBeAbsent(),
+      expect(text(gamified)).toBeAbsent(),
+    )
+  })
+
   test.each(screens)(
     'never says "accuracy" or that a take is correct: %s',
     (_name, model, drawsCurves) => {

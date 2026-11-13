@@ -4,16 +4,48 @@
 
 Intone's own code is all rights reserved (see `LICENSE`).
 The app ships these third-party packages and model files, each under its own licence.
+The recordings it brings, each under its own licence or terms, are credited on its `/credits` screen and in `CREDITS.md`.
 
 ## Packages
 
 | Package | Version | Licence |
 | - | - | - |
 | @effect/platform-browser | 4.1.2 | MIT |
+| @emnapi/runtime | 1.11.3 | MIT |
 | @floating-ui/core | 1.8.0 | MIT |
 | @floating-ui/dom | 1.8.0 | MIT |
 | @floating-ui/utils | 0.2.12 | MIT |
 | @foldkit/ui | 0.170.0 | MIT |
+| @huggingface/jinja | 0.5.13 | MIT |
+| @huggingface/tokenizers | 0.2.0 | Apache-2.0 |
+| @huggingface/transformers | 4.3.2 | Apache-2.0 |
+| @img/colour | 1.1.0 | MIT |
+| @img/sharp-darwin-arm64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-darwin-x64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-freebsd-wasm32 | 0.35.5 | Apache-2.0 |
+| @img/sharp-libvips-darwin-arm64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-darwin-x64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-arm | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-arm64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-ppc64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-riscv64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-s390x | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-x64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linuxmusl-arm64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linuxmusl-x64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-linux-arm | 0.35.5 | Apache-2.0 |
+| @img/sharp-linux-arm64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-linux-ppc64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-linux-riscv64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-linux-s390x | 0.35.5 | Apache-2.0 |
+| @img/sharp-linux-x64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-linuxmusl-arm64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-linuxmusl-x64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-wasm32 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later AND MIT |
+| @img/sharp-webcontainers-wasm32 | 0.35.5 | Apache-2.0 |
+| @img/sharp-win32-arm64 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later |
+| @img/sharp-win32-ia32 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later |
+| @img/sharp-win32-x64 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later |
 | @protobufjs/aspromise | 1.1.2 | BSD-3-Clause |
 | @protobufjs/base64 | 1.1.2 | BSD-3-Clause |
 | @protobufjs/codegen | 2.0.5 | BSD-3-Clause |
@@ -24,18 +56,41 @@ The app ships these third-party packages and model files, each under its own lic
 | @protobufjs/pool | 1.1.0 | BSD-3-Clause |
 | @protobufjs/utf8 | 1.1.2 | BSD-3-Clause |
 | @types/node | 24.19.2 | MIT |
+| adm-zip | 0.6.1 | MIT |
+| define-data-property | 1.1.4 | MIT |
+| define-properties | 1.2.1 | MIT |
+| detect-libc | 2.1.2 | Apache-2.0 |
 | effect | 4.1.2 | MIT |
 | entities | 9.0.0 | BSD-2-Clause |
+| es-define-property | 1.0.1 | MIT |
+| es-errors | 1.3.0 | MIT |
+| escape-string-regexp | 4.0.0 | MIT |
 | fflate | 0.8.3 | MIT |
 | flatbuffers | 25.9.23 | Apache-2.0 |
 | foldkit | 0.170.0 | MIT |
+| global-agent | 4.1.7 | BSD-3-Clause |
+| globalthis | 1.0.4 | MIT |
+| gopd | 1.2.0 | MIT |
 | guid-typescript | 1.0.9 | ISC |
+| has-property-descriptors | 1.0.2 | MIT |
+| lindera-wasm | 6.2.0 | MIT |
 | long | 5.3.2 | Apache-2.0 |
+| matcher | 4.0.0 | MIT |
+| object-keys | 1.1.1 | MIT |
+| onnxruntime-common | 1.30.0 | MIT |
+| onnxruntime-common | 1.31.0-dev.20260911-2a43ec07e | MIT |
 | onnxruntime-common | 1.31.1 | MIT |
+| onnxruntime-node | 1.30.0 | MIT |
+| onnxruntime-web | 1.31.0-dev.20260914-8d85527a0 | MIT |
 | onnxruntime-web | 1.31.1 | MIT |
 | parse5 | 8.1.1 | MIT |
 | platform | 1.3.6 | MIT |
 | protobufjs | 7.6.6 | BSD-3-Clause |
+| semver | 7.8.6 | ISC |
+| serialize-error | 8.1.0 | MIT |
+| sharp | 0.35.5 | Apache-2.0 |
+| tslib | 2.9.1 | 0BSD |
+| type-fest | 0.20.2 | (MIT OR CC0-1.0) |
 | undici-types | 7.24.6 | MIT |
 
 ## Models
@@ -44,4 +99,6 @@ The app ships these third-party packages and model files, each under its own lic
 | - | - | - | - |
 | SwiftF0 0.3.0 | swift-f0/model.onnx | MIT | https://github.com/lars76/swift-f0/tree/v0.3.0 |
 | Silero VAD 6.2.3 | silero-vad/silero_vad.onnx | MIT | https://github.com/snakers4/silero-vad/tree/v6.2.3 |
-| Whisper small, ONNX by onnx-community | whisper-small/onnx/decoder_model_merged_int8.onnx | MIT | https://github.com/openai/whisper/tree/86098128c0b4f24f0e2aa2994de830614b474227 |
+| Whisper base, timestamped ONNX export by onnx-community | whisper-base/config.json, whisper-base/generation_config.json, whisper-base/preprocessor_config.json, whisper-base/tokenizer.json, whisper-base/tokenizer_config.json, whisper-base/onnx/encoder_model_q4.onnx, whisper-base/onnx/decoder_model_merged_int8.onnx | MIT | https://github.com/openai/whisper/tree/86098128c0b4f24f0e2aa2994de830614b474227 |
+| Whisper small, timestamped ONNX export by onnx-community | whisper-small/config.json, whisper-small/generation_config.json, whisper-small/preprocessor_config.json, whisper-small/tokenizer.json, whisper-small/tokenizer_config.json, whisper-small/onnx/encoder_model_q4.onnx, whisper-small/onnx/decoder_model_merged_int8.onnx | MIT | https://github.com/openai/whisper/tree/86098128c0b4f24f0e2aa2994de830614b474227 |
+| IPADIC 2.7.0, built for Lindera 6.2.0 | lindera-ipadic/lindera-ipadic-6.2.0.zip | mecab-ipadic's own notice (NAIST, and ICOT Free Software), whose text the app's /NOTICES.md carries | https://github.com/lindera/lindera/tree/0482efcc46b5ec518b7238efae55e9fed9bba0c0/lindera-ipadic |

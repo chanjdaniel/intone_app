@@ -7,7 +7,7 @@ import type { Recording } from '../score/score'
 import { syntheticTake } from '../score/synthetic-take'
 import { ClipStore, ClipStoreError } from './clip-store'
 import type { NewClip } from './history-clips'
-import { recordingId } from './history-records'
+import { clipLineTexts, recordingId } from './history-records'
 import { HistoryStore, type NewTake, make } from './history-store'
 import { databaseName, stores } from './indexed-db'
 
@@ -203,7 +203,12 @@ describe('clips in the history', () => {
     () =>
       Effect.gen(function* () {
         const { run, files, factory } = harness()
-        yield* run(store => store.setSettings({ keepTakeAudio: true }))
+        yield* run(store =>
+          store.updateSettings(settings => ({
+            ...settings,
+            keepTakeAudio: true,
+          })),
+        )
         const clip = yield* run(store => store.addClip(newClip()))
         const other = yield* run(store =>
           store.addClip(
@@ -659,5 +664,201 @@ describe('changing a clip’s lines', () => {
       yield* run(store => store.removeClip(clip.id))
       expect((yield* nativeIdsIn(factory)).size).toBe(0)
     }),
+  )
+})
+
+describe('the text of a clip’s lines', () => {
+  const transcript = {
+    model: 'whisper-base' as const,
+    version: '0123456789abcdef',
+    device: 'Wasm' as const,
+    at: Date.UTC(2026, 10, 13, 9),
+    pieces: [
+      { text: '雨', from: 0.5, to: 0.7 },
+      { text: 'が', from: 0.7, to: 0.9 },
+      { text: '、', from: 3.2, to: 3.3 },
+      { text: '好き', from: 3.4, to: 3.9 },
+      { text: '晴れ', from: 6, to: 6.4 },
+      { text: 'も', from: 7.2, to: 7.4 },
+    ],
+  }
+
+  it.effect(
+    'keeps the transcript, and gives each line the words said in it, across a reopen',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        const kept = yield* run(store =>
+          store.setClipTranscript(clip.id, transcript),
+        )
+
+        expect(Option.getOrThrow(kept).transcript).toStrictEqual(transcript)
+        const again = Option.getOrThrow(
+          yield* run(store => store.clip(clip.id)),
+        )
+        expect(clipLineTexts(again)).toStrictEqual(['雨が', '好き', '晴れも'])
+      }),
+  )
+
+  it.effect(
+    'keeps the text the learner gave a line over the transcript, and only for the lines given',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        yield* run(store => store.setClipTranscript(clip.id, transcript))
+        const given = yield* run(store =>
+          store.setLineTexts(clip.id, [{ lineId: '2', text: '大好き' }]),
+        )
+
+        expect(clipLineTexts(Option.getOrThrow(given))).toStrictEqual([
+          '雨が',
+          '大好き',
+          '晴れも',
+        ])
+        // A transcript written again later, which heard nothing, leaves
+        // the line as the learner gave it.
+        const rewritten = yield* run(store =>
+          store.setClipTranscript(clip.id, { ...transcript, pieces: [] }),
+        )
+        expect(clipLineTexts(Option.getOrThrow(rewritten))).toStrictEqual([
+          '',
+          '大好き',
+          '',
+        ])
+      }),
+  )
+
+  it.effect(
+    'a line’s own text cleared to nothing gives the line back the transcript’s words',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        yield* run(store => store.setClipTranscript(clip.id, transcript))
+        yield* run(store =>
+          store.setLineTexts(clip.id, [{ lineId: '2', text: '大好き' }]),
+        )
+        const cleared = Option.getOrThrow(
+          yield* run(store =>
+            store.setLineTexts(clip.id, [{ lineId: '2', text: '' }]),
+          ),
+        )
+        expect(cleared.lines[1]).not.toHaveProperty('text')
+        expect(clipLineTexts(cleared)).toStrictEqual(['雨が', '好き', '晴れも'])
+      }),
+  )
+
+  it.effect('gives no line text before anything is written out or given', () =>
+    Effect.gen(function* () {
+      const { run } = harness()
+      const clip = yield* run(store => store.addClip(newClip()))
+      expect(clipLineTexts(clip)).toStrictEqual([
+        undefined,
+        undefined,
+        undefined,
+      ])
+      expect(
+        yield* run(store => store.setLineTexts('no-such-clip', [])),
+      ).toStrictEqual(Option.none())
+    }),
+  )
+
+  it.effect(
+    'keeps the transcript through a change of lines, so each line gets the words of its new span, and a moved line keeps the text it was given',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        yield* run(store => store.setClipTranscript(clip.id, transcript))
+        yield* run(store =>
+          store.setLineTexts(clip.id, [{ lineId: '1', text: '雨がね' }]),
+        )
+        const { track } = tracker()
+        const moved = yield* run(store =>
+          store.editClipLines(
+            clip.id,
+            { _tag: 'Move', lineId: '1', edge: 'to', seconds: 3 },
+            track,
+          ),
+        )
+        expect(Option.getOrThrow(moved).transcript).toStrictEqual(transcript)
+        expect(clipLineTexts(Option.getOrThrow(moved))[0]).toBe('雨がね')
+
+        const merged = yield* run(store =>
+          store.editClipLines(clip.id, { _tag: 'Merge', lineId: '1' }, track),
+        )
+        // A merge makes new words of the line: the transcript's, not the
+        // text it was given.
+        expect(clipLineTexts(Option.getOrThrow(merged))).toStrictEqual([
+          '雨が、好き',
+          '晴れも',
+        ])
+      }),
+  )
+})
+
+describe('the readings the learner corrected on a clip’s line', () => {
+  const readings = {
+    text: '入江の家',
+    fixes: [{ from: 0, to: 2, kana: 'いりえ' }],
+  }
+
+  it.effect(
+    'keeps them with the line, across a reopen, and forgets them when cleared',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        yield* run(store => store.setLineReadings(clip.id, '2', readings))
+
+        const again = Option.getOrThrow(
+          yield* run(store => store.clip(clip.id)),
+        )
+        expect(again.lines.map(line => line.readings)).toStrictEqual([
+          undefined,
+          readings,
+          undefined,
+        ])
+
+        const cleared = yield* run(store =>
+          store.setLineReadings(clip.id, '2', undefined),
+        )
+        expect(
+          Option.getOrThrow(cleared).lines.some(line => 'readings' in line),
+        ).toBe(false)
+        expect(
+          yield* run(store =>
+            store.setLineReadings('no-such-clip', '1', readings),
+          ),
+        ).toStrictEqual(Option.none())
+      }),
+  )
+
+  it.effect(
+    'keeps them on a moved line, and leaves them out of a merged one',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        yield* run(store => store.setLineReadings(clip.id, '1', readings))
+        const { track } = tracker()
+        const moved = yield* run(store =>
+          store.editClipLines(
+            clip.id,
+            { _tag: 'Move', lineId: '1', edge: 'to', seconds: 3 },
+            track,
+          ),
+        )
+        expect(Option.getOrThrow(moved).lines[0]?.readings).toStrictEqual(
+          readings,
+        )
+
+        const merged = yield* run(store =>
+          store.editClipLines(clip.id, { _tag: 'Merge', lineId: '1' }, track),
+        )
+        expect(Option.getOrThrow(merged).lines[0]?.readings).toBeUndefined()
+      }),
   )
 })

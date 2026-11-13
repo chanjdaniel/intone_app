@@ -93,20 +93,26 @@ export type LazyChunkSize = Readonly<{
 }>
 
 // A built chunk's name: `assets/tracker.worker-CbN21Jdx.js` is
-// `tracker.worker`; ONNX Runtime's files keep their own names.
+// `tracker.worker`, and `assets/lindera_wasm_bg-BbaAsae8.wasm`
+// `lindera_wasm_bg`; ONNX Runtime's files, outside assets/, keep their own
+// names (`ort-wasm-simd-threaded.wasm`, whose `-threaded` would read as a
+// hash).
 const nameOf = (file: string): string =>
-  posix.basename(file).replace(/-[\w-]{8}\.js$/, '')
+  file.startsWith('assets/')
+    ? posix.basename(file).replace(/-[\w-]{8}\.(js|wasm)$/, '')
+    : posix.basename(file)
 
 // Every chunk the page does not load at start, each on its own: the
-// JavaScript in assets/ outside the entry and its static imports, and
-// ONNX Runtime's files under ort/<version>/.
+// JavaScript in assets/ outside the entry and its static imports, the
+// WebAssembly the bundler emits there beside a package's module
+// (Lindera's), and ONNX Runtime's files under ort/<version>/.
 export const lazyChunkSizes = async (
   dist: string,
 ): Promise<ReadonlyArray<LazyChunkSize>> => {
   const entry = await entryChunkSize(dist)
   const atStart = new Set([entry.file, ...entry.imports])
   const assets = (await readdir(join(dist, 'assets')))
-    .filter(file => file.endsWith('.js'))
+    .filter(file => file.endsWith('.js') || file.endsWith('.wasm'))
     .map(file => posix.join('assets', file))
     .filter(file => !atStart.has(file))
   const ort = (

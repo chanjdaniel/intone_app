@@ -1,13 +1,46 @@
 {
-  "entry": { "gzipBytes": 210000 },
+  "entry": {
+    "gzipBytes": 240000
+  },
   "chunks": {
-    "backup": { "gzipBytes": 9000 },
-    "capture-processor": { "gzipBytes": 1000 },
-    "clip-store.worker": { "gzipBytes": 28000 },
-    "clip.worker": { "gzipBytes": 58000 },
-    "compare-take": { "gzipBytes": 4000 },
-    "ort-wasm-simd-threaded.mjs": { "gzipBytes": 11000 },
-    "ort-wasm-simd-threaded.wasm": { "gzipBytes": 4180000 },
-    "tracker.worker": { "gzipBytes": 56000 }
+    "backup": {
+      "gzipBytes": 9000
+    },
+    "capture-processor": {
+      "gzipBytes": 1000
+    },
+    "clip-store.worker": {
+      "gzipBytes": 28000
+    },
+    "clip.worker": {
+      "gzipBytes": 58000
+    },
+    "compare-take": {
+      "gzipBytes": 4000
+    },
+    "lindera_wasm_bg": {
+      "gzipBytes": 779000
+    },
+    "ort-wasm-simd-threaded.asyncify.mjs": {
+      "gzipBytes": 22000
+    },
+    "ort-wasm-simd-threaded.asyncify.wasm": {
+      "gzipBytes": 7288000
+    },
+    "ort-wasm-simd-threaded.mjs": {
+      "gzipBytes": 11000
+    },
+    "ort-wasm-simd-threaded.wasm": {
+      "gzipBytes": 4180000
+    },
+    "readings.worker": {
+      "gzipBytes": 45000
+    },
+    "text.worker": {
+      "gzipBytes": 193000
+    },
+    "tracker.worker": {
+      "gzipBytes": 56000
+    }
   }
 }

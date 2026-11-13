@@ -4,9 +4,12 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { historyRouter, homeRouter, settingsRouter } from './route'
 
 // The app's own places, at the top of the screens that are not a line's
-// practice: the lines, the history and the settings.
+// practice: the lines, the history and the settings. The credits are a
+// place of their own, reached from the settings, and the starter review
+// one reached only by its address, each with none of the three marked
+// current.
 
-export type Place = 'Lines' | 'History' | 'Settings'
+export type Place = 'Lines' | 'History' | 'Settings' | 'Credits' | 'Review'
 
 const places: ReadonlyArray<Readonly<{ place: Place; href: string }>> = [
   { place: 'Lines', href: homeRouter({ maybeFind: Option.none() }) },

@@ -153,6 +153,9 @@ Credits: VOICEVOX:四国めたん, VOICEVOX:ずんだもん, VOICEVOX:九州そ�
 Each is the 64 kbps MP3 as the Internet Archive serves it, at its own 22.05 kHz, cut between pauses; its labels name the file, its SHA-1, the item, the licence and the ffmpeg that decoded it.
 Every CC0 Japanese recording on LibriVox found on 2026-11-09 has the same reader, so these are one voice reading literary prose aloud.
 
+Beside each, `<clip>.txt` is what the stretch reads, from the work's public-domain text on [Aozora Bunko](https://www.aozora.gr.jp/) (ろまん燈籠 `cards/000035/files/315_20041.html`, ごん狐 `cards/000121/files/628_14895.html`, グッド・バイ `cards/000035/files/258_20179.html`, all three authors dead over seventy years), with its ruby readings and line breaks taken out: the reference `npm run text:study` counts character error against (`docs/transcription.md`).
+Its first and last words were found by lining whisper-small's transcript up with the whole text; it is the book's text, so a word the reader said otherwise than the book counts as an error too.
+
 ### Room noise
 
 `noise/classroom.wav` is cut from ["Geräusche aus einem Chemie-Lehrsaal 20240827 C1003.wav"](https://commons.wikimedia.org/wiki/File:Ger%C3%A4usche_aus_einem_Chemie-Lehrsaal_20240827_C1003.wav) by PantheraLeo1359531, on Wikimedia Commons, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): a chemistry classroom's ceiling light and, probably, its ventilation.

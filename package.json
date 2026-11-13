@@ -30,14 +30,18 @@
     "sounds:features": "node --import ./scripts/source-imports.ts scripts/sound-features.ts",
     "sounds:study": "node --import ./scripts/source-imports.ts scripts/sounds-study.ts",
     "sounds:bench": "node --import ./scripts/source-imports.ts scripts/sounds-bench.ts",
-    "vendor:foldkit": "scripts/vendor-foldkit.sh"
+    "vendor:foldkit": "scripts/vendor-foldkit.sh",
+    "text:study": "node --import ./scripts/source-imports.ts scripts/transcription-study.ts",
+    "starter:pack": "node --import ./scripts/source-imports.ts scripts/starter-pack.ts"
   },
   "dependencies": {
     "@effect/platform-browser": "4.1.2",
     "@foldkit/ui": "0.170.0",
+    "@huggingface/transformers": "4.3.2",
     "effect": "4.1.2",
     "fflate": "0.8.3",
     "foldkit": "0.170.0",
+    "lindera-wasm": "6.2.0",
     "onnxruntime-web": "1.31.1"
   },
   "devDependencies": {

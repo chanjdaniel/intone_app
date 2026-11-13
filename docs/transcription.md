@@ -1,0 +1,127 @@
+# Transcription on the device
+
+Intone writes out the text of a clip the learner brings, on their own device, with OpenAI's Whisper, once they agree to its download.
+The text is for reading: no score reads it, practice never waits for it, and the learner can edit it or paste their own.
+This file says how it works, what was chosen and why, and what it measured; `docs/transcription-study.md` holds the study's numbers, written by `npm run text:study`.
+
+## What the learner sees
+
+- When an upload's lines open, a dialog asks first: "Download the text model?", with "Intone can write out each line's text, on this device. It needs a one-time download of 75 MB, which the browser keeps. Your clip never leaves this device.", a choice "Larger model, better text (whisper-small, 226 MB)", and "Download 75 MB" (the size following the choice) or "Not now".
+  The spec's wording said 73 MB, the two model files alone; the dialog adds the five small files Transformers.js loads with them, read from `models.json`, so the size it names is what downloads.
+- "Not now" is kept with the settings, so a later upload does not ask again; `/settings` ("Text for your lines") offers the download again, and the level's "Write out the text" asks again.
+  Declining leaves practice as it was: `tests/e2e/uploads.spec.ts` says "Not now" and then practises a line of the clip to a score, with no request for a model file.
+- Agreeing keeps the model chosen, and later uploads are written out at once with it while its files are on the device.
+  When they are not, as after a backup restored on another device or a store the browser evicted, the dialog asks again, with the size, before anything downloads.
+  `/settings` then says the model agreed to is not on this device, with its size, and offers "Download the text model" rather than "Choose another text model".
+  The job runs in the background, on any screen: the level shows its step ("Downloading the text model: 30 of 75 MB.", "Writing out the text: part 2 of 4.") with a bar and a Stop, and says "It runs in the background: practise any line meanwhile."
+- Each line of the level is then named by its text, with its number and times under it, and its practice screen is titled by it.
+  Under each row, "Edit the text" (or "Add its text") opens a field for that line; "Paste your own text" takes one line of text for each line of the clip, in order, and refuses a count that differs, saying both counts.
+  The learner's own text stands over the transcript's, and survives writing the clip out again.
+  A line's text cleared to nothing is no text of the learner's own: the line shows the transcript's words again.
+- `/credits` names every model the app ships, with its licence and source, read from `models.json` through the build, and the bundled recording's voice; `NOTICES.md` lists the same models with their files.
+
+## The models
+
+| Model           | Files from                                 | Revision                                   | Download      |
+| --------------- | ------------------------------------------ | ------------------------------------------ | ------------- |
+| `whisper-base`  | `onnx-community/whisper-base_timestamped`  | `608c49e61301901684bc36cac8f74b95ff6b5a8e` | 75,253,316 B  |
+| `whisper-small` | `onnx-community/whisper-small_timestamped` | `65caa70f294b46e1c33ff820aae6b16d048ab818` | 225,743,849 B |
+
+Each is seven files: `config.json`, `generation_config.json`, `preprocessor_config.json`, `tokenizer.json`, `tokenizer_config.json`, `onnx/encoder_model_q4.onnx` and `onnx/decoder_model_merged_int8.onnx`, the quantisations T226's spike ran.
+They are exactly the files Transformers.js 4.3.2 requested in Chromium for an `automatic-speech-recognition` pipeline at those dtypes, seen in the page's requests, and `tests/build/models.test.ts` pins the list.
+OpenAI's code and weights are MIT (`docs/sounds.md`, "Licences").
+
+`whisper-small` comes from the timestamped export of the same weights, not from `onnx-community/whisper-small`, whose decoder ticket 05 first listed: that export has no cross-attention outputs, and asked for word timestamps Transformers.js fails with "Model outputs must contain cross attentions to extract timestamps"; with segment timestamps alone it gave four chunks of 4 to 10 s for the 29 s clip, longer than a line, so they could not be matched to lines.
+
+## How it runs
+
+- `src/services/transcriber.ts` decodes the clip at 16 kHz with the browser's decoder, as the cut does, cuts it into the windows Whisper reads, and hands it to the text Worker, `src/workers/text.worker.ts`, transferred.
+- The Worker fetches the model's files itself into Transformers.js's own browser cache, the Cache API store `intone-text-models` (`src/workers/text-model-cache.ts`), under the key Transformers.js looks a local model's file up by, reporting the bytes against the sizes `models.json` gives and checking each file's length.
+  Transformers.js, given a progress callback, first fetches every file once more to learn its size, and asks for `onnx/encoder_model_quantized.onnx`, which is not listed, so a 404 reaches the console; without the callback it does neither, and finds every file in its cache.
+- Whisper is opened through Transformers.js with remote models off, local models on and its local model path on the app's `/models/`, each model loaded by `<id>/<version>`, its directory (`src/workers/whisper-session.ts`), so every request is for the app's own origin; the model's files are served with `Cache-Control: immutable` like every model (`docs/deploying.md`).
+- Transformers.js pins its own ONNX Runtime, a 1.31.0 development build, and loads its `asyncify` WebAssembly, which runs WebGPU as well as the CPU; the build serves those two files from `/ort/1.31.0-dev.20260914-8d85527a0/` (`build/onnx-runtime.ts`).
+  Its WebAssembly cache is off: on, it loads ONNX Runtime's loader from a `blob:` URL, which the Content Security Policy refuses.
+- Stop ends the job's Stream: the Worker is asked to close, stops a download at once and a transcription at its next window, disposes Whisper's sessions, and is terminated after two seconds anyway.
+- Clearing all data deletes the Cache API store too.
+
+### Windows and pieces
+
+Whisper's encoder reads 30 s whatever it is given, so the clip is read in windows of at most 30 s (`src/engine/text/windows.ts`), from 0.2 s before its first line to 0.2 s after its last, each window closing in the middle of a pause between two lines, never inside one.
+A single phrase read alone costs about 3 s on `whisper-base` and comes out worse (方向を for 方こそ, report section 2), which is why the whole clip is read and the text matched to lines afterwards.
+
+Transformers.js 4.3.2 groups a Japanese transcript's word timestamps on spaces, as for English: its pipeline drops the language token before it groups the words, so the language it groups for is unknown, and the "words" it gave for the 29 s clip were whole phrases of up to 6.3 s.
+The Worker therefore runs the model's `generate` itself with token timestamps, as the pipeline does, and makes its own pieces (`src/engine/text/pieces.ts`): the shortest run of tokens that decodes to whole characters, from its first token's time to the next piece's, but no longer than 0.6 s, so a pause after a word is not counted as its.
+
+### Matching to lines
+
+Each piece goes to the line its middle falls in, or, in a pause, to the nearer line within half a second; further from any line it is left out (`src/engine/text/match.ts`).
+A line's text is its pieces in order, without the punctuation that closed the line before it and without the spaces Whisper's tokens put between Japanese words.
+The transcript is kept with the clip as pieces (`ClipEntry.transcript`) and matched each time it is read, so a line the learner moves, splits or merges gets the words of its new span; a moved line keeps the text the learner gave it, and a split or merged one takes the transcript's.
+
+## WebGPU and the CPU
+
+| Run on the 29 s clip, `whisper-base`, T226's spike page       | Reading    |
+| ------------------------------------------------------------- | ---------- |
+| Both sessions on the CPU (WebAssembly, one thread)            | 17 s       |
+| Both on WebGPU, the q4 encoder and int8 decoder               | 56 to 65 s |
+| Both on WebGPU, the q4 encoder and a q4 decoder (124 MB more) | 5.7 s      |
+| The q4 encoder on WebGPU, the int8 decoder on the CPU         | 4.9 s      |
+
+Measured on 2026-11-13 on Daniel's machine, an NVIDIA GeForce RTX 3070 (Ampere) through Chromium's Vulkan WebGPU, in a headed window: headless Chromium reaches only SwiftShader, a software adapter, whatever the flags.
+The int8 decoder is slower on WebGPU than on the CPU, so the app runs the encoder on WebGPU and the decoder on the CPU, from the same files: the download is the same either way.
+The GPU's arithmetic differs a little from the CPU's, so the text can differ by a word, and its character error stays within 2.3 points of the CPU's on every clip (below).
+The Worker uses WebGPU when a GPU answers that is not a software one, and falls back to the CPU when there is none or its sessions fail to open; the transcript records which ran.
+The tests run on the CPU, in headless Chromium; `npm run text:study -- --run` runs both, WebGPU in a headed window.
+
+## What the study measured
+
+`npm run text:study` runs the app's own text Worker on the three LibriVox CC0 clips of `fixtures/real/` (59.5, 29.2 and 28.8 s, one reader), each cut into lines by the app's own code, with both models, on the CPU in headless Chromium and on the RTX 3070 in a headed window; `docs/transcription-study.md` has every number, and these are from 2026-11-13, with the machine's load average between 10 and 25 from other work, so the CPU's times are slower than on a quiet machine.
+
+### Speed
+
+| Model           | Encoder on | Reading, times real time | Opening the model |
+| --------------- | ---------- | ------------------------ | ----------------- |
+| `whisper-base`  | the CPU    | 3.3 to 3.6               | 1.1 s             |
+| `whisper-base`  | WebGPU     | 6.0 to 7.2               | 1.4 s             |
+| `whisper-small` | the CPU    | 0.72 to 0.76             | 3.3 to 3.6 s      |
+| `whisper-small` | WebGPU     | 1.75 to 2.3              | 2.5 to 3.5 s      |
+
+The model was already on the device for these; its first download, from localhost, is a few seconds more.
+A ten-minute clip on the CPU would take about three minutes with `whisper-base` and about fourteen with `whisper-small`, in the background.
+
+### Character error
+
+Edits from what the model wrote to the clip's book text (`fixtures/real/<clip>.txt`), over the text's length, spaces and punctuation left out:
+
+| Model           | Written form  | Kana         |
+| --------------- | ------------- | ------------ |
+| `whisper-base`  | 21.5 to 28.9% | 7.0 to 12.5% |
+| `whisper-small` | 15.4 to 27.2% | 1.9 to 7.5%  |
+
+The written form counts a word written in kana where the book has kanji, or the other way, as wrong: the books write むかし, ちかく and さま in kana where Whisper writes 昔, 近く and 様, and much of the error is that.
+On kana, OpenJTalk reads both the book and what Whisper wrote, and only how a word is said counts: `whisper-small`'s 1.9% on ごん狐 is a few kana, and both models get names wrong: 入江 is 医療 to `whisper-base` and 入れ to `whisper-small`, and ごん狐 is ゴンギスネ to `whisper-base`.
+OpenJTalk's own readings can be wrong, alike on both sides, and the book is not quite what the reader says, so neither figure is the model's alone.
+
+### Matching to lines
+
+At each edge between two lines, the study lines the two lines' matched text up with what the model writes reading each line alone, and counts the characters on the wrong side of the edge; an edge is wrong when two or more moved.
+
+| Model           | Edges | Wrong                   | Characters moved          |
+| --------------- | ----- | ----------------------- | ------------------------- |
+| `whisper-base`  | 37    | 3 (the CPU), 1 (WebGPU) | 10 (the CPU), 8 (WebGPU)  |
+| `whisper-small` | 35    | 3 (the CPU), 4 (WebGPU) | 25 (the CPU), 36 (WebGPU) |
+
+So `whisper-base` moves a word or more to the neighbouring line at 1 to 3 of its 37 edges and `whisper-small` at 3 or 4 of its 35, most of them in ろまん燈籠, the longest clip; no line was left empty that had words.
+The measure trusts each line read alone, which is worse than the whole clip read at once (report section 2), so it overstates the errors a little, and three clips by one reader are a small sample: the learner's own clips, with music, other voices or faster speech, will match worse.
+
+## Nothing leaves the device
+
+`tests/e2e/transcription.spec.ts` uploads `fixtures/real/gongitsune.wav` to the built app, agrees, and waits for the text, then checks that every request went to the app's own origin, every one a `GET` with no body, and that each of `whisper-base`'s seven files was requested once and nothing of `whisper-small`.
+After a reload it writes the clip out again and sees no request for any model file, and the seven files in the Cache API store.
+
+## What it does not do
+
+- It writes no kana: a line's readings come from a dictionary run on the device (`docs/readings.md`).
+- A pack's lines take their text from its manifest, and the bundled lines have theirs; only uploads are written out.
+- An interrupted download is not resumed; the files already in the cache are kept, and the rest fetched again.
+- Nothing has been measured on a phone, whose speed and memory for Whisper are the largest unknown (report section 2).

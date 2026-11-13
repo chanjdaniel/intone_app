@@ -1,0 +1,2056 @@
+{
+  "version": 1,
+  "levels": [
+    {
+      "id": "starter-heiban",
+      "kind": "Heiban",
+      "name": "Heiban: flat",
+      "about": "Low on the first mora, then high to the end, the particle too: no fall.",
+      "lines": [
+        {
+          "id": "mizu-ga",
+          "seed": false,
+          "text": "水が",
+          "kana": "みずが",
+          "morae": [
+            "み",
+            "ず",
+            "が"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "水",
+              "kana": "みず",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/mizu-ga.wav",
+          "seconds": 1.0986666666666667,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "tori-ga",
+          "seed": false,
+          "text": "鳥が",
+          "kana": "とりが",
+          "morae": [
+            "と",
+            "り",
+            "が"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "鳥",
+              "kana": "とり",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/tori-ga.wav",
+          "seconds": 1.0026666666666666,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "sakura-ga",
+          "seed": false,
+          "text": "桜が",
+          "kana": "さくらが",
+          "morae": [
+            "さ",
+            "く",
+            "ら",
+            "が"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "桜",
+              "kana": "さくら",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": "桜 (さくら): UniDic gives 0, Wiktionary gives 0 and 1; the list states 0.",
+          "note": null,
+          "audio": "audio/sakura-ga.wav",
+          "seconds": 1.2053333333333334,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "namae-ga",
+          "seed": false,
+          "text": "名前が",
+          "kana": "なまえが",
+          "morae": [
+            "な",
+            "ま",
+            "え",
+            "が"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "名前",
+              "kana": "なまえ",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/namae-ga.wav",
+          "seconds": 1.0986666666666667,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "gakkou-ga",
+          "seed": true,
+          "text": "学校が",
+          "kana": "がっこうが",
+          "morae": [
+            "が",
+            "っ",
+            "こ",
+            "う",
+            "が"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "学校",
+              "kana": "がっこう",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/gakkou-ga.wav",
+          "seconds": 1.248,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "tomodachi-ga",
+          "seed": false,
+          "text": "友達が",
+          "kana": "ともだちが",
+          "morae": [
+            "と",
+            "も",
+            "だ",
+            "ち",
+            "が"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "友達",
+              "kana": "ともだち",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/tomodachi-ga.wav",
+          "seconds": 1.1946666666666668,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "starter-atamadaka",
+      "kind": "Atamadaka",
+      "name": "Atamadaka: falls after the first",
+      "about": "High on the first mora, then low from the second.",
+      "lines": [
+        {
+          "id": "neko-ga",
+          "seed": true,
+          "text": "猫が",
+          "kana": "ねこが",
+          "morae": [
+            "ね",
+            "こ",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "猫",
+              "kana": "ねこ",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/neko-ga.wav",
+          "seconds": 1.0986666666666667,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "aki-ga",
+          "seed": false,
+          "text": "秋が",
+          "kana": "あきが",
+          "morae": [
+            "あ",
+            "き",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "秋",
+              "kana": "あき",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/aki-ga.wav",
+          "seconds": 1.0133333333333334,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "inochi-ga",
+          "seed": false,
+          "text": "命が",
+          "kana": "いのちが",
+          "morae": [
+            "い",
+            "の",
+            "ち",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "命",
+              "kana": "いのち",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/inochi-ga.wav",
+          "seconds": 1.1733333333333333,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "midori-ga",
+          "seed": false,
+          "text": "緑が",
+          "kana": "みどりが",
+          "morae": [
+            "み",
+            "ど",
+            "り",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "緑",
+              "kana": "みどり",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/midori-ga.wav",
+          "seconds": 1.0773333333333333,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "keizai-ga",
+          "seed": false,
+          "text": "経済が",
+          "kana": "けいざいが",
+          "morae": [
+            "け",
+            "い",
+            "ざ",
+            "い",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "経済",
+              "kana": "けいざい",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/keizai-ga.wav",
+          "seconds": 1.2906666666666666,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "genkan-ga",
+          "seed": false,
+          "text": "玄関が",
+          "kana": "げんかんが",
+          "morae": [
+            "げ",
+            "ん",
+            "か",
+            "ん",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "玄関",
+              "kana": "げんかん",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/genkan-ga.wav",
+          "seconds": 1.1946666666666668,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "starter-nakadaka",
+      "kind": "Nakadaka",
+      "name": "Nakadaka: falls inside the word",
+      "about": "Rises after the first mora and falls before the word ends.",
+      "lines": [
+        {
+          "id": "kinou-ga",
+          "seed": true,
+          "text": "昨日が",
+          "kana": "きのうが",
+          "morae": [
+            "き",
+            "の",
+            "う",
+            "が"
+          ],
+          "accentType": 2,
+          "particle": "が",
+          "words": [
+            {
+              "text": "昨日",
+              "kana": "きのう",
+              "accentType": 2,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": "昨日 (きのう): UniDic gives 2 and 0, Wiktionary gives 2 and 0; the list states 2.",
+          "note": null,
+          "audio": "audio/kinou-ga.wav",
+          "seconds": 1.1626666666666667,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "hitori-ga",
+          "seed": false,
+          "text": "一人が",
+          "kana": "ひとりが",
+          "morae": [
+            "ひ",
+            "と",
+            "り",
+            "が"
+          ],
+          "accentType": 2,
+          "particle": "が",
+          "words": [
+            {
+              "text": "一人",
+              "kana": "ひとり",
+              "accentType": 2,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/hitori-ga.wav",
+          "seconds": 1.0986666666666667,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "mizuumi-ga",
+          "seed": false,
+          "text": "湖が",
+          "kana": "みずうみが",
+          "morae": [
+            "み",
+            "ず",
+            "う",
+            "み",
+            "が"
+          ],
+          "accentType": 3,
+          "particle": "が",
+          "words": [
+            {
+              "text": "湖",
+              "kana": "みずうみ",
+              "accentType": 3,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/mizuumi-ga.wav",
+          "seconds": 1.2906666666666666,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "sensei-ga",
+          "seed": false,
+          "text": "先生が",
+          "kana": "せんせいが",
+          "morae": [
+            "せ",
+            "ん",
+            "せ",
+            "い",
+            "が"
+          ],
+          "accentType": 3,
+          "particle": "が",
+          "words": [
+            {
+              "text": "先生",
+              "kana": "せんせい",
+              "accentType": 3,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/sensei-ga.wav",
+          "seconds": 1.2266666666666666,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "starter-odaka",
+      "kind": "Odaka",
+      "name": "Odaka: falls onto the particle",
+      "about": "Sounds flat on its own: the fall comes after the last mora, so the particle is low.",
+      "lines": [
+        {
+          "id": "yama-ga",
+          "seed": false,
+          "text": "山が",
+          "kana": "やまが",
+          "morae": [
+            "や",
+            "ま",
+            "が"
+          ],
+          "accentType": 2,
+          "particle": "が",
+          "words": [
+            {
+              "text": "山",
+              "kana": "やま",
+              "accentType": 2,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/yama-ga.wav",
+          "seconds": 1.0986666666666667,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "inu-ga",
+          "seed": false,
+          "text": "犬が",
+          "kana": "いぬが",
+          "morae": [
+            "い",
+            "ぬ",
+            "が"
+          ],
+          "accentType": 2,
+          "particle": "が",
+          "words": [
+            {
+              "text": "犬",
+              "kana": "いぬ",
+              "accentType": 2,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/inu-ga.wav",
+          "seconds": 1.0133333333333334,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "otoko-ga",
+          "seed": false,
+          "text": "男が",
+          "kana": "おとこが",
+          "morae": [
+            "お",
+            "と",
+            "こ",
+            "が"
+          ],
+          "accentType": 3,
+          "particle": "が",
+          "words": [
+            {
+              "text": "男",
+              "kana": "おとこ",
+              "accentType": 3,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/otoko-ga.wav",
+          "seconds": 1.1733333333333333,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "yasumi-ga",
+          "seed": false,
+          "text": "休みが",
+          "kana": "やすみが",
+          "morae": [
+            "や",
+            "す",
+            "み",
+            "が"
+          ],
+          "accentType": 3,
+          "particle": "が",
+          "words": [
+            {
+              "text": "休み",
+              "kana": "やすみ",
+              "accentType": 3,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": "休み (やすみ): UniDic gives 3 and 2, Wiktionary gives 3; the list states 3.",
+          "note": null,
+          "audio": "audio/yasumi-ga.wav",
+          "seconds": 1.12,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "otouto-ga",
+          "seed": true,
+          "text": "弟が",
+          "kana": "おとうとが",
+          "morae": [
+            "お",
+            "と",
+            "う",
+            "と",
+            "が"
+          ],
+          "accentType": 4,
+          "particle": "が",
+          "words": [
+            {
+              "text": "弟",
+              "kana": "おとうと",
+              "accentType": 4,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/otouto-ga.wav",
+          "seconds": 1.2586666666666666,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "imouto-ga",
+          "seed": false,
+          "text": "妹が",
+          "kana": "いもうとが",
+          "morae": [
+            "い",
+            "も",
+            "う",
+            "と",
+            "が"
+          ],
+          "accentType": 4,
+          "particle": "が",
+          "words": [
+            {
+              "text": "妹",
+              "kana": "いもうと",
+              "accentType": 4,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/imouto-ga.wav",
+          "seconds": 1.184,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "starter-pairs",
+      "kind": "Pairs",
+      "name": "Pairs: the same kana, another accent",
+      "about": "Words written alike in kana, told apart by where they fall.",
+      "lines": [
+        {
+          "id": "ame-ga-suki",
+          "seed": true,
+          "text": "雨が好き",
+          "kana": "あめがすき",
+          "morae": [
+            "あ",
+            "め",
+            "が",
+            "す",
+            "き"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "雨",
+              "kana": "あめ",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            },
+            {
+              "text": "好き",
+              "kana": "すき",
+              "accentType": 2,
+              "particle": null,
+              "byRule": null
+            }
+          ],
+          "flag": "好き (すき): UniDic gives 2 and 1, Wiktionary gives 2; the list states 2.",
+          "note": null,
+          "audio": "audio/ame-ga-suki.wav",
+          "seconds": 1.312,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "ame-candy-ga-suki",
+          "seed": true,
+          "text": "飴が好き",
+          "kana": "あめがすき",
+          "morae": [
+            "あ",
+            "め",
+            "が",
+            "す",
+            "き"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "飴",
+              "kana": "あめ",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            },
+            {
+              "text": "好き",
+              "kana": "すき",
+              "accentType": 2,
+              "particle": null,
+              "byRule": null
+            }
+          ],
+          "flag": "好き (すき): UniDic gives 2 and 1, Wiktionary gives 2; the list states 2.",
+          "note": null,
+          "audio": "audio/ame-candy-ga-suki.wav",
+          "seconds": 1.2373333333333334,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "hashi-bridge-ga",
+          "seed": false,
+          "text": "橋が",
+          "kana": "はしが",
+          "morae": [
+            "は",
+            "し",
+            "が"
+          ],
+          "accentType": 2,
+          "particle": "が",
+          "words": [
+            {
+              "text": "橋",
+              "kana": "はし",
+              "accentType": 2,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/hashi-bridge-ga.wav",
+          "seconds": 1.12,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "hashi-chopsticks-ga",
+          "seed": false,
+          "text": "箸が",
+          "kana": "はしが",
+          "morae": [
+            "は",
+            "し",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "箸",
+              "kana": "はし",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/hashi-chopsticks-ga.wav",
+          "seconds": 1.0346666666666666,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "hashi-edge-ga",
+          "seed": false,
+          "text": "端が",
+          "kana": "はしが",
+          "morae": [
+            "は",
+            "し",
+            "が"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "端",
+              "kana": "はし",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/hashi-edge-ga.wav",
+          "seconds": 1.12,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "hana-flower-ga",
+          "seed": false,
+          "text": "花が",
+          "kana": "はなが",
+          "morae": [
+            "は",
+            "な",
+            "が"
+          ],
+          "accentType": 2,
+          "particle": "が",
+          "words": [
+            {
+              "text": "花",
+              "kana": "はな",
+              "accentType": 2,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/hana-flower-ga.wav",
+          "seconds": 1.024,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "hana-nose-ga",
+          "seed": false,
+          "text": "鼻が",
+          "kana": "はなが",
+          "morae": [
+            "は",
+            "な",
+            "が"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "鼻",
+              "kana": "はな",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/hana-nose-ga.wav",
+          "seconds": 1.12,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "kaki-persimmon-ga",
+          "seed": false,
+          "text": "柿が",
+          "kana": "かきが",
+          "morae": [
+            "か",
+            "き",
+            "が"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "柿",
+              "kana": "かき",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/kaki-persimmon-ga.wav",
+          "seconds": 1.0346666666666666,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "kaki-oyster-ga",
+          "seed": false,
+          "text": "牡蠣が",
+          "kana": "かきが",
+          "morae": [
+            "か",
+            "き",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "牡蠣",
+              "kana": "かき",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/kaki-oyster-ga.wav",
+          "seconds": 1.1306666666666667,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "kami-god-ga",
+          "seed": false,
+          "text": "神が",
+          "kana": "かみが",
+          "morae": [
+            "か",
+            "み",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "神",
+              "kana": "かみ",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/kami-god-ga.wav",
+          "seconds": 1.0026666666666666,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "kami-paper-ga",
+          "seed": false,
+          "text": "紙が",
+          "kana": "かみが",
+          "morae": [
+            "か",
+            "み",
+            "が"
+          ],
+          "accentType": 2,
+          "particle": "が",
+          "words": [
+            {
+              "text": "紙",
+              "kana": "かみ",
+              "accentType": 2,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/kami-paper-ga.wav",
+          "seconds": 1.1093333333333333,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "sake-drink-ga",
+          "seed": false,
+          "text": "酒が",
+          "kana": "さけが",
+          "morae": [
+            "さ",
+            "け",
+            "が"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "酒",
+              "kana": "さけ",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/sake-drink-ga.wav",
+          "seconds": 1.056,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "sake-salmon-ga",
+          "seed": false,
+          "text": "鮭が",
+          "kana": "さけが",
+          "morae": [
+            "さ",
+            "け",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "鮭",
+              "kana": "さけ",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/sake-salmon-ga.wav",
+          "seconds": 1.152,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "kumo-cloud-ga",
+          "seed": false,
+          "text": "雲が",
+          "kana": "くもが",
+          "morae": [
+            "く",
+            "も",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "雲",
+              "kana": "くも",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": "雲 and 蜘蛛 are both atamadaka in Tokyo, in UniDic and in Wiktionary, so they are no minimal pair there, as the plan supposed; Kansai tells them apart. Keep, reject or note them as a pair.",
+          "audio": "audio/kumo-cloud-ga.wav",
+          "seconds": 1.024,
+          "credit": {
+            "author": "VOICEVOX:玄野武宏",
+            "source": "VOICEVOX",
+            "page": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "licence": "VOICEVOX:玄野武宏 terms of use",
+            "licenceUrl": "https://www.virvoxproject.com/voicevoxの利用規約",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "kumo-spider-ga",
+          "seed": false,
+          "text": "蜘蛛が",
+          "kana": "くもが",
+          "morae": [
+            "く",
+            "も",
+            "が"
+          ],
+          "accentType": 1,
+          "particle": "が",
+          "words": [
+            {
+              "text": "蜘蛛",
+              "kana": "くも",
+              "accentType": 1,
+              "particle": "が",
+              "byRule": null
+            }
+          ],
+          "flag": null,
+          "note": "雲 and 蜘蛛 are both atamadaka in Tokyo, in UniDic and in Wiktionary, so they are no minimal pair there, as the plan supposed; Kansai tells them apart. Keep, reject or note them as a pair.",
+          "audio": "audio/kumo-spider-ga.wav",
+          "seconds": 1.0773333333333333,
+          "credit": {
+            "author": "VOICEVOX:冥鳴ひまり",
+            "source": "VOICEVOX",
+            "page": "https://www.meimeihimari.com/terms-of-use",
+            "licence": "VOICEVOX:冥鳴ひまり terms of use",
+            "licenceUrl": "https://www.meimeihimari.com/terms-of-use",
+            "changes": "Synthesised by VOICEVOX CORE 0.17.1, its pitch set from the stated accent."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "starter-phrases",
+      "kind": "Phrases",
+      "name": "Phrases: two words together",
+      "about": "A word and its particle, then a verb in its ます form.",
+      "lines": [
+        {
+          "id": "hashi-o-watarimasu",
+          "seed": false,
+          "text": "橋を渡ります",
+          "kana": "はしをわたります",
+          "morae": [
+            "は",
+            "し",
+            "を",
+            "わ",
+            "た",
+            "り",
+            "ま",
+            "す"
+          ],
+          "accentType": 2,
+          "particle": "を",
+          "words": [
+            {
+              "text": "橋",
+              "kana": "はし",
+              "accentType": 2,
+              "particle": "を",
+              "byRule": null
+            },
+            {
+              "text": "渡ります",
+              "kana": "わたります",
+              "accentType": 4,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/hashi-o-watarimasu.wav",
+          "seconds": 1.448,
+          "credit": {
+            "author": "Zsrtrgh",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E6%A9%8B%E3%82%92%E6%B8%A1%E3%82%8A%E3%81%BE%E3%81%99.wav",
+            "licence": "CC0",
+            "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "tokei-ga-ugokimasu",
+          "seed": false,
+          "text": "時計が動きます",
+          "kana": "とけいがうごきます",
+          "morae": [
+            "と",
+            "け",
+            "い",
+            "が",
+            "う",
+            "ご",
+            "き",
+            "ま",
+            "す"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "時計",
+              "kana": "とけい",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            },
+            {
+              "text": "動きます",
+              "kana": "うごきます",
+              "accentType": 4,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/tokei-ga-ugokimasu.wav",
+          "seconds": 1.7253333333333334,
+          "credit": {
+            "author": "Fukujinzuke",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E6%99%82%E8%A8%88%E3%81%8C%E5%8B%95%E3%81%8D%E3%81%BE%E3%81%99.wav",
+            "licence": "CC BY 4.0",
+            "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "kusuri-o-nomimasu",
+          "seed": false,
+          "text": "薬を飲みます",
+          "kana": "くすりをのみます",
+          "morae": [
+            "く",
+            "す",
+            "り",
+            "を",
+            "の",
+            "み",
+            "ま",
+            "す"
+          ],
+          "accentType": 0,
+          "particle": "を",
+          "words": [
+            {
+              "text": "薬",
+              "kana": "くすり",
+              "accentType": 0,
+              "particle": "を",
+              "byRule": null
+            },
+            {
+              "text": "飲みます",
+              "kana": "のみます",
+              "accentType": 3,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/kusuri-o-nomimasu.wav",
+          "seconds": 1.36,
+          "credit": {
+            "author": "Zsrtrgh",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E8%96%AC%E3%82%92%E9%A3%B2%E3%81%BF%E3%81%BE%E3%81%99.wav",
+            "licence": "CC0",
+            "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "michi-o-arukimasu",
+          "seed": false,
+          "text": "道を歩きます",
+          "kana": "みちをあるきます",
+          "morae": [
+            "み",
+            "ち",
+            "を",
+            "あ",
+            "る",
+            "き",
+            "ま",
+            "す"
+          ],
+          "accentType": 0,
+          "particle": "を",
+          "words": [
+            {
+              "text": "道",
+              "kana": "みち",
+              "accentType": 0,
+              "particle": "を",
+              "byRule": null
+            },
+            {
+              "text": "歩きます",
+              "kana": "あるきます",
+              "accentType": 4,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/michi-o-arukimasu.wav",
+          "seconds": 1.6213333333333333,
+          "credit": {
+            "author": "Fukujinzuke",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E9%81%93%E3%82%92%E6%AD%A9%E3%81%8D%E3%81%BE%E3%81%99.wav",
+            "licence": "CC BY 4.0",
+            "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "densha-ni-norimasu",
+          "seed": false,
+          "text": "電車に乗ります",
+          "kana": "でんしゃにのります",
+          "morae": [
+            "で",
+            "ん",
+            "しゃ",
+            "に",
+            "の",
+            "り",
+            "ま",
+            "す"
+          ],
+          "accentType": 0,
+          "particle": "に",
+          "words": [
+            {
+              "text": "電車",
+              "kana": "でんしゃ",
+              "accentType": 0,
+              "particle": "に",
+              "byRule": null
+            },
+            {
+              "text": "乗ります",
+              "kana": "のります",
+              "accentType": 3,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": "電車 (でんしゃ): UniDic gives 0 and 1, Wiktionary gives 0 and 1; the list states 0.",
+          "note": null,
+          "audio": "audio/densha-ni-norimasu.wav",
+          "seconds": 1.416,
+          "credit": {
+            "author": "Zsrtrgh",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E9%9B%BB%E8%BB%8A%E3%81%AB%E4%B9%97%E3%82%8A%E3%81%BE%E3%81%99.wav",
+            "licence": "CC0",
+            "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "kutsu-o-hakimasu",
+          "seed": false,
+          "text": "靴をはきます",
+          "kana": "くつをはきます",
+          "morae": [
+            "く",
+            "つ",
+            "を",
+            "は",
+            "き",
+            "ま",
+            "す"
+          ],
+          "accentType": 2,
+          "particle": "を",
+          "words": [
+            {
+              "text": "靴",
+              "kana": "くつ",
+              "accentType": 2,
+              "particle": "を",
+              "byRule": null
+            },
+            {
+              "text": "はきます",
+              "kana": "はきます",
+              "accentType": 3,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/kutsu-o-hakimasu.wav",
+          "seconds": 1.232,
+          "credit": {
+            "author": "Fukujinzuke",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E9%9D%B4%E3%82%92%E3%81%AF%E3%81%8D%E3%81%BE%E3%81%99.wav",
+            "licence": "CC BY 4.0",
+            "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "eki-ni-tsukimasu",
+          "seed": false,
+          "text": "駅に着きます",
+          "kana": "えきにつきます",
+          "morae": [
+            "え",
+            "き",
+            "に",
+            "つ",
+            "き",
+            "ま",
+            "す"
+          ],
+          "accentType": 1,
+          "particle": "に",
+          "words": [
+            {
+              "text": "駅",
+              "kana": "えき",
+              "accentType": 1,
+              "particle": "に",
+              "byRule": null
+            },
+            {
+              "text": "着きます",
+              "kana": "つきます",
+              "accentType": 3,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/eki-ni-tsukimasu.wav",
+          "seconds": 1.4586666666666666,
+          "credit": {
+            "author": "Zsrtrgh",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E9%A7%85%E3%81%AB%E7%9D%80%E3%81%8D%E3%81%BE%E3%81%99.wav",
+            "licence": "CC0",
+            "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "sensei-ni-kikimasu",
+          "seed": false,
+          "text": "先生に聞きます",
+          "kana": "せんせいにききます",
+          "morae": [
+            "せ",
+            "ん",
+            "せ",
+            "い",
+            "に",
+            "き",
+            "き",
+            "ま",
+            "す"
+          ],
+          "accentType": 3,
+          "particle": "に",
+          "words": [
+            {
+              "text": "先生",
+              "kana": "せんせい",
+              "accentType": 3,
+              "particle": "に",
+              "byRule": null
+            },
+            {
+              "text": "聞きます",
+              "kana": "ききます",
+              "accentType": 3,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/sensei-ni-kikimasu.wav",
+          "seconds": 1.888,
+          "credit": {
+            "author": "Fukujinzuke",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E5%85%88%E7%94%9F%E3%81%AB%E8%81%9E%E3%81%8D%E3%81%BE%E3%81%99.wav",
+            "licence": "CC BY 4.0",
+            "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "megane-o-kakemasu",
+          "seed": false,
+          "text": "眼鏡をかけます",
+          "kana": "めがねをかけます",
+          "morae": [
+            "め",
+            "が",
+            "ね",
+            "を",
+            "か",
+            "け",
+            "ま",
+            "す"
+          ],
+          "accentType": 1,
+          "particle": "を",
+          "words": [
+            {
+              "text": "眼鏡",
+              "kana": "めがね",
+              "accentType": 1,
+              "particle": "を",
+              "byRule": null
+            },
+            {
+              "text": "かけます",
+              "kana": "かけます",
+              "accentType": 3,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/megane-o-kakemasu.wav",
+          "seconds": 1.496,
+          "credit": {
+            "author": "Zsrtrgh",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E7%9C%BC%E9%8F%A1%E3%82%92%E3%81%8B%E3%81%91%E3%81%BE%E3%81%99.wav",
+            "licence": "CC0",
+            "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "daigaku-ni-hairimasu",
+          "seed": false,
+          "text": "大学に入ります",
+          "kana": "だいがくにはいります",
+          "morae": [
+            "だ",
+            "い",
+            "が",
+            "く",
+            "に",
+            "は",
+            "い",
+            "り",
+            "ま",
+            "す"
+          ],
+          "accentType": 0,
+          "particle": "に",
+          "words": [
+            {
+              "text": "大学",
+              "kana": "だいがく",
+              "accentType": 0,
+              "particle": "に",
+              "byRule": null
+            },
+            {
+              "text": "入ります",
+              "kana": "はいります",
+              "accentType": 4,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/daigaku-ni-hairimasu.wav",
+          "seconds": 1.7626666666666666,
+          "credit": {
+            "author": "Fukujinzuke",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E5%A4%A7%E5%AD%A6%E3%81%AB%E5%85%A5%E3%82%8A%E3%81%BE%E3%81%99.wav",
+            "licence": "CC BY 4.0",
+            "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "omatsuri-ga-arimasu",
+          "seed": false,
+          "text": "お祭りがあります",
+          "kana": "おまつりがあります",
+          "morae": [
+            "お",
+            "ま",
+            "つ",
+            "り",
+            "が",
+            "あ",
+            "り",
+            "ま",
+            "す"
+          ],
+          "accentType": 0,
+          "particle": "が",
+          "words": [
+            {
+              "text": "お祭り",
+              "kana": "おまつり",
+              "accentType": 0,
+              "particle": "が",
+              "byRule": null
+            },
+            {
+              "text": "あります",
+              "kana": "あります",
+              "accentType": 3,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": "お祭り (おまつり): UniDic has no entry for it, Wiktionary gives 0; the list states 0.",
+          "note": null,
+          "audio": "audio/omatsuri-ga-arimasu.wav",
+          "seconds": 1.52,
+          "credit": {
+            "author": "Zsrtrgh",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Zsrtrgh-%E3%81%8A%E7%A5%AD%E3%82%8A%E3%81%8C%E3%81%82%E3%82%8A%E3%81%BE%E3%81%99.wav",
+            "licence": "CC0",
+            "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        },
+        {
+          "id": "koohii-o-iremasu",
+          "seed": false,
+          "text": "コーヒーを入れます",
+          "kana": "コーヒーをいれます",
+          "morae": [
+            "コ",
+            "ー",
+            "ヒ",
+            "ー",
+            "を",
+            "い",
+            "れ",
+            "ま",
+            "す"
+          ],
+          "accentType": 3,
+          "particle": "を",
+          "words": [
+            {
+              "text": "コーヒー",
+              "kana": "コーヒー",
+              "accentType": 3,
+              "particle": "を",
+              "byRule": null
+            },
+            {
+              "text": "入れます",
+              "kana": "いれます",
+              "accentType": 3,
+              "particle": null,
+              "byRule": "A ます form falls after its ま, whatever the verb’s own accent."
+            }
+          ],
+          "flag": null,
+          "note": null,
+          "audio": "audio/koohii-o-iremasu.wav",
+          "seconds": 1.696,
+          "credit": {
+            "author": "Fukujinzuke",
+            "source": "Wikimedia Commons",
+            "page": "https://commons.wikimedia.org/wiki/File:LL-Q5287_(jpn)-Fukujinzuke-%E3%82%B3%E3%83%BC%E3%83%92%E3%83%BC%E3%82%92%E5%85%A5%E3%82%8C%E3%81%BE%E3%81%99.wav",
+            "licence": "CC BY 4.0",
+            "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+            "changes": "Mixed to mono and resampled to 24 kHz."
+          },
+          "review": {
+            "verdict": "unreviewed"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -4,11 +4,18 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import { Dialog } from '@foldkit/ui'
 
 import { countText } from '../history/format'
-import { clockText } from '../line/lines'
+import { bundledClipOf, clockText } from '../line/lines'
 import { sourceLink } from '../line/sourceLink'
 import { listFrame } from '../listFrame'
 import { pageFrame } from '../pageFrame'
 import { homeRouter, lineRouter } from '../route'
+import type { LineTextEdit, TextJob, TextOffer } from '../text/text'
+import {
+  type TextEvents,
+  levelTextSection,
+  lineTextControls,
+  textDialogView,
+} from '../text/textView'
 import { levelRowAttribute } from './commands'
 import {
   type DeleteState,
@@ -45,9 +52,18 @@ export type LevelEvents<ViewMessage> = Readonly<{
   keepClip: ViewMessage
   confirmDelete: ViewMessage
   dialog: (message: Dialog.Message) => ViewMessage
+  text: TextEvents<ViewMessage>
 }>
 
-const secondaryButton = 'button-secondary disabled:text-muted'
+// What a level shows of its clip's text: the one job, the text being
+// typed or pasted, and the consent dialog.
+export type LevelText = Readonly<{
+  job: TextJob
+  edit: LineTextEdit
+  offer: TextOffer
+  dialog: Dialog.Model
+}>
+
 const dangerButton = 'button bg-bad text-on-accent disabled:opacity-60'
 
 export const levelFindInputId = 'find-level-lines'
@@ -82,7 +98,10 @@ const lineDetail = (line: LevelLine): string =>
   [
     ...(Option.isSome(line.maybeText) ? [levelLineTitle(line)] : []),
     ...Option.toArray(line.maybeFile),
-    `${clockText(line.from, true)} to ${clockText(line.to, true)}`,
+    Option.getOrElse(
+      line.maybeDetail,
+      () => `${clockText(line.from, true)} to ${clockText(line.to, true)}`,
+    ),
     `${lengthTenthsText(line.from, line.to)} s`,
   ].join(' · ')
 
@@ -156,6 +175,7 @@ export const levelRow = <ViewMessage>(
   stars: StarCount | null,
   index: number,
   editLine: ((lineId: string) => ViewMessage) | null,
+  below: ReadonlyArray<Html>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
   const maybeWhy = unplayable(line, hasAudio)
@@ -226,6 +246,7 @@ export const levelRow = <ViewMessage>(
           h.div([h.Class('flex px-4')], [sourceLink(source, h)]),
         ],
       }),
+      ...below,
     ],
   )
 }
@@ -243,6 +264,8 @@ export const levelLineList = <ViewMessage>(
   events: Pick<LevelEvents<ViewMessage>, 'changedWords' | 'showMore'> &
     Partial<Pick<LevelEvents<ViewMessage>, 'editLine'>>,
   h: HtmlBuilder<ViewMessage>,
+  // What goes under a line's row: an upload's line has its own text.
+  belowRow: (line: LevelLine) => ReadonlyArray<Html> = () => [],
 ): Html => {
   const found = levelLinesFound(clip.lines, words)
   return listFrame(
@@ -256,12 +279,15 @@ export const levelLineList = <ViewMessage>(
       find: {
         inputId: levelFindInputId,
         label: 'Find a line',
-        placeholder: 'A line’s number or time, such as 12 or 1:05',
+        placeholder:
+          clip.origin === 'Bundled'
+            ? 'A line’s text, kana or number'
+            : 'A line’s number or time, such as 12 or 1:05',
       },
       countLine: countLine(found.length, clip.lines.length, words),
       changedWords: events.changedWords,
       showMore: events.showMore,
-      moreButtonClass: secondaryButton,
+      moreButtonClass: 'button-secondary',
       row: (line, index) =>
         levelRow(
           clip.id,
@@ -272,6 +298,7 @@ export const levelLineList = <ViewMessage>(
           clip.hasAudio && clip.origin === 'Upload'
             ? (events.editLine ?? null)
             : null,
+          belowRow(line),
           h,
         ),
     },
@@ -352,7 +379,7 @@ const deleteDialogView = <ViewMessage>(
                             ...initialFocus,
                             h.Type('button'),
                             h.OnClick(events.keepClip),
-                            h.Class(secondaryButton),
+                            h.Class('button-secondary'),
                           ],
                           [`Keep the ${nounOf(clip)}`],
                         ),
@@ -419,23 +446,51 @@ const readyBody = <ViewMessage>(
   page: Extract<LevelPage, { _tag: 'Ready' }>,
   words: string,
   dialog: Dialog.Model,
+  text: LevelText,
   events: LevelEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): ReadonlyArray<Html> => {
   const { clip } = page
+  const isUpload = clip.origin === 'Upload'
+  const maybeBundled = bundledClipOf(clip.id)
   return [
     h.header(
       [h.Class('flex flex-col gap-2')],
       [
         h.h1(
           [
-            ...(clip.origin === 'Bundled' ? [h.Lang('ja')] : []),
+            ...(Option.exists(maybeBundled, bundled => bundled.nameIsText)
+              ? [h.Lang('ja')]
+              : []),
             h.Class('text-3xl font-bold break-words sm:text-5xl'),
           ],
           [clip.name],
         ),
+        ...Option.match(
+          Option.flatMap(maybeBundled, bundled => bundled.maybeAbout),
+          {
+            onNone: () => [],
+            onSome: about => [h.p([h.Class('text-lg text-ink')], [about])],
+          },
+        ),
         h.p([h.Class('text-base text-muted')], [aboutText(clip)]),
       ],
+    ),
+    ...Option.match(
+      Option.flatMap(maybeBundled, bundled => bundled.maybeReviewNote),
+      {
+        onNone: () => [],
+        onSome: note => [
+          h.p(
+            [
+              h.Class(
+                'rounded-lg border border-warn bg-surface p-4 text-base text-ink',
+              ),
+            ],
+            [note],
+          ),
+        ],
+      },
     ),
     starsSummary(clip, page.stars, h),
     ...(clip.hasAudio
@@ -449,8 +504,11 @@ const readyBody = <ViewMessage>(
             h,
           ),
         ]),
-    ...(clip.hasAudio && clip.origin === 'Upload'
+    ...(clip.hasAudio && isUpload
       ? [lineEditorView(clip, page.editor, events.editor, h)]
+      : []),
+    ...(isUpload
+      ? [levelTextSection(clip, text.job, text.edit, events.text, h)]
       : []),
     h.section(
       [h.AriaLabelledBy('level-lines-heading'), h.Class('flex flex-col gap-4')],
@@ -459,7 +517,17 @@ const readyBody = <ViewMessage>(
           [h.Id('level-lines-heading'), h.Class('text-xl font-bold')],
           ['Lines to copy'],
         ),
-        levelLineList(clip, page.stars, words, page.shownRows, events, h),
+        levelLineList(
+          clip,
+          page.stars,
+          words,
+          page.shownRows,
+          events,
+          h,
+          isUpload
+            ? line => lineTextControls(line, text.edit, events.text, h)
+            : () => [],
+        ),
       ],
     ),
     ...(clip.origin === 'Bundled'
@@ -477,12 +545,7 @@ const deleteSection = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   h.section(
-    [
-      h.AriaLabelledBy('delete-clip-heading'),
-      h.Class(
-        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
-      ),
-    ],
+    [h.AriaLabelledBy('delete-clip-heading'), h.Class('card')],
     [
       h.h2(
         [h.Id('delete-clip-heading'), h.Class('text-xl font-bold')],
@@ -561,6 +624,7 @@ export const levelView = <ViewMessage>(
   page: LevelPage,
   maybeFind: Option.Option<string>,
   dialog: Dialog.Model,
+  text: LevelText,
   events: LevelEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
@@ -586,9 +650,20 @@ export const levelView = <ViewMessage>(
         ready,
         Option.getOrElse(maybeFind, () => ''),
         dialog,
+        text,
         events,
         h,
       ),
   })
-  return pageFrame('Lines', [backLink(h), ...body], h)
+  // The consent dialog is on the page whatever its state, since an
+  // upload's level offers the download as it opens.
+  return pageFrame(
+    'Lines',
+    [
+      backLink(h),
+      ...body,
+      textDialogView(text.dialog, text.offer, events.text, h),
+    ],
+    h,
+  )
 }

@@ -1,8 +1,8 @@
-import { Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 import { TakeCurve, TakeFeatures } from '../take/take'
-import { PracticeLine } from './lines'
+import { PracticeLine, lineOf, practiceLineOfBundled } from './lines'
 
 // The practice screen's line: what it is and where its audio is, and its
 // native curve and features, which are tracked once on the device, then
@@ -44,3 +44,14 @@ export const isNativeFor = (
   line: string,
 ): boolean =>
   native._tag !== 'NoLine' && native.clipId === clip && native.lineId === line
+
+// The line a practice screen shows: its native's once read, else the
+// bundled line by that name, which is known at once.
+export const shownLineOf = (
+  native: NativeCurve,
+  clip: string,
+  line: string,
+): Option.Option<PracticeLine> =>
+  native._tag === 'Ready' && isNativeFor(native, clip, line)
+    ? Option.some(native.line)
+    : Option.map(lineOf(clip, line), practiceLineOfBundled)

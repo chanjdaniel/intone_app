@@ -71,7 +71,7 @@ export const view = (_model: Model, h: HtmlBuilder<never>): Html =>
         ),
         list(
           bundled.lines.map((line, index) =>
-            levelRow(bundled.id, true, line, 0, index, null, h),
+            levelRow(bundled.id, true, line, 0, index, null, [], h),
           ),
           h,
         ),
@@ -88,6 +88,7 @@ export const view = (_model: Model, h: HtmlBuilder<never>): Html =>
               starsOfLine(studyStars, line.id),
               index,
               null,
+              [],
               h,
             ),
           ),

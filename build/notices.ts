@@ -1,9 +1,10 @@
 import { Schema } from 'effect'
+import { unzipSync } from 'fflate'
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import type { Plugin } from 'vite'
 
-import type { Model } from './models.ts'
+import { type Model, ensureCached, readModelList } from './models.ts'
 
 // NOTICES.md: every dependency the app ships, read from the lockfile (the
 // packages a production install keeps), and every model's files, read
@@ -68,6 +69,7 @@ export const notices = (
     '',
     "Intone's own code is all rights reserved (see `LICENSE`).",
     'The app ships these third-party packages and model files, each under its own licence.',
+    'The recordings it brings, each under its own licence or terms, are credited on its `/credits` screen and in `CREDITS.md`.',
     '',
     '## Packages',
     '',
@@ -92,9 +94,74 @@ export const notices = (
     '',
   ].join('\n')
 
+// A notice a model's zip carries, which its licence asks to travel with
+// every copy: mecab-ipadic's, in Lindera's IPADIC (docs/readings.md).
+const noticeName = /^(notice|licen[cs]e|copying)(\.(txt|md))?$/i
+
+export type ModelNotice = Readonly<{
+  model: string
+  path: string
+  text: string
+}>
+
+// Every notice file inside each listed model's zip files, read from the
+// model cache, which the build has filled by then.
+export const modelNotices = async (
+  models: ReadonlyArray<Model>,
+  cacheDirectory: string,
+): Promise<ReadonlyArray<ModelNotice>> => {
+  const found: Array<ModelNotice> = []
+  for (const model of models) {
+    for (const file of model.files.filter(each => each.path.endsWith('.zip'))) {
+      const zip = await readFile(
+        await ensureCached(model.id, file, cacheDirectory),
+      )
+      const entries = unzipSync(zip, {
+        filter: entry => noticeName.test(basename(entry.name)),
+      })
+      for (const [path, bytes] of Object.entries(entries).toSorted(([a], [b]) =>
+        a.localeCompare(b),
+      )) {
+        found.push({
+          model: model.name,
+          path: `${model.id}/${file.path}: ${path}`,
+          text: new TextDecoder().decode(bytes),
+        })
+      }
+    }
+  }
+  return found
+}
+
+// NOTICES.md as the build serves it: the generated file, then the text of
+// each notice the model files carry, which their licences ask to travel
+// with every copy.
+export const servedNotices = (
+  generated: string,
+  carried: ReadonlyArray<ModelNotice>,
+): string =>
+  carried.length === 0
+    ? generated
+    : [
+        generated.trimEnd(),
+        '',
+        '## Notices the model files carry',
+        '',
+        ...carried.flatMap(({ model, path, text }) => [
+          `### ${model}`,
+          '',
+          `From \`${path}\`, as it ships:`,
+          '',
+          '```text',
+          text.trimEnd(),
+          '```',
+          '',
+        ]),
+      ].join('\n')
+
 // The production build carries NOTICES.md beside the app, at /NOTICES.md,
 // so every copy of the app names the packages and model files it ships
-// and their licences.
+// and their licences, with the text of each notice a model file carries.
 export const noticesFile = (): Plugin => {
   let root = process.cwd()
   return {
@@ -104,10 +171,14 @@ export const noticesFile = (): Plugin => {
       root = config.root
     },
     async generateBundle() {
+      const models = await readModelList(join(root, 'models.json'))
       this.emitFile({
         type: 'asset',
         fileName: 'NOTICES.md',
-        source: await readFile(join(root, 'NOTICES.md'), 'utf8'),
+        source: servedNotices(
+          await readFile(join(root, 'NOTICES.md'), 'utf8'),
+          await modelNotices(models, join(root, '.cache', 'models')),
+        ),
       })
     },
   }

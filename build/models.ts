@@ -26,9 +26,15 @@ export const ModelFile = Schema.Struct({
   path: Schema.String.check(
     Schema.isPattern(new RegExp(`^${segment}(/${segment})*$`)),
   ),
-  // A pinned revision: the URL names a 40-character commit, never a branch.
+  // A pinned revision: the URL names a 40-character commit, never a
+  // branch, or is a GitHub release's asset at a version tag, the one way
+  // Lindera publishes its built dictionaries (docs/readings.md). A tag can
+  // move where a commit cannot, so the size and SHA-256 below are what pin
+  // a release asset's bytes.
   url: Schema.String.check(
-    Schema.isPattern(/^https:\/\/[^\s]*\/[0-9a-f]{40}\/[^\s]+$/),
+    Schema.isPattern(
+      /^https:\/\/([^\s]*\/[0-9a-f]{40}\/[^\s]+|github\.com\/[\w.-]+\/[\w.-]+\/releases\/download\/v?\d+(\.\d+)*\/[^\s/]+)$/,
+    ),
   ),
   bytes: Schema.Number.check(Schema.isInt(), Schema.isGreaterThan(0)),
   sha256: Schema.String.check(Schema.isPattern(sha256Pattern)),
@@ -294,6 +300,10 @@ export const models = (options: ModelsOptions = {}): Plugin => {
       return [
         `export const modelDirectories = Object.freeze(${JSON.stringify(modelDirectories(listed, base))})`,
         `export const modelUrls = Object.freeze(${JSON.stringify(modelUrls(listed, base))})`,
+        `export const modelsRoot = ${JSON.stringify(`${base}models/`)}`,
+        `export const modelVersions = Object.freeze(${JSON.stringify(Object.fromEntries(listed.map(model => [model.id, modelVersion(model)])))})`,
+        `export const modelFiles = Object.freeze(${JSON.stringify(Object.fromEntries(listed.map(model => [model.id, model.files.map(file => ({ path: file.path, bytes: file.bytes }))])))})`,
+        `export const modelCredits = Object.freeze(${JSON.stringify(listed.map(({ id, name, licence, source }) => ({ id, name, licence, source })))})`,
         '',
       ].join('\n')
     },

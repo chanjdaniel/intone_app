@@ -31,5 +31,9 @@ export default defineConfig({
   },
   optimizeDeps: {
     entries: ['src/app/entry.ts'],
+    // Lindera's module finds its WebAssembly beside itself
+    // (`new URL('lindera_wasm_bg.wasm', import.meta.url)`), which the dev
+    // server's pre-bundling would move it away from.
+    exclude: ['lindera-wasm'],
   },
 })

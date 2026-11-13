@@ -5,6 +5,13 @@ import { Dialog } from '@foldkit/ui'
 
 import { bytesText, countText } from '../history/format'
 import { pageFrame } from '../pageFrame'
+import { creditsRouter } from '../route'
+import type { TextChoiceState, TextJob, TextOffer } from '../text/text'
+import {
+  type TextEvents,
+  settingsTextSection,
+  textDialogView,
+} from '../text/textView'
 import {
   BackupState,
   type Browser,
@@ -30,10 +37,21 @@ export type SettingsEvents<ViewMessage> = Readonly<{
   keepEverything: ViewMessage
   confirmClearAll: ViewMessage
   dialog: (message: Dialog.Message) => ViewMessage
+  text: Pick<
+    TextEvents<ViewMessage>,
+    'chooseModel' | 'stop' | 'dialog' | 'selectModel' | 'agree' | 'notNow'
+  >
 }>
 
-const primaryButton = 'button-primary disabled:opacity-60'
-const secondaryButton = 'button-secondary disabled:text-muted'
+// What the settings show of the text model: the learner's answer, the
+// download in the background, and the consent dialog.
+export type SettingsText = Readonly<{
+  choice: TextChoiceState
+  job: TextJob
+  offer: TextOffer
+  dialog: Dialog.Model
+}>
+
 const dangerButton = 'button bg-bad text-on-accent disabled:opacity-60'
 
 const section = <ViewMessage>(
@@ -43,12 +61,7 @@ const section = <ViewMessage>(
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   h.section(
-    [
-      h.AriaLabelledBy(id),
-      h.Class(
-        'flex flex-col gap-4 rounded-lg border border-line bg-raised p-5 sm:p-6',
-      ),
-    ],
+    [h.AriaLabelledBy(id), h.Class('card')],
     [h.h2([h.Id(id), h.Class('text-xl font-bold')], [heading]), ...body],
   )
 
@@ -145,7 +158,7 @@ const storageSection = <ViewMessage>(
               [
                 h.Type('button'),
                 h.OnClick(events.askToPersist),
-                h.Class(`${secondaryButton} self-start`),
+                h.Class('button-secondary self-start'),
               ],
               ['Ask the browser to keep it'],
             ),
@@ -282,7 +295,7 @@ const backupSection = <ViewMessage>(
               ...(page.backup._tag === 'Saving'
                 ? [h.Disabled(true)]
                 : [h.OnClick(events.saveBackup)]),
-              h.Class(primaryButton),
+              h.Class('button-primary'),
             ],
             ['Save a backup'],
           ),
@@ -292,7 +305,7 @@ const backupSection = <ViewMessage>(
               ...(page.restore._tag === 'Restoring'
                 ? [h.Disabled(true)]
                 : [h.OnClick(events.restoreBackup)]),
-              h.Class(secondaryButton),
+              h.Class('button-secondary'),
             ],
             ['Restore from a backup'],
           ),
@@ -409,7 +422,7 @@ const clearDialogView = <ViewMessage>(
                             ...initialFocus,
                             h.Type('button'),
                             h.OnClick(events.keepEverything),
-                            h.Class(secondaryButton),
+                            h.Class('button-secondary'),
                           ],
                           ['Keep everything'],
                         ),
@@ -457,6 +470,7 @@ export const settingsView = <ViewMessage>(
   page: SettingsPage,
   maybeNotice: Option.Option<string>,
   dialog: Dialog.Model,
+  text: SettingsText,
   events: SettingsEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
@@ -484,11 +498,30 @@ export const settingsView = <ViewMessage>(
     ],
     Ready: ready => [
       audioSection(ready, events, h),
+      settingsTextSection(text.choice, text.job, events.text, h),
       storageSection(ready.storage, events, h),
       backupSection(ready, events, h),
       clearSection(events, h),
       clearDialogView(dialog, ready.clearing, events, h),
+      h.p(
+        [h.Class('text-base text-ink')],
+        [
+          h.a(
+            [h.Href(creditsRouter()), h.Class('link')],
+            ['Credits for the models and recordings'],
+          ),
+        ],
+      ),
     ],
   })
-  return pageFrame('Settings', [heading, notice, ...body], h)
+  return pageFrame(
+    'Settings',
+    [
+      heading,
+      notice,
+      ...body,
+      textDialogView(text.dialog, text.offer, events.text, h),
+    ],
+    h,
+  )
 }

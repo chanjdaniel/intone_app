@@ -26,3 +26,9 @@ fixtures/tracked/** linguist-generated binary
 docs/score-study.md linguist-generated
 docs/cut-study.md linguist-generated
 src/app/dev/cutStudyLines.json linguist-generated
+
+# Written by `npm run starter:pack` from starter/lines.json; a test checks
+# they are what it writes (docs/starter-set.md).
+starter/pack/** linguist-generated
+starter/pack/audio/** binary
+CREDITS.md linguist-generated

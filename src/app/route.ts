@@ -14,6 +14,11 @@ export const AppRoute = defineRouteUnion({
   History: { maybeFind: Schema.Option(Schema.String) },
   LineHistory: { clipId: Schema.String, lineId: Schema.String },
   Settings: {},
+  // Who made the models and recordings the app brings.
+  Credits: {},
+  // The native speaker's review of the starter set, reached only by its
+  // address (docs/starter-set.md).
+  Review: {},
   DevLibrary: {},
   DevEntry: { entry: Schema.String },
   NotFound: { path: Schema.String },
@@ -69,6 +74,16 @@ export const settingsRouter = pipe(
   Route.mapTo(AppRoute.Settings),
 )
 
+export const creditsRouter = pipe(
+  literal('credits'),
+  Route.mapTo(AppRoute.Credits),
+)
+
+export const reviewRouter = pipe(
+  literal('review'),
+  Route.mapTo(AppRoute.Review),
+)
+
 const devLibraryRouter = pipe(literal('dev'), Route.mapTo(AppRoute.DevLibrary))
 
 const devEntryRouter = pipe(
@@ -84,6 +99,8 @@ const appRouters = [
   lineHistoryRouter,
   historyRouter,
   settingsRouter,
+  creditsRouter,
+  reviewRouter,
   homeRouter,
 ] as const
 

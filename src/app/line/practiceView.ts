@@ -6,6 +6,13 @@ import { swiftF0FrameHz } from '../../engine/pitch/swift-f0'
 import { dayText } from '../history/format'
 import { starRow, starRules } from '../level/starRow'
 import { screenFrame } from '../pageFrame'
+import {
+  type ReadingsEvents,
+  type ReadingsState,
+  readingsControls,
+  rubyText,
+  shownWords,
+} from '../readings/readingsView'
 import { isReturnDue } from '../returns/lineReturn'
 import { levelRouter, lineHistoryRouter, lineRouter } from '../route'
 import { PairLearner, curvePairView, describeCurve } from '../take/curvePair'
@@ -35,6 +42,7 @@ export type PracticeEvents<ViewMessage> = TakePanelEvents<ViewMessage> &
   Pick<ListenControls<ViewMessage>, 'selectSpeed'> &
   Readonly<{
     retryNative: ViewMessage
+    readings: ReadingsEvents<ViewMessage>
     draw: (args: {
       native: TakeCurve
       learner: PairLearner
@@ -49,6 +57,7 @@ export type PracticeState = Readonly<{
   canPlayLine: boolean
   canPlayTake: boolean
   maybePlaybackFailure: Option.Option<string>
+  readings: ReadingsState
 }>
 
 const spanNote =
@@ -179,9 +188,7 @@ const keptNote = <ViewMessage>(
                         lineId: line.lineId,
                       }),
                     ),
-                    h.Class(
-                      `inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring`,
-                    ),
+                    h.Class(`link`),
                   ],
                   ['See this line’s history'],
                 ),
@@ -249,11 +256,11 @@ const nativePending = <ViewMessage>(
         ],
       )
 
-// The back link goes to the line's level, where every line of its clip
-// is, with its stars.
+// The back link goes to the line's level, where every line of it is,
+// with its stars: a clip's lines, or a starter level's recordings.
 const backOf = (clipId: string) => ({
   href: levelRouter({ clipId, maybeFind: Option.none() }),
-  text: 'This clip’s lines',
+  text: 'This level’s lines',
 })
 
 // During a blind take, in the curves' place and at their size: why
@@ -434,10 +441,14 @@ const nextView = <ViewMessage>(
       )
     : h.empty
 
-// The screen's heading: the line, once it is known. A bundled line is
-// known at once; a line of the learner's clip once it is read.
+// The screen's heading: the line, once it is known, its kanji with their
+// readings over them when the learner shows them, and the readings'
+// controls under a line with Japanese text. A bundled line is known at
+// once; a line of the learner's clip once it is read.
 const lineHeader = <ViewMessage>(
   maybeLine: Option.Option<PracticeLine>,
+  readings: ReadingsState,
+  events: ReadingsEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html =>
   Option.match(maybeLine, {
@@ -451,16 +462,24 @@ const lineHeader = <ViewMessage>(
           ),
         ],
       ),
-    onSome: line =>
-      h.header(
+    onSome: line => {
+      const maybeWords = line.titleIsText
+        ? shownWords(readings, line.title)
+        : Option.none()
+      return h.header(
         [h.Class('flex flex-col gap-1')],
         [
           h.h1(
             [
               ...(line.titleIsText ? [h.Lang('ja')] : []),
-              h.Class('text-3xl font-bold sm:text-5xl break-words'),
+              h.Class(
+                `text-3xl font-bold sm:text-5xl break-words ${Option.isSome(maybeWords) ? 'leading-[1.75] sm:leading-[1.6]' : ''}`,
+              ),
             ],
-            [line.title],
+            Option.match(maybeWords, {
+              onNone: () => [line.title],
+              onSome: words => rubyText(words, h),
+            }),
           ),
           h.p(
             [
@@ -469,8 +488,15 @@ const lineHeader = <ViewMessage>(
             ],
             [line.detail],
           ),
+          line.titleIsText
+            ? h.div(
+                [h.Class('mt-3')],
+                [readingsControls(readings, line.title, events, h)],
+              )
+            : h.empty,
         ],
-      ),
+      )
+    },
   })
 
 export const practiceView = <ViewMessage>(
@@ -503,7 +529,7 @@ export const practiceView = <ViewMessage>(
           ),
         ],
       ),
-      lineHeader(maybeLine, h),
+      lineHeader(maybeLine, state.readings, events.readings, h),
       linePlaceView(state.place, h),
       native._tag === 'Ready'
         ? readyBody(native.line, native.curve, state, events, h)

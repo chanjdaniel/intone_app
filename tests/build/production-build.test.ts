@@ -1,3 +1,4 @@
+import { Schema } from 'effect'
 import { createHash } from 'node:crypto'
 import {
   mkdtempSync,
@@ -20,9 +21,16 @@ import {
 import {
   onnxRuntimeFiles,
   onnxRuntimeVersion,
+  textRuntimeFiles,
+  textRuntimeVersion,
 } from '../../build/onnx-runtime.ts'
+import {
+  StarterPack,
+  StarterPackFiles,
+} from '../../src/services/starter-records.ts'
 import { chunksOf, productionBuild } from '../support/build'
 import { root } from '../support/run'
+import { audioExtensions } from '../support/starter-pack.ts'
 
 // One real production build with the project's own config, read back from
 // its output directory.
@@ -35,9 +43,14 @@ const files = (): ReadonlyArray<string> =>
     .filter(entry => entry.isFile())
     .map(entry => relative(dist, join(entry.parentPath, entry.name)))
 
+// A string in minified code, whichever quotes it chose.
+const quoted = (value: string): RegExp => new RegExp(`["'\`]${value}["'\`]`)
+
 // A key and its string value in minified code, whichever quotes it chose.
 const quotedPair = (key: string, value: string): RegExp =>
-  new RegExp(`["'\`]?${key}["'\`]?:\\s*["'\`]${value}["'\`]`)
+  new RegExp(
+    `["'\`]?${key}["'\`]?:\\s*["'\`]${value.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)}["'\`]`,
+  )
 
 const sha256 = (bytes: Buffer): string =>
   createHash('sha256').update(bytes).digest('hex')
@@ -146,7 +159,7 @@ describe('the production build', () => {
     )
   })
 
-  test("ships ONNX Runtime's WebAssembly from its own origin, unchanged", async () => {
+  test("ships both ONNX Runtime builds' WebAssembly and Lindera's from its own origin, unchanged", async () => {
     const version = await onnxRuntimeVersion()
     for (const file of onnxRuntimeFiles) {
       expect(readFileSync(join(dist, 'ort', version, file))).toStrictEqual(
@@ -155,9 +168,38 @@ describe('the production build', () => {
         ),
       )
     }
-    expect(files().filter(file => file.endsWith('.wasm'))).toStrictEqual([
-      join('ort', version, 'ort-wasm-simd-threaded.wasm'),
-    ])
+    // Transformers.js pins its own ONNX Runtime, installed beside it.
+    const textVersion = await textRuntimeVersion()
+    for (const file of textRuntimeFiles) {
+      expect(readFileSync(join(dist, 'ort', textVersion, file))).toStrictEqual(
+        readFileSync(
+          join(
+            root,
+            'node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist',
+            file,
+          ),
+        ),
+      )
+    }
+    const wasm = files()
+      .filter(file => file.endsWith('.wasm'))
+      .sort()
+    expect(wasm.filter(file => file.startsWith('ort'))).toStrictEqual(
+      [
+        join('ort', version, 'ort-wasm-simd-threaded.wasm'),
+        join('ort', textVersion, 'ort-wasm-simd-threaded.asyncify.wasm'),
+      ].sort(),
+    )
+    // Lindera's, which the bundler emits beside the readings Worker under
+    // a hashed name.
+    const lindera = wasm.filter(file => !file.startsWith('ort'))
+    expect(lindera).toHaveLength(1)
+    expect(lindera[0]).toMatch(/^assets\/lindera_wasm_bg-[\w-]{8}\.wasm$/)
+    expect(readFileSync(join(dist, lindera[0] ?? ''))).toStrictEqual(
+      readFileSync(
+        join(root, 'node_modules', 'lindera-wasm', 'lindera_wasm_bg.wasm'),
+      ),
+    )
   })
 
   test('maps each model id to its directory, each one-file model to its file, and ONNX Runtime to its directory, all same-origin', async () => {
@@ -165,9 +207,9 @@ describe('the production build', () => {
     writeFileSync(
       entry,
       [
-        "import { modelDirectories, modelUrls } from 'virtual:intone/models'",
-        "import { onnxRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'",
-        'export const read = [modelDirectories, modelUrls, onnxRuntimeWasmPaths]',
+        "import { modelCredits, modelDirectories, modelFiles, modelUrls, modelVersions, modelsRoot } from 'virtual:intone/models'",
+        "import { onnxRuntimeWasmPaths, textRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'",
+        'export const read = [modelCredits, modelDirectories, modelFiles, modelUrls, modelVersions, modelsRoot, onnxRuntimeWasmPaths, textRuntimeWasmPaths]',
         '',
       ].join('\n'),
     )
@@ -197,31 +239,157 @@ describe('the production build', () => {
         }
       }
       expect(code).toContain(`${base}ort/${version}/`)
+      expect(code).toContain(`${base}ort/${await textRuntimeVersion()}/`)
+      expect(code).toMatch(quoted(`${base}models/`))
+      for (const model of models) {
+        expect(code).toMatch(quotedPair(model.id, modelVersion(model)))
+        for (const file of model.files) {
+          expect(code).toMatch(
+            new RegExp(
+              `${quotedPair('path', file.path).source},\\s*["'\`]?bytes["'\`]?:\\s*${file.bytes}\\b`,
+            ),
+          )
+        }
+        expect(code).toMatch(quotedPair('licence', model.licence))
+        expect(code).toMatch(quotedPair('source', model.source))
+      }
     }
   })
 
   // The app claims only what it compared (report section 3): no text it
   // ships says "accuracy", or that a take is correct. Every text file the
   // build writes is read, libraries and ONNX Runtime's loader included.
-  test('ships the notices of every package and model file it carries, as NOTICES.md', () => {
-    expect(readFileSync(join(dist, 'NOTICES.md'), 'utf8')).toBe(
-      readFileSync(join(root, 'NOTICES.md'), 'utf8'),
+  test('ships the notices of every package and model file it carries, as NOTICES.md, with the text of mecab-ipadic’s notice', () => {
+    const served = readFileSync(join(dist, 'NOTICES.md'), 'utf8')
+    expect(
+      served.startsWith(
+        readFileSync(join(root, 'NOTICES.md'), 'utf8').trimEnd(),
+      ),
+    ).toBe(true)
+    expect(served).toContain('## Notices the model files carry')
+    expect(served).toContain(
+      'From `lindera-ipadic/lindera-ipadic-6.2.0.zip: lindera-ipadic/NOTICE.txt`, as it ships:',
     )
+    expect(served).toContain('Nara Institute of Science and Technology')
+    expect(served).toContain('originate from ICOT Free Software.')
   })
+
+  // Transformers.js's own words to a developer, in the text Worker, each
+  // with how often it is there: three warnings to the console, two of its
+  // tokenizers (Marian's and XLM's, in the same words) and one of its
+  // timestamps, and one error, which the Worker writes to the console and
+  // says in its own words on screen (src/workers/whisper-session.ts).
+  const libraryWarnings: ReadonlyArray<readonly [string, number]> = [
+    ['you may experience slightly inaccurate results', 2],
+    ['This may lead to inaccurate token-level timestamps', 1],
+    ['Incorrect state encountered during generation.', 1],
+  ]
+  // The starter review's verdict that a stated accent is another, as the
+  // export the script applies spells it (src/services/starter-records.ts):
+  // a value in the file, which the review page never shows; it says of a
+  // dictionary's accent, never of a take. Its six uses, all in the entry
+  // chunk: the verdict's Schema, the review's two reads of it in
+  // review.ts and one in update.ts, and the view's choice and its accent
+  // field. A seventh would be a new use, which must be read before it is
+  // let through.
+  const reviewVerdict = /(["'`])correct\1/g
+  const reviewVerdictUses = 6
 
   test('ships no text that says "accuracy" or that a take is correct', () => {
     const texts = files().filter(file => /\.(js|mjs|html|css)$/.test(file))
     expect(texts.length).toBeGreaterThan(3)
+    const allowed = new Map<string, number>()
+    const count = (key: string, found: number) =>
+      allowed.set(key, (allowed.get(key) ?? 0) + found)
     for (const file of texts) {
-      const code = readFileSync(join(dist, file), 'utf8')
+      const read = readFileSync(join(dist, file), 'utf8')
+      for (const [warning] of libraryWarnings) {
+        count(warning, read.split(warning).length - 1)
+      }
+      const verdicts = read.match(reviewVerdict)?.length ?? 0
+      count('the review verdict', verdicts)
+      if (verdicts > 0) {
+        expect(file).toMatch(/^assets\/index-/)
+      }
+      const code = libraryWarnings
+        .reduce((rest, [warning]) => rest.replaceAll(warning, ''), read)
+        .replace(reviewVerdict, '')
       expect(code, file).not.toMatch(/accura/i)
       expect(code, file).not.toMatch(/\b(in)?correct/i)
     }
+    // Each allowance is let through exactly as often as it is known.
+    expect(Object.fromEntries(allowed)).toStrictEqual({
+      ...Object.fromEntries(libraryWarnings),
+      'the review verdict': reviewVerdictUses,
+    })
     // The score's own words are there to be read.
     expect(
       texts.some(file =>
         readFileSync(join(dist, file), 'utf8').includes('match to this clip'),
       ),
     ).toBe(true)
+  })
+
+  // Every recording the build bundles is credited (spec, "Content and
+  // licences"): a starter line, by its bytes, whose pack record names its
+  // source, author and licence, or the first bundled line, whose voice's
+  // credit and terms fixtures/voices/voices.json records.
+  test('bundles no recording without its credit, each under a hashed /assets/ path and in no chunk', () => {
+    const pack = Schema.decodeUnknownSync(StarterPack)(
+      JSON.parse(
+        readFileSync(join(root, 'starter', 'pack', 'levels.json'), 'utf8'),
+      ),
+    )
+    const packFiles = Schema.decodeUnknownSync(StarterPackFiles)(
+      JSON.parse(
+        readFileSync(join(root, 'starter', 'pack', 'files.json'), 'utf8'),
+      ),
+    )
+    const lines = pack.levels.flatMap(level => level.lines)
+    const starter = new Map(
+      packFiles.lines.flatMap(file => {
+        const line = lines.find(found => found.id === file.id)
+        return line === undefined ? [] : [[file.sha256, line] as const]
+      }),
+    )
+    const first = sha256(
+      readFileSync(
+        join(
+          root,
+          'fixtures',
+          'voices',
+          'ame-ga-suki',
+          'meimei-himari',
+          'right.wav',
+        ),
+      ),
+    )
+    const voices: ReadonlyArray<{
+      id: string
+      credit: string
+      termsUrl: string
+    }> = JSON.parse(
+      readFileSync(join(root, 'fixtures', 'voices', 'voices.json'), 'utf8'),
+    )
+    expect(voices.find(voice => voice.id === 'meimei-himari')).toMatchObject({
+      credit: 'VOICEVOX:冥鳴ひまり',
+      termsUrl: 'https://www.meimeihimari.com/terms-of-use',
+    })
+    const audio = files().filter(file => audioExtensions.test(file))
+    expect(audio.length).toBe(starter.size + 1)
+    const found = new Set<string>()
+    for (const file of audio) {
+      expect(file).toMatch(/^assets\/[a-z0-9-]+-[\w-]{8}\.wav$/)
+      const hash = sha256(readFileSync(join(dist, file)))
+      expect(starter.has(hash) || hash === first, file).toBe(true)
+      found.add(hash)
+    }
+    expect(found.size).toBe(audio.length)
+    for (const file of files().filter(file => /\.(js|mjs)$/.test(file))) {
+      // A file inlined would be a data: URL, its RIFF header in base64.
+      expect(readFileSync(join(dist, file), 'utf8'), file).not.toMatch(
+        /data:audio|UklGR/,
+      )
+    }
   })
 })

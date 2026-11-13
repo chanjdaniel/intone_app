@@ -400,8 +400,9 @@ const probeWithMediaElement = (
     }),
   )
 
-// The whole file decoded by the browser at 16 kHz, its channels mixed.
-const decodeWithAudioContext = (
+// The whole file decoded by the browser at 16 kHz, its channels mixed; the
+// transcriber (./transcriber.ts) decodes a clip for Whisper the same way.
+export const decodeWithAudioContext = (
   file: Blob,
 ): Effect.Effect<Float32Array, ClipAnalyserError> =>
   Effect.tryPromise({

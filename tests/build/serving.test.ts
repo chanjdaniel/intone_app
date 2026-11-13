@@ -110,7 +110,7 @@ const sha256 = (bytes: ArrayBuffer): string =>
 describe.each(['dev', 'preview'] as const)('the %s server', server => {
   test("serves whisper-small's 149.5 MiB merged decoder whole", async () => {
     const decoder = whisperDecoder()
-    expect(decoder.bytes).toBe(156_750_845)
+    expect(decoder.bytes).toBe(156_795_750)
 
     const response = await fetch(`${origins[server]}/${decoder.path}`)
 
@@ -124,6 +124,23 @@ describe.each(['dev', 'preview'] as const)('the %s server', server => {
     const body = await response.arrayBuffer()
     expect(body.byteLength).toBe(decoder.bytes)
     expect(sha256(body)).toBe(decoder.sha256)
+  })
+
+  test('serves the reading dictionary as a zip, kept for good', async () => {
+    const found = servedModelFiles(models).find(
+      each => each.model.id === 'lindera-ipadic',
+    )
+    expect(found?.path).toMatch(
+      /^models\/lindera-ipadic\/[0-9a-f]{16}\/lindera-ipadic-6\.2\.0\.zip$/,
+    )
+
+    const response = await fetch(`${origins[server]}/${found?.path}`, {
+      method: 'HEAD',
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('application/zip')
+    expect(response.headers.get('cache-control')).toBe(keptForGood)
   })
 
   test('serves every file of every model, by its model directory', async () => {

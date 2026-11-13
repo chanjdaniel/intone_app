@@ -145,6 +145,9 @@ describe('the fixtures in many voices', () => {
             !file.startsWith('tracked/') &&
             !file.startsWith('formats/') &&
             !file.startsWith('local-pack/') &&
+            // The texts the clips read, for the transcription study,
+            // are not made: they are the books' own (fixtures/README.md).
+            !/^real\/[a-z-]+\.txt$/.test(file) &&
             file !== 'README.md',
         ),
       )

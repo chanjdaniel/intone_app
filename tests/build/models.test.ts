@@ -73,22 +73,89 @@ describe('models.json', () => {
     })
   })
 
-  test("lists whisper-small's int8 merged decoder in its folder, at a pinned revision", async () => {
-    const whisper = (await readModelList(join(root, 'models.json'))).find(
-      model => model.id === 'whisper-small',
+  // The files Transformers.js 4.3.2 loads for a Whisper model at the
+  // dtypes the text Worker asks for (`q4` encoder, `int8` merged decoder),
+  // seen in the requests of a run in Chromium: docs/transcription.md.
+  const whisperFiles = [
+    'config.json',
+    'generation_config.json',
+    'preprocessor_config.json',
+    'tokenizer.json',
+    'tokenizer_config.json',
+    'onnx/encoder_model_q4.onnx',
+    'onnx/decoder_model_merged_int8.onnx',
+  ]
+
+  test.each([
+    ['whisper-base', 'whisper-base_timestamped'],
+    ['whisper-small', 'whisper-small_timestamped'],
+  ])(
+    'lists every file Transformers.js loads for %s, from %s at one pinned revision, MIT',
+    async (id, repository) => {
+      const whisper = (await readModelList(join(root, 'models.json'))).find(
+        model => model.id === id,
+      )
+      const revisions = new Set(
+        whisper?.files.map(file => file.url.split('/')[6]),
+      )
+
+      expect(whisper?.licence).toBe('MIT')
+      expect(whisper?.files.map(file => file.path)).toStrictEqual(whisperFiles)
+      expect(revisions.size).toBe(1)
+      for (const file of whisper?.files ?? []) {
+        expect(file.url).toBe(
+          `https://huggingface.co/onnx-community/${repository}/resolve/${[...revisions][0]}/${file.path}`,
+        )
+      }
+    },
+  )
+
+  // Lindera publishes its built dictionaries only as release assets, which
+  // name a tag, not a commit; the size and SHA-256 pin the bytes
+  // (docs/readings.md).
+  test("lists the reading dictionary, Lindera's IPADIC build from its v6.2.0 release, with IPADIC's own notice", async () => {
+    const dictionary = (await readModelList(join(root, 'models.json'))).find(
+      model => model.id === 'lindera-ipadic',
     )
 
-    expect(whisper?.files).toStrictEqual([
-      {
-        path: 'onnx/decoder_model_merged_int8.onnx',
-        url: expect.stringMatching(
-          /^https:\/\/huggingface\.co\/onnx-community\/whisper-small\/resolve\/[0-9a-f]{40}\/onnx\/decoder_model_merged_int8\.onnx$/,
-        ),
-        bytes: 156_750_845,
-        sha256:
-          'ec07c3cbb64172c39791e26ee870a65ac22b458c36722bfe2776b3dbf741e0c9',
-      },
+    expect(dictionary).toMatchObject({
+      licence: expect.stringContaining('NAIST'),
+      files: [
+        {
+          path: 'lindera-ipadic-6.2.0.zip',
+          url: 'https://github.com/lindera/lindera/releases/download/v6.2.0/lindera-ipadic-6.2.0.zip',
+          bytes: 10_519_550,
+          sha256:
+            '5ed4bba6b429030b0387df67d40d5751d35dedef0306f4bac6d957cad5f04b72',
+        },
+      ],
+    })
+  })
+
+  test('takes a GitHub release asset at a version tag', async () => {
+    const swiftF0 = await listed()
+    const url =
+      'https://github.com/lindera/lindera/releases/download/v6.2.0/lindera-ipadic-6.2.0.zip'
+    const path = plantList([
+      { ...swiftF0, files: [{ ...swiftF0.files[0], url }] },
     ])
+
+    const [model] = await readModelList(path)
+    expect(model?.files[0].url).toBe(url)
+  })
+
+  test("keeps whisper-small's 149.5 MiB merged decoder, the largest file served", async () => {
+    const files = (await readModelList(join(root, 'models.json'))).flatMap(
+      model => model.files,
+    )
+    const largest = files.reduce((a, b) => (b.bytes > a.bytes ? b : a))
+
+    expect(largest).toMatchObject({
+      path: 'onnx/decoder_model_merged_int8.onnx',
+      bytes: 156_795_750,
+      sha256:
+        'c831996a6d5a535cf17447b0d7ecc36da6b72696e6fb906852ba6136b9199abb',
+    })
   })
 
   test.each([
@@ -106,6 +173,18 @@ describe('models.json', () => {
       'a branch instead of a pinned commit',
       {
         url: 'https://raw.githubusercontent.com/lars76/swift-f0/main/swift_f0/model.onnx',
+      },
+    ],
+    [
+      'the latest release instead of one tag',
+      {
+        url: 'https://github.com/lindera/lindera/releases/latest/download/lindera-ipadic.zip',
+      },
+    ],
+    [
+      'a release tag that is not a version',
+      {
+        url: 'https://github.com/lindera/lindera/releases/download/nightly/lindera-ipadic.zip',
       },
     ],
     ['a short hash', { sha256: 'abc' }],

@@ -6,7 +6,10 @@ import { Url } from 'foldkit/url'
 
 import { Dialog, FileDrop } from '@foldkit/ui'
 
+import { TextChoice, TextModelId } from '../services/history-records'
 import { MicrophoneFailure } from '../services/microphone'
+import { ReviewDraft } from '../services/review-store'
+import { ReviewVerdict } from '../services/starter-records'
 import {
   BlindPoint,
   DayCount,
@@ -21,10 +24,12 @@ import { LineProgress } from './level/progress'
 import { PracticeLine } from './line/lines'
 import { ListenSpeed, NativeFailure } from './line/native'
 import { NextLine } from './line/place'
+import { ReadingsShown, ShownWord } from './readings/readings'
 import { LineReturn } from './returns/lineReturn'
 import { DueLine } from './returns/returns'
 import { SettingsFacts, StorageFacts } from './settings/settings'
 import { Extent, TakeCurve, TakeFeatures, TakeResult, Voice } from './take/take'
+import { TextStep } from './text/text'
 import { PackStep, UploadStep } from './upload/upload'
 
 const takeNumber = Schema.Finite
@@ -259,5 +264,87 @@ export const Message = defineMessageUnion({
   SubmittedClearAll: {},
   SucceededClearAllData: {},
   FailedClearAllData: { reason: Schema.String },
+
+  // The text of the learner's clips.
+  SucceededLoadTextChoice: {
+    maybeChoice: Schema.Option(TextChoice),
+    modelKept: Schema.Boolean,
+  },
+  FailedLoadTextChoice: { reason: Schema.String },
+  ClickedWriteOutText: {},
+  ClickedChooseTextModel: {},
+  GotTextDialogMessage: { message: Dialog.Message },
+  SelectedTextModel: { model: TextModelId },
+  SubmittedTextDownload: {},
+  ClickedNotNowText: {},
+  SucceededSetTextChoice: {},
+  FailedSetTextChoice: { reason: Schema.String },
+  ProgressedTextJob: { jobNumber: Schema.Finite, step: TextStep },
+  SucceededTextJob: {
+    jobNumber: Schema.Finite,
+    maybeClip: Schema.Option(LevelClip),
+  },
+  FailedTextJob: { jobNumber: Schema.Finite, reason: Schema.String },
+  ClickedStopTextJob: {},
+  ClickedEditLineText: { lineId: Schema.String },
+  ClickedPasteText: {},
+  ChangedTextDraft: { text: Schema.String },
+  SubmittedLineText: {},
+  ClickedCancelLineText: {},
+  SucceededSetLineTexts: { clipId: Schema.String, clip: LevelClip },
+  FailedSetLineTexts: { clipId: Schema.String, reason: Schema.String },
+  CompletedFocusLineText: {},
+
+  // A line's readings.
+  SucceededLoadReadingsChoice: { maybeShown: Schema.Option(ReadingsShown) },
+  FailedLoadReadingsChoice: { reason: Schema.String },
+  ClickedShowReadings: {},
+  ClickedHideReadings: {},
+  SucceededSetReadingsChoice: {},
+  FailedSetReadingsChoice: { reason: Schema.String },
+  AcquiredReadings: {},
+  ReleasedReadings: {},
+  FailedAcquireReadings: { reason: Schema.String },
+  SucceededReadLineReadings: {
+    clipId: Schema.String,
+    lineId: Schema.String,
+    text: Schema.String,
+    words: Schema.Array(ShownWord),
+  },
+  FailedReadLineReadings: {
+    clipId: Schema.String,
+    lineId: Schema.String,
+    text: Schema.String,
+    reason: Schema.String,
+  },
+  ClickedEditReadings: {},
+  ChangedReadingDraft: { from: Schema.Finite, text: Schema.String },
+  SubmittedReadings: {},
+  ClickedCancelReadings: {},
+  SucceededSetLineReadings: { clipId: Schema.String, lineId: Schema.String },
+  FailedSetLineReadings: {
+    clipId: Schema.String,
+    lineId: Schema.String,
+    reason: Schema.String,
+  },
+  CompletedFocusReadings: {},
+
+  // The starter review, at /review.
+  SucceededLoadReview: { draft: ReviewDraft },
+  FailedLoadReview: { reason: Schema.String },
+  ChangedReviewer: { name: Schema.String },
+  ChoseReviewVerdict: { lineId: Schema.String, verdict: ReviewVerdict },
+  ChoseReviewAccent: { lineId: Schema.String, accentType: Schema.String },
+  ChangedReviewNote: { lineId: Schema.String, note: Schema.String },
+  ClickedClearReviewVerdict: { lineId: Schema.String },
+  SucceededSaveReview: {},
+  FailedSaveReview: { reason: Schema.String },
+  ClickedPlayReviewLine: { lineId: Schema.String },
+  ClickedStopReviewLine: {},
+  EndedReviewPlay: { playNumber: Schema.Finite },
+  FailedReviewPlay: { playNumber: Schema.Finite, reason: Schema.String },
+  ClickedExportReview: {},
+  SucceededExportReview: { fileName: Schema.String, verdicts: Schema.Finite },
+  FailedExportReview: { reason: Schema.String },
 })
 export type Message = typeof Message.Type

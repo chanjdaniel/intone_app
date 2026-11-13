@@ -16,6 +16,7 @@ import {
   update,
 } from '../main'
 import { LoadDueLines } from '../returns/commands'
+import { LoadTextChoice } from '../text/commands'
 import {
   DeleteClip,
   FocusLevelRow,
@@ -59,6 +60,7 @@ describe('a clip’s lines', () => {
     )
     expect(start.commands).toMatchObject([
       { name: LoadLevel.name, args: { clipId: 'c1' } },
+      { name: LoadTextChoice.name },
     ])
   })
 

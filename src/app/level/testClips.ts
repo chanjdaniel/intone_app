@@ -30,6 +30,7 @@ export const sampleClip = (count: number, hasAudio = true): LevelClip => ({
   })),
   maybeUndo: Option.none(),
   origin: 'Upload',
+  maybeWrittenBy: Option.none(),
 })
 
 // What a line of an upload has none of.
@@ -38,6 +39,7 @@ export const noPackFields = {
   maybeText: Option.none(),
   maybeKana: Option.none(),
   maybeSource: Option.none(),
+  maybeDetail: Option.none(),
 } as const
 
 // A level imported from the local pack, as the history keeps it: a line

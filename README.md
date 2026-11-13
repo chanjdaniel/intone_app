@@ -41,7 +41,7 @@ npm run test:e2e
 
 `npm test` runs the unit, Story and Scene tests in Vitest.
 `npm run test:e2e` builds the app and runs the Playwright tests against that build in headless Chromium, with Chromium's fake microphone playing the synthetic voices in `fixtures/synthetic/` ([`docs/fake-microphone.md`](docs/fake-microphone.md)).
-The first build fetches the model files listed in `models.json`, about 160 MB, into `.cache/models/`, so it needs the network.
+The first build fetches the model files listed in `models.json`, about 314 MB, most of it the two Whisper models, into `.cache/models/`, so it needs the network.
 `npm run dev` also serves a component library at http://localhost:5173/dev, which production builds leave out.
 
 The app is built with [Foldkit](https://foldkit.dev) on [Effect](https://effect.website).
