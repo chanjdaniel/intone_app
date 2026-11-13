@@ -17,6 +17,7 @@ import {
   type StarterList,
   type StarterListLine,
   type StarterPack,
+  type StarterPackFiles,
   type StarterPackLine,
   type StarterRecording,
   type StarterWord,
@@ -443,7 +444,7 @@ export const audioPathOf = (line: Pick<StarterListLine, 'id'>): string =>
 
 export const packLineOf = (
   line: StarterListLine,
-  audio: Readonly<{ seconds: number; sha256: string }>,
+  audio: Readonly<{ seconds: number }>,
 ): StarterPackLine => {
   const [first] = line.words
   return {
@@ -465,8 +466,6 @@ export const packLineOf = (
     note: line.note ?? null,
     audio: audioPathOf(line),
     seconds: audio.seconds,
-    sha256: audio.sha256,
-    made: recipeOf(line),
     credit: creditOf(line.recording),
     review: line.review,
   }
@@ -477,9 +476,7 @@ export const packLineOf = (
 // review rejected is left out.
 export const packOf = (
   list: StarterList,
-  audioOf: (
-    line: StarterListLine,
-  ) => Readonly<{ seconds: number; sha256: string }>,
+  audioOf: (line: StarterListLine) => Readonly<{ seconds: number }>,
 ): StarterPack => ({
   version: 1,
   levels: list.levels.map(level => ({
@@ -493,6 +490,26 @@ export const packOf = (
       )
       .map(line => packLineOf(line, audioOf(line))),
   })),
+})
+
+// Each pack line's file, by its bytes and what it was made from, in the
+// pack's order: what the script reads to keep a file it need not make.
+export const packFilesOf = (
+  list: StarterList,
+  audioOf: (line: StarterListLine) => Readonly<{ sha256: string }>,
+): StarterPackFiles => ({
+  version: 1,
+  lines: list.levels.flatMap(level =>
+    list.lines
+      .filter(
+        line => line.level === level.id && line.review.verdict !== 'reject',
+      )
+      .map(line => ({
+        id: line.id,
+        sha256: audioOf(line).sha256,
+        made: recipeOf(line),
+      })),
+  ),
 })
 
 // The review's verdicts written into the list: each named line's

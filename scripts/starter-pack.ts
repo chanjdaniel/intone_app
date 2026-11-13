@@ -1,10 +1,12 @@
 // Writes the starter pack (docs/starter-set.md) from its source list,
 // starter/lines.json: starter/pack/levels.json, the level data the app
-// imports, starter/pack/audio/<line>.wav, each line's file, and
-// CREDITS.md, the same bytes every run.
+// imports, starter/pack/audio/<line>.wav, each line's file,
+// starter/pack/files.json, each file's SHA-256 and what it was made
+// from, which this script alone reads, and CREDITS.md, the same bytes
+// every run.
 //
 // `npm run starter:pack` writes them. A line's file is made only when
-// what it is made from has changed (its `made` key in levels.json):
+// what it is made from has changed (its `made` key in files.json):
 // a Commons file downloaded at its pinned URL into the git-ignored
 // .cache/starter/, checked by size and SHA-256, mixed to mono and
 // resampled to 24 kHz; a VOICEVOX line synthesised by VOICEVOX CORE,
@@ -45,6 +47,7 @@ import {
   StarterList,
   type StarterListLine,
   StarterPack,
+  StarterPackFiles,
 } from '../src/services/starter-records.ts'
 import { toMono } from '../tests/support/fixture-audio.ts'
 import {
@@ -54,6 +57,7 @@ import {
   creditsMarkdown,
   lineFlag,
   listProblems,
+  packFilesOf,
   packOf,
   packSampleRate,
   packWav,
@@ -90,6 +94,7 @@ const base = values.root ?? root
 const listPath = join(base, 'starter', 'lines.json')
 const packDir = join(base, 'starter', 'pack')
 const levelsPath = join(packDir, 'levels.json')
+const filesPath = join(packDir, 'files.json')
 const creditsPath = join(base, 'CREDITS.md')
 const sourcesCache = join(root, '.cache', 'starter')
 const unidicCache = join(root, '.cache', 'unidic')
@@ -276,26 +281,11 @@ const synthesise = (
   return made
 }
 
-// What the pack on disk says each line's file was made from: only that,
-// so a pack of an older shape still lets its files be kept.
-const PackMade = Schema.Struct({
-  levels: Schema.Array(
-    Schema.Struct({
-      lines: Schema.Array(
-        Schema.Struct({
-          id: Schema.String,
-          made: Schema.String,
-          sha256: Schema.String,
-        }),
-      ),
-    }),
-  ),
-})
-
-const readPack = (): typeof PackMade.Type | undefined =>
-  existsSync(levelsPath)
-    ? Schema.decodeUnknownSync(PackMade)(
-        JSON.parse(readFileSync(levelsPath, 'utf8')),
+// What the pack on disk says each line's file was made from.
+const readFiles = (): StarterPackFiles | undefined =>
+  existsSync(filesPath)
+    ? Schema.decodeUnknownSync(StarterPackFiles)(
+        JSON.parse(readFileSync(filesPath, 'utf8')),
       )
     : undefined
 
@@ -307,9 +297,7 @@ const packFiles = async (
   offline: boolean,
 ): Promise<ReadonlyMap<string, Uint8Array>> => {
   const before = new Map(
-    (readPack()?.levels ?? []).flatMap(level =>
-      level.lines.map(line => [line.id, line]),
-    ),
+    (readFiles()?.lines ?? []).map(line => [line.id, line]),
   )
   const files = new Map<string, Uint8Array>()
   const toSynthesise: Array<StarterListLine> = []
@@ -374,13 +362,18 @@ const buildPack = async (remake: boolean, check: boolean): Promise<void> => {
     throw new Error(`starter/lines.json:\n${problems.join('\n')}`)
   }
   const files = await packFiles(list, remake, check)
-  const pack = packOf(list, line => {
+  const audioOf = (line: StarterListLine) => {
     const bytes = files.get(audioPathOf(line))
     if (bytes === undefined) throw new Error(`no file for ${line.id}`)
     return { seconds: secondsOf(bytes), sha256: sha256Of(bytes) }
-  })
+  }
+  const pack = packOf(list, audioOf)
   const wanted = new Map<string, Uint8Array | string>([
     [levelsPath, json(Schema.encodeSync(StarterPack)(pack))],
+    [
+      filesPath,
+      json(Schema.encodeSync(StarterPackFiles)(packFilesOf(list, audioOf))),
+    ],
     [creditsPath, creditsMarkdown(pack)],
     ...[...files].map(([path, bytes]) => [join(packDir, path), bytes] as const),
   ])

@@ -24,7 +24,10 @@ import {
   textRuntimeFiles,
   textRuntimeVersion,
 } from '../../build/onnx-runtime.ts'
-import { StarterPack } from '../../src/services/starter-records.ts'
+import {
+  StarterPack,
+  StarterPackFiles,
+} from '../../src/services/starter-records.ts'
 import { chunksOf, productionBuild } from '../support/build'
 import { root } from '../support/run'
 import { audioExtensions } from '../support/starter-pack.ts'
@@ -308,10 +311,17 @@ describe('the production build', () => {
         readFileSync(join(root, 'starter', 'pack', 'levels.json'), 'utf8'),
       ),
     )
+    const packFiles = Schema.decodeUnknownSync(StarterPackFiles)(
+      JSON.parse(
+        readFileSync(join(root, 'starter', 'pack', 'files.json'), 'utf8'),
+      ),
+    )
+    const lines = pack.levels.flatMap(level => level.lines)
     const starter = new Map(
-      pack.levels
-        .flatMap(level => level.lines)
-        .map(line => [line.sha256, line]),
+      packFiles.lines.flatMap(file => {
+        const line = lines.find(found => found.id === file.id)
+        return line === undefined ? [] : [[file.sha256, line] as const]
+      }),
     )
     const first = sha256(
       readFileSync(

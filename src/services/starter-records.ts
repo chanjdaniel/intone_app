@@ -226,14 +226,27 @@ export const StarterPackLine = Schema.Struct({
   // Its file under starter/pack/, and how long and what it is.
   audio: Schema.String.check(Schema.isPattern(/^audio\/[a-z0-9-]+\.wav$/)),
   seconds: Schema.Finite,
-  sha256: Sha256,
-  // What the file was made from, as a key: the script remakes a line
-  // whose key has changed, and keeps its file otherwise.
-  made: Schema.String,
   credit: StarterCredit,
   review: LineReview,
 })
 export type StarterPackLine = typeof StarterPackLine.Type
+
+// Each line's file as the script keeps it, in starter/pack/files.json,
+// which the script alone reads, so the app's bundle carries none of it.
+export const StarterPackFile = Schema.Struct({
+  id: Schema.String,
+  sha256: Sha256,
+  // What the file was made from, as a key: the script remakes a line
+  // whose key has changed, and keeps its file otherwise.
+  made: Schema.String,
+})
+export type StarterPackFile = typeof StarterPackFile.Type
+
+export const StarterPackFiles = Schema.Struct({
+  version: Schema.Literal(1),
+  lines: Schema.Array(StarterPackFile),
+})
+export type StarterPackFiles = typeof StarterPackFiles.Type
 
 export const StarterPack = Schema.Struct({
   version: Schema.Literal(1),

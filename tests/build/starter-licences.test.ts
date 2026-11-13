@@ -4,7 +4,11 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { describe, expect, test } from 'vitest'
 
-import { StarterList, StarterPack } from '../../src/services/starter-records.ts'
+import {
+  StarterList,
+  StarterPack,
+  StarterPackFiles,
+} from '../../src/services/starter-records.ts'
 import { root } from '../support/run'
 import { audioExtensions } from '../support/starter-pack.ts'
 
@@ -31,6 +35,9 @@ describe('the starter set’s recordings', () => {
     readJson(join(starterDir, 'lines.json')),
   )
   const lines = pack.levels.flatMap(level => level.lines)
+  const files = Schema.decodeUnknownSync(StarterPackFiles)(
+    readJson(join(starterDir, 'pack', 'files.json')),
+  )
 
   test('are each a line of the pack, by its bytes, credited with its source, author and licence', () => {
     const audio = readdirSync(starterDir, {
@@ -44,7 +51,9 @@ describe('the starter set’s recordings', () => {
       const named = relative(join(starterDir, 'pack'), path)
       const line = lines.find(found => found.audio === named)
       expect(line, named).toBeDefined()
-      expect(sha256(readFileSync(path)), named).toBe(line?.sha256)
+      expect(sha256(readFileSync(path)), named).toBe(
+        files.lines.find(file => file.id === line?.id)?.sha256,
+      )
       expect(line?.credit.author.trim(), named).not.toBe('')
     }
   })
