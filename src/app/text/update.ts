@@ -34,6 +34,8 @@ type TextUpdate = Update.Return<Model, Message, AppResourceServices>
 
 const unchanged = (model: Model): TextUpdate => ({ model })
 
+type ReadyLevel = Extract<Model['level'], { _tag: 'Ready' }>
+
 const agreedModel = (model: Model): Option.Option<TextModelId> =>
   model.textChoice._tag === 'Read'
     ? Option.flatMap(model.textChoice.maybeChoice, choice =>
@@ -287,53 +289,53 @@ export const clickedStopTextJob = (model: Model): TextUpdate =>
 
 // THE LEARNER'S OWN TEXT
 
-const levelLine = (model: Model, lineId: string) =>
-  model.level._tag === 'Ready'
-    ? Option.fromNullishOr(
-        model.level.clip.lines.find(line => line.id === lineId),
-      )
-    : Option.none()
+const readyLevel = (model: Model): Option.Option<ReadyLevel> =>
+  model.level._tag === 'Ready' ? Option.some(model.level) : Option.none()
 
 export const clickedEditLineText = (model: Model, lineId: string): TextUpdate =>
-  model.level._tag === 'Ready'
-    ? Option.match(levelLine(model, lineId), {
-        onNone: () => unchanged(model),
-        onSome: line => ({
-          model: modifyFields(model, {
-            lineText: () =>
-              LineTextEdit.OneLine({
-                clipId: model.level._tag === 'Ready' ? model.level.clip.id : '',
-                lineId,
-                draft: Option.getOrElse(line.maybeText, () => ''),
-                status: TextFormStatus.Open(),
-              }),
-          }),
-          commands: [FocusLineText({ id: lineTextFieldId })],
+  Option.match(
+    Option.flatMap(readyLevel(model), page =>
+      Option.map(
+        Option.fromNullishOr(page.clip.lines.find(line => line.id === lineId)),
+        line => ({ clipId: page.clip.id, line }),
+      ),
+    ),
+    {
+      onNone: () => unchanged(model),
+      onSome: ({ clipId, line }) => ({
+        model: modifyFields(model, {
+          lineText: () =>
+            LineTextEdit.OneLine({
+              clipId,
+              lineId,
+              draft: Option.getOrElse(line.maybeText, () => ''),
+              status: TextFormStatus.Open(),
+            }),
         }),
-      })
-    : unchanged(model)
+        commands: [FocusLineText({ id: lineTextFieldId })],
+      }),
+    },
+  )
 
 // The whole clip's text to paste over, given as it is now, one line of
 // text for each line.
 export const clickedPasteText = (model: Model): TextUpdate =>
-  model.level._tag === 'Ready'
-    ? {
-        model: modifyFields(model, {
-          lineText: () =>
-            LineTextEdit.WholeClip({
-              clipId: model.level._tag === 'Ready' ? model.level.clip.id : '',
-              draft:
-                model.level._tag === 'Ready'
-                  ? model.level.clip.lines
-                      .map(line => Option.getOrElse(line.maybeText, () => ''))
-                      .join('\n')
-                  : '',
-              status: TextFormStatus.Open(),
-            }),
-        }),
-        commands: [FocusLineText({ id: pastedTextFieldId })],
-      }
-    : unchanged(model)
+  Option.match(readyLevel(model), {
+    onNone: () => unchanged(model),
+    onSome: page => ({
+      model: modifyFields(model, {
+        lineText: () =>
+          LineTextEdit.WholeClip({
+            clipId: page.clip.id,
+            draft: page.clip.lines
+              .map(line => Option.getOrElse(line.maybeText, () => ''))
+              .join('\n'),
+            status: TextFormStatus.Open(),
+          }),
+      }),
+      commands: [FocusLineText({ id: pastedTextFieldId })],
+    }),
+  })
 
 export const changedTextDraft = (model: Model, text: string): TextUpdate => ({
   model: modifyFields(model, {
