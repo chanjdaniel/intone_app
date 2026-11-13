@@ -66,11 +66,12 @@ The flagged lines on 2026-11-13:
 
 `npm run starter:pack` (`scripts/starter-pack.ts`) writes, from `starter/lines.json`, the same bytes every run:
 
-- `starter/pack/levels.json`, the levels and lines the app imports (`StarterPack`), each line with its text, kana, morae, accent type and particle, its words, its flag, its file's length and SHA-256, its credit and its review;
+- `starter/pack/levels.json`, the levels and lines the app imports (`StarterPack`), each line with its text, kana, morae, accent type and particle, its words, its flag, its file's length, its credit and its review;
 - `starter/pack/audio/<line>.wav`, each line's file;
+- `starter/pack/files.json` (`StarterPackFiles`), each file's SHA-256 and its `made` key, which the script alone reads, so the app's bundle carries neither;
 - `CREDITS.md`, written whole, crediting each recording as its licence asks.
 
-A line's file is made only when what it is made from changes, its `made` key: a Commons file downloaded at its pinned URL into `.cache/starter/` and checked by size and SHA-256, or a VOICEVOX line synthesised, which needs VOICEVOX CORE (`npm run fixtures:voices-setup`, whose terms prompt is Daniel's to answer).
+A line's file is made only when what it is made from changes, its `made` key in `files.json`: a Commons file downloaded at its pinned URL into `.cache/starter/` and checked by size and SHA-256, or a VOICEVOX line synthesised, which needs VOICEVOX CORE (`npm run fixtures:voices-setup`, whose terms prompt is Daniel's to answer).
 `--check` writes nothing and fails while the pack or `CREDITS.md` is not what the list makes; `tests/scripts/starter-pack.test.ts` runs it in CI, with no network and no VOICEVOX, and remakes every file byte for byte where both are at hand.
 
 ## In the app

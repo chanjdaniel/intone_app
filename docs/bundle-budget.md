@@ -102,7 +102,7 @@ The readings' tokeniser and dictionary stay out of it: the Worker's chunk and Li
 The readings' view, update and Messages cannot be loaded lazily in a single Foldkit program.
 
 Ticket 24 added its starter set under that cap, raising nothing: measured against its base `944ff5b0`, 211,082 B to 227,359 B, 16,277 B more, all in the entry chunk.
-Most of it is the pack's JSON (39 kB minified, 7.1 kB gzip on its own), `src/app/review/` (16.4 kB minified), and smaller parts of `src/app/line/`, `src/app/level/` and `src/services/starter-records.ts`.
+By the source map, it is the pack's JSON (39 kB minified, 7.1 kB gzip on its own), `src/app/review/` (16.4 kB minified), and smaller parts of `src/app/line/`, `src/app/level/` and `src/services/starter-records.ts`.
 The review of that pull request found two ways to win some back, and both were measured with `npm run check:budget`, from 227,596 B at its head `055b7619`:
 
 - The pack carried each file's SHA-256 and recipe key (`sha256`, `made`), which only `scripts/starter-pack.ts` reads; they now live in `starter/pack/files.json`, which the app never imports, and the page loads 224,690 B before starting, 2,906 B less.
