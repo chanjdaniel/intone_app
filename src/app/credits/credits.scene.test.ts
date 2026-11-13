@@ -24,10 +24,14 @@ describe('/credits', () => {
         expect(role('heading', { name: new RegExp(`^${name}`) })).toExist(),
       ),
       ...modelCredits.map(model =>
-        expect(role('link', { name: model.source })).toHaveAttr(
-          'rel',
-          'noopener noreferrer',
+        expect(role('link', { name: `Source of ${model.name}` })).toHaveAttr(
+          'href',
+          model.source,
         ),
+      ),
+      expect(role('link', { name: 'Source of SwiftF0 0.3.0' })).toHaveAttr(
+        'rel',
+        'noopener noreferrer',
       ),
       expect(text(/voice VOICEVOX:冥鳴ひまり, made with VOICEVOX/)).toExist(),
       expect(role('link', { name: 'The notices' })).toHaveAttr(

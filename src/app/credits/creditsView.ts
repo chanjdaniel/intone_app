@@ -23,7 +23,7 @@ const externalLink = <ViewMessage>(
       h.Target('_blank'),
       h.Rel('noopener noreferrer'),
       h.Class(
-        'inline-flex min-h-11 items-center rounded-md break-all text-accent underline underline-offset-4 focus-ring',
+        'inline-flex min-h-11 items-center rounded-md text-accent underline underline-offset-4 focus-ring',
       ),
     ],
     [name],
@@ -87,7 +87,7 @@ export const creditsView = <ViewMessage>(h: HtmlBuilder<ViewMessage>): Html =>
                   ),
                   h.div(
                     [h.Class('flex')],
-                    [externalLink(model.source, model.source, h)],
+                    [externalLink(model.source, `Source of ${model.name}`, h)],
                   ),
                 ],
               ),
