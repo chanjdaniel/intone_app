@@ -110,7 +110,7 @@ const sha256 = (bytes: ArrayBuffer): string =>
 describe.each(['dev', 'preview'] as const)('the %s server', server => {
   test("serves whisper-small's 149.5 MiB merged decoder whole", async () => {
     const decoder = whisperDecoder()
-    expect(decoder.bytes).toBe(156_750_845)
+    expect(decoder.bytes).toBe(156_795_750)
 
     const response = await fetch(`${origins[server]}/${decoder.path}`)
 

@@ -6,6 +6,7 @@ import type { ClipStore } from './clip-store'
 import {
   ClipEntry,
   type ClipLine,
+  type ClipTranscript,
   type LineNative,
   type LineQuality,
   NativeEntry,
@@ -109,6 +110,18 @@ export type ClipOperations = Readonly<{
   // in `writes`; then deletes the curves and the
   // files `before` named that nothing names any more. A local pack's
   // import (./local-pack.ts) plans what to write.
+  // Keeps an upload's transcript, over any it had, and gives the clip
+  // as it is then; none when there is no such clip.
+  readonly setClipTranscript: (
+    clipId: string,
+    transcript: ClipTranscript,
+  ) => Effect.Effect<Option.Option<ClipEntry>, HistoryError>
+  // Gives each line named its text, the learner's own, typed or pasted,
+  // which stands over the transcript's; the clip as it is then.
+  readonly setLineTexts: (
+    clipId: string,
+    texts: ReadonlyArray<Readonly<{ lineId: string; text: string }>>,
+  ) => Effect.Effect<Option.Option<ClipEntry>, HistoryError>
   readonly replaceClip: (
     before: Option.Option<ClipEntry>,
     next: ClipEntry,
@@ -510,12 +523,27 @@ export const makeClipOperations = (
         })
       }
       const queue = [...tracked]
+      // A moved line keeps the text the learner gave it; a split or merge
+      // makes new words of a line, so it takes the transcript's.
+      const givenTexts = new Map(
+        edit._tag === 'Move'
+          ? before.lines.flatMap(line =>
+              line.text === undefined ? [] : [[line.id, line.text] as const],
+            )
+          : [],
+      )
       const lines = plan.lines.map(line => {
         if (line._tag === 'Kept') {
           return line.line
         }
         const made = queue.shift()
-        return clipLineOf(line.id, line, made?.native ?? { _tag: 'TooQuiet' })
+        const retracked = clipLineOf(
+          line.id,
+          line,
+          made?.native ?? { _tag: 'TooQuiet' },
+        )
+        const text = givenTexts.get(line.id)
+        return text === undefined ? retracked : { ...retracked, text }
       })
       const next: ClipEntry = {
         format: before.format,
@@ -527,6 +555,9 @@ export const makeClipOperations = (
         lines,
         nextLineId: plan.nextLineId,
         undo: plan.undo,
+        ...(before.transcript === undefined
+          ? {}
+          : { transcript: before.transcript }),
       }
       return Option.some(
         yield* replaceClip(
@@ -561,6 +592,47 @@ export const makeClipOperations = (
       )
     })
 
+  // `change` of the clip as it is, written unless it changed meanwhile.
+  const changeClip = (
+    clipId: string,
+    change: (clip: ClipEntry) => ClipEntry,
+    lead: string,
+  ) =>
+    Effect.gen(function* () {
+      const maybeClip = yield* clip(clipId)
+      if (Option.isNone(maybeClip)) {
+        return Option.none()
+      }
+      return Option.some(
+        yield* replaceClip(maybeClip, change(maybeClip.value), [], [], lead),
+      )
+    })
+
+  const setClipTranscript = (clipId: string, transcript: ClipTranscript) =>
+    changeClip(
+      clipId,
+      before => ({ ...before, transcript }),
+      'The text was not kept.',
+    )
+
+  const setLineTexts = (
+    clipId: string,
+    texts: ReadonlyArray<Readonly<{ lineId: string; text: string }>>,
+  ) => {
+    const given = new Map(texts.map(({ lineId, text }) => [lineId, text]))
+    return changeClip(
+      clipId,
+      before => ({
+        ...before,
+        lines: before.lines.map(line => {
+          const text = given.get(line.id)
+          return text === undefined ? line : { ...line, text }
+        }),
+      }),
+      'The text was not kept.',
+    )
+  }
+
   return {
     addClip,
     clips,
@@ -569,6 +641,8 @@ export const makeClipOperations = (
     removeClip,
     editClipLines,
     undoClipEdit,
+    setClipTranscript,
+    setLineTexts,
     replaceClip: (before, next, natives, writes) =>
       replaceClip(before, next, natives, writes),
   }

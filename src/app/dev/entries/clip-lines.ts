@@ -76,6 +76,7 @@ const longClip = (): LevelClip => ({
   })),
   maybeUndo: Option.none(),
   origin: 'Upload',
+  maybeWrittenBy: Option.none(),
 })
 
 export const init: Runtime.ElementInit<Model, Message> = () => ({

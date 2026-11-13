@@ -10,6 +10,7 @@ import { DuePage } from './returns/returns'
 import { AppRoute } from './route'
 import { SettingsPage } from './settings/settings'
 import { Take } from './take/take'
+import { LineTextEdit, TextChoiceState, TextJob, TextOffer } from './text/text'
 import { UploadPage } from './upload/upload'
 
 export const Model = Schema.Struct({
@@ -42,5 +43,14 @@ export const Model = Schema.Struct({
   deleteClipDialog: Dialog.Model,
   // What the home screen says once a clip has been deleted.
   maybeHomeNotice: Schema.Option(Schema.String),
+  // The text of the learner's clips (./text/text.ts): what they said to
+  // the model's download, the consent dialog, the one job in the
+  // background, and the text they type or paste on a level.
+  textChoice: TextChoiceState,
+  textOffer: TextOffer,
+  textDialog: Dialog.Model,
+  textJob: TextJob,
+  textJobsStarted: Schema.Finite,
+  lineText: LineTextEdit,
 })
 export type Model = typeof Model.Type

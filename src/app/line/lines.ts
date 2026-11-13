@@ -2,11 +2,12 @@ import { Array, Option, Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 import ameGaSukiAudio from '../../../fixtures/voices/ame-ga-suki/meimei-himari/right.wav?url'
-import type {
-  ClipAudio,
-  ClipEntry,
-  ClipLine,
-  LineSource,
+import {
+  type ClipAudio,
+  type ClipEntry,
+  type ClipLine,
+  type LineSource,
+  clipLineTexts,
 } from '../../services/history-records'
 
 // The lines to copy: those the app brings with it, and those of the
@@ -170,17 +171,17 @@ export const clipLineDetail = (
   `${line.file ?? clip.name}, ${clockText(line.from, true)} to ${clockText(line.to, true)}`
 
 // A line of the learner's clip or of their local pack, whose audio is on
-// this device: called by its manifest's text when it has one, else by its
+// this device: called by its text when it has one (its manifest's, the
+// learner's own, or its words in the clip's transcript), else by its
 // place.
 export const practiceLineOfClip = (
   clip: ClipEntry,
   line: ClipLine,
   audio: ClipAudio,
 ): PracticeLine => {
-  const name = clipLineTitle(
-    clip.lines.findIndex(found => found.id === line.id) + 1,
-  )
-  const text = line.text ?? ''
+  const place = clip.lines.findIndex(found => found.id === line.id)
+  const name = clipLineTitle(place + 1)
+  const text = (clipLineTexts(clip)[place] ?? line.text ?? '').trim()
   return {
     clipId: clip.id,
     lineId: line.id,

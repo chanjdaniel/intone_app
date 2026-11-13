@@ -6,6 +6,7 @@ import { Url } from 'foldkit/url'
 
 import { Dialog, FileDrop } from '@foldkit/ui'
 
+import { TextChoice, TextModelId } from '../services/history-records'
 import { MicrophoneFailure } from '../services/microphone'
 import {
   BlindPoint,
@@ -25,6 +26,7 @@ import { LineReturn } from './returns/lineReturn'
 import { DueLine } from './returns/returns'
 import { SettingsFacts, StorageFacts } from './settings/settings'
 import { Extent, TakeCurve, TakeFeatures, TakeResult, Voice } from './take/take'
+import { TextStep } from './text/text'
 import { PackStep, UploadStep } from './upload/upload'
 
 const takeNumber = Schema.Finite
@@ -259,5 +261,32 @@ export const Message = defineMessageUnion({
   SubmittedClearAll: {},
   SucceededClearAllData: {},
   FailedClearAllData: { reason: Schema.String },
+
+  // The text of the learner's clips.
+  SucceededLoadTextChoice: { maybeChoice: Schema.Option(TextChoice) },
+  FailedLoadTextChoice: { reason: Schema.String },
+  ClickedWriteOutText: {},
+  ClickedChooseTextModel: {},
+  GotTextDialogMessage: { message: Dialog.Message },
+  SelectedTextModel: { model: TextModelId },
+  SubmittedTextDownload: {},
+  ClickedNotNowText: {},
+  SucceededSetTextChoice: {},
+  FailedSetTextChoice: { reason: Schema.String },
+  ProgressedTextJob: { jobNumber: Schema.Finite, step: TextStep },
+  SucceededTextJob: {
+    jobNumber: Schema.Finite,
+    maybeClip: Schema.Option(LevelClip),
+  },
+  FailedTextJob: { jobNumber: Schema.Finite, reason: Schema.String },
+  ClickedStopTextJob: {},
+  ClickedEditLineText: { lineId: Schema.String },
+  ClickedPasteText: {},
+  ChangedTextDraft: { text: Schema.String },
+  SubmittedLineText: {},
+  ClickedCancelLineText: {},
+  SucceededSetLineTexts: { clipId: Schema.String, clip: LevelClip },
+  FailedSetLineTexts: { clipId: Schema.String, reason: Schema.String },
+  CompletedFocusLineText: {},
 })
 export type Message = typeof Message.Type

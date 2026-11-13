@@ -29,6 +29,7 @@ import {
   sampleLine,
   sampleScore,
 } from './take/testCurves'
+import { LoadTextChoice } from './text/commands'
 
 const url = (path: string) =>
   Option.getOrThrow(fromString(`http://localhost${path}`))
@@ -51,6 +52,7 @@ describe('init', () => {
     expect((start.commands ?? []).map(({ name }) => name)).toStrictEqual([
       LoadClips.name,
       LoadDueLines.name,
+      LoadTextChoice.name,
     ])
     expect(start.model).toStrictEqual({
       ...on(AppRoute.Home({ maybeFind: Option.none() })),
@@ -159,6 +161,7 @@ describe('opening a line', () => {
         name: LoadLinePlace.name,
         args: { clipId: 'ame-ga-suki', lineId: '1' },
       },
+      { name: LoadTextChoice.name, args: undefined },
     ])
   })
 

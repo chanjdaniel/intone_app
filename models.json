@@ -29,16 +29,102 @@
       ]
     },
     {
-      "id": "whisper-small",
-      "name": "Whisper small, ONNX by onnx-community",
+      "id": "whisper-base",
+      "name": "Whisper base, timestamped ONNX export by onnx-community",
       "licence": "MIT",
       "source": "https://github.com/openai/whisper/tree/86098128c0b4f24f0e2aa2994de830614b474227",
       "files": [
         {
+          "path": "config.json",
+          "url": "https://huggingface.co/onnx-community/whisper-base_timestamped/resolve/608c49e61301901684bc36cac8f74b95ff6b5a8e/config.json",
+          "bytes": 2243,
+          "sha256": "f4d0608f7d918166da7edb3e188de5ef1bfe70d9802e785d271fd88111e9cf4b"
+        },
+        {
+          "path": "generation_config.json",
+          "url": "https://huggingface.co/onnx-community/whisper-base_timestamped/resolve/608c49e61301901684bc36cac8f74b95ff6b5a8e/generation_config.json",
+          "bytes": 3832,
+          "sha256": "61070cf8de25b1e9256e8e102ded49d8d24a8369ed36ef84fdf21549e68125a0"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "url": "https://huggingface.co/onnx-community/whisper-base_timestamped/resolve/608c49e61301901684bc36cac8f74b95ff6b5a8e/preprocessor_config.json",
+          "bytes": 339,
+          "sha256": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d"
+        },
+        {
+          "path": "tokenizer.json",
+          "url": "https://huggingface.co/onnx-community/whisper-base_timestamped/resolve/608c49e61301901684bc36cac8f74b95ff6b5a8e/tokenizer.json",
+          "bytes": 2480466,
+          "sha256": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "url": "https://huggingface.co/onnx-community/whisper-base_timestamped/resolve/608c49e61301901684bc36cac8f74b95ff6b5a8e/tokenizer_config.json",
+          "bytes": 282682,
+          "sha256": "2e036e4dbacfdeb7242c7d4ec4149f4a16e86026048f94d1637e3a8ee9c6a573"
+        },
+        {
+          "path": "onnx/encoder_model_q4.onnx",
+          "url": "https://huggingface.co/onnx-community/whisper-base_timestamped/resolve/608c49e61301901684bc36cac8f74b95ff6b5a8e/onnx/encoder_model_q4.onnx",
+          "bytes": 18771046,
+          "sha256": "0df94e35822653ba16e23c3f19f05b9b7fe7aae97884d1b277e02044f33c4880"
+        },
+        {
           "path": "onnx/decoder_model_merged_int8.onnx",
-          "url": "https://huggingface.co/onnx-community/whisper-small/resolve/36050c46d777d46dc4b5f43f6d90574fc38f8732/onnx/decoder_model_merged_int8.onnx",
-          "bytes": 156750845,
-          "sha256": "ec07c3cbb64172c39791e26ee870a65ac22b458c36722bfe2776b3dbf741e0c9"
+          "url": "https://huggingface.co/onnx-community/whisper-base_timestamped/resolve/608c49e61301901684bc36cac8f74b95ff6b5a8e/onnx/decoder_model_merged_int8.onnx",
+          "bytes": 53712708,
+          "sha256": "cf9a8d5bcddc0917a0078135b484cedcaf44f28909cd91910abd29dced9171db"
+        }
+      ]
+    },
+    {
+      "id": "whisper-small",
+      "name": "Whisper small, timestamped ONNX export by onnx-community",
+      "licence": "MIT",
+      "source": "https://github.com/openai/whisper/tree/86098128c0b4f24f0e2aa2994de830614b474227",
+      "files": [
+        {
+          "path": "config.json",
+          "url": "https://huggingface.co/onnx-community/whisper-small_timestamped/resolve/65caa70f294b46e1c33ff820aae6b16d048ab818/config.json",
+          "bytes": 2227,
+          "sha256": "457854d452f17661e197d74aee12b8e74fb75ba30ebfaa7426d0d61ea1e08a18"
+        },
+        {
+          "path": "generation_config.json",
+          "url": "https://huggingface.co/onnx-community/whisper-small_timestamped/resolve/65caa70f294b46e1c33ff820aae6b16d048ab818/generation_config.json",
+          "bytes": 3893,
+          "sha256": "f538b28220c6a6d6f1af1458d4141cacb4ef4963df3de98a19490440c412ddf0"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "url": "https://huggingface.co/onnx-community/whisper-small_timestamped/resolve/65caa70f294b46e1c33ff820aae6b16d048ab818/preprocessor_config.json",
+          "bytes": 339,
+          "sha256": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d"
+        },
+        {
+          "path": "tokenizer.json",
+          "url": "https://huggingface.co/onnx-community/whisper-small_timestamped/resolve/65caa70f294b46e1c33ff820aae6b16d048ab818/tokenizer.json",
+          "bytes": 2480466,
+          "sha256": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "url": "https://huggingface.co/onnx-community/whisper-small_timestamped/resolve/65caa70f294b46e1c33ff820aae6b16d048ab818/tokenizer_config.json",
+          "bytes": 282683,
+          "sha256": "2a4c4281cf9f51ac6ccc406fdc711a087afe6530f671fa7b80953edc498275ce"
+        },
+        {
+          "path": "onnx/encoder_model_q4.onnx",
+          "url": "https://huggingface.co/onnx-community/whisper-small_timestamped/resolve/65caa70f294b46e1c33ff820aae6b16d048ab818/onnx/encoder_model_q4.onnx",
+          "bytes": 66178491,
+          "sha256": "433fc34451d145ff5cc3e80cfeef42f9d0d91886fdcba02ec6e70075f1d1d53f"
+        },
+        {
+          "path": "onnx/decoder_model_merged_int8.onnx",
+          "url": "https://huggingface.co/onnx-community/whisper-small_timestamped/resolve/65caa70f294b46e1c33ff820aae6b16d048ab818/onnx/decoder_model_merged_int8.onnx",
+          "bytes": 156795750,
+          "sha256": "c831996a6d5a535cf17447b0d7ecc36da6b72696e6fb906852ba6136b9199abb"
         }
       ]
     }

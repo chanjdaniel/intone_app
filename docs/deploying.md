@@ -79,11 +79,11 @@ Left to itself, `vite preview` sends `.onnx` files with no content type and with
 
 ### The largest file
 
-`whisper-small`'s merged decoder, `onnx/decoder_model_merged_int8.onnx` from `onnx-community/whisper-small` at revision `36050c46d777d46dc4b5f43f6d90574fc38f8732`, is 156,750,845 bytes (149.5 MiB), int8, the dtype T226's speech-recognition spike ran.
-On 2026-11-12 both local servers served it whole: `200`, `Content-Type: application/octet-stream`, `Content-Length: 156750845`, the listed SHA-256 byte for byte, `Cache-Control: public, max-age=31536000, immutable`, a range from byte 156,000,000 as `206`, and a range from its size as `416`.
+`whisper-small`'s merged decoder, `onnx/decoder_model_merged_int8.onnx`, is 156,795,750 bytes (149.5 MiB), int8, the dtype T226's speech-recognition spike ran.
+It comes from `onnx-community/whisper-small_timestamped` at revision `65caa70f294b46e1c33ff820aae6b16d048ab818`, the export that gives word timestamps (`docs/transcription.md`); until ticket 16 it came from `onnx-community/whisper-small`, 156,750,845 bytes.
+On 2026-11-12 both local servers served that earlier file whole: `200`, `Content-Type: application/octet-stream`, `Content-Length: 156750845`, the listed SHA-256 byte for byte, `Cache-Control: public, max-age=31536000, immutable`, a range from byte 156,000,000 as `206`, and a range from its size as `416`.
 Plain `vite preview`, with none of the project's plugins, sends it whole too, and answers the same two ranges, but with an empty `Content-Type` and `Cache-Control: no-cache`.
-`tests/build/serving.test.ts` checks this on every run.
-It is in `models.json` alone for now; ticket 16 adds the rest of Whisper's files.
+`tests/build/serving.test.ts` checks this on every run, on the file `models.json` lists now.
 
 ### Interrupted downloads
 

@@ -1,7 +1,12 @@
 import { Array, Option, Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
-import { type ClipEntry, clipHasAudio } from '../../services/history-records'
+import {
+  type ClipEntry,
+  TextModelId,
+  clipHasAudio,
+  clipLineTexts,
+} from '../../services/history-records'
 import {
   type BundledClip,
   SourceLink,
@@ -73,33 +78,43 @@ export const LevelClip = Schema.Struct({
   lines: Schema.Array(LevelLine),
   maybeUndo: Schema.Option(LevelChange),
   origin: LevelOrigin,
+  // The model that wrote an upload's text out on this device, once one
+  // has.
+  maybeWrittenBy: Schema.Option(TextModelId),
 })
 export type LevelClip = typeof LevelClip.Type
 
 const nonEmpty = (text: string | undefined): Option.Option<string> =>
   Option.filter(Option.fromNullishOr(text), found => found.trim() !== '')
 
-export const levelClipOf = (clip: ClipEntry): LevelClip => ({
-  id: clip.id,
-  name: clip.name,
-  seconds: clip.seconds,
-  addedAt: clip.addedAt,
-  hasAudio: clipHasAudio(clip),
-  lines: clip.lines.map((line, k) => ({
-    id: line.id,
-    number: k + 1,
-    from: line.from,
-    to: line.to,
-    native: line.native._tag,
-    maybeQuality: Option.fromNullishOr(line.quality),
-    maybeFile: Option.fromNullishOr(line.file),
-    maybeText: nonEmpty(line.text),
-    maybeKana: nonEmpty(line.kana),
-    maybeSource: Option.map(Option.fromNullishOr(line.source), sourceLinkOf),
-  })),
-  maybeUndo: Option.map(Option.fromNullishOr(clip.undo), undo => undo.change),
-  origin: clip.pack === undefined ? 'Upload' : 'Pack',
-})
+export const levelClipOf = (clip: ClipEntry): LevelClip => {
+  const texts = clipLineTexts(clip)
+  return {
+    id: clip.id,
+    name: clip.name,
+    seconds: clip.seconds,
+    addedAt: clip.addedAt,
+    hasAudio: clipHasAudio(clip),
+    lines: clip.lines.map((line, k) => ({
+      id: line.id,
+      number: k + 1,
+      from: line.from,
+      to: line.to,
+      native: line.native._tag,
+      maybeQuality: Option.fromNullishOr(line.quality),
+      maybeFile: Option.fromNullishOr(line.file),
+      maybeText: nonEmpty(texts[k]),
+      maybeKana: nonEmpty(line.kana),
+      maybeSource: Option.map(Option.fromNullishOr(line.source), sourceLinkOf),
+    })),
+    maybeUndo: Option.map(Option.fromNullishOr(clip.undo), undo => undo.change),
+    origin: clip.pack === undefined ? 'Upload' : 'Pack',
+    maybeWrittenBy: Option.map(
+      Option.fromNullishOr(clip.transcript),
+      transcript => transcript.model,
+    ),
+  }
+}
 
 // A level the app brings: each line its whole file, from its first
 // sample to its last.
@@ -123,6 +138,7 @@ export const levelClipOfBundled = (clip: BundledClip): LevelClip => ({
   })),
   maybeUndo: Option.none(),
   origin: 'Bundled',
+  maybeWrittenBy: Option.none(),
 })
 
 // A clip on the home screen.

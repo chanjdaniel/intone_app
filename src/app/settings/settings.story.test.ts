@@ -6,6 +6,7 @@ import { describe, expect, test } from 'vitest'
 import { HistoryPage, LineHistoryPage } from '../history/history'
 import { NativeCurve } from '../line/native'
 import { AppRoute, Message, init, initialModel, update } from '../main'
+import { LoadTextChoice } from '../text/commands'
 import { LoadSettings } from './commands'
 import { SettingsPage } from './settings'
 
@@ -16,7 +17,10 @@ describe('/settings', () => {
   test('reads what the device keeps when it opens', () => {
     const start = init(url('/settings'))
     expect(start.model.settings).toStrictEqual(SettingsPage.Loading())
-    expect(start.commands).toMatchObject([{ name: LoadSettings.name }])
+    expect(start.commands).toMatchObject([
+      { name: LoadSettings.name },
+      { name: LoadTextChoice.name },
+    ])
   })
 
   test('forgets what the screens showed once everything is cleared, and says so', () => {

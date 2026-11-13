@@ -5,6 +5,12 @@ import { Dialog } from '@foldkit/ui'
 
 import { bytesText, countText } from '../history/format'
 import { pageFrame } from '../pageFrame'
+import type { TextChoiceState, TextJob, TextOffer } from '../text/text'
+import {
+  type TextEvents,
+  settingsTextSection,
+  textDialogView,
+} from '../text/textView'
 import {
   BackupState,
   type Browser,
@@ -30,6 +36,19 @@ export type SettingsEvents<ViewMessage> = Readonly<{
   keepEverything: ViewMessage
   confirmClearAll: ViewMessage
   dialog: (message: Dialog.Message) => ViewMessage
+  text: Pick<
+    TextEvents<ViewMessage>,
+    'chooseModel' | 'stop' | 'dialog' | 'selectModel' | 'agree' | 'notNow'
+  >
+}>
+
+// What the settings show of the text model: the learner's answer, the
+// download in the background, and the consent dialog.
+export type SettingsText = Readonly<{
+  choice: TextChoiceState
+  job: TextJob
+  offer: TextOffer
+  dialog: Dialog.Model
 }>
 
 const primaryButton = 'button-primary disabled:opacity-60'
@@ -457,6 +476,7 @@ export const settingsView = <ViewMessage>(
   page: SettingsPage,
   maybeNotice: Option.Option<string>,
   dialog: Dialog.Model,
+  text: SettingsText,
   events: SettingsEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
@@ -484,11 +504,21 @@ export const settingsView = <ViewMessage>(
     ],
     Ready: ready => [
       audioSection(ready, events, h),
+      settingsTextSection(text.choice, text.job, events.text, h),
       storageSection(ready.storage, events, h),
       backupSection(ready, events, h),
       clearSection(events, h),
       clearDialogView(dialog, ready.clearing, events, h),
     ],
   })
-  return pageFrame('Settings', [heading, notice, ...body], h)
+  return pageFrame(
+    'Settings',
+    [
+      heading,
+      notice,
+      ...body,
+      textDialogView(text.dialog, text.offer, events.text, h),
+    ],
+    h,
+  )
 }

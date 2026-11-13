@@ -1,5 +1,6 @@
 import { Schema } from 'effect'
 
+import { lineTextsOf } from '../engine/text/match'
 import type { Recording, Score } from '../score/score'
 
 // The history's records, as IndexedDB holds them and as the backup file
@@ -218,6 +219,8 @@ export const ClipLine = Schema.Struct({
   // A line of a local pack: the path of its file in the pack, and the
   // text, kana and source its manifest gives, each only when given.
   file: Schema.optionalKey(Schema.String),
+  // The line's text as given: by its manifest, or by the learner, typed
+  // or pasted; it stands over the clip's transcript (`clipLineTexts`).
   text: Schema.optionalKey(Schema.String),
   kana: Schema.optionalKey(Schema.String),
   source: Schema.optionalKey(LineSource),
@@ -259,6 +262,35 @@ export const ClipPack = Schema.Struct({
 })
 export type ClipPack = typeof ClipPack.Type
 
+// The two text models the learner may agree to download (ticket 16).
+export const TextModelId = Schema.Literals(['whisper-base', 'whisper-small'])
+export type TextModelId = typeof TextModelId.Type
+
+// A piece of a transcript (../engine/text/pieces.ts): seconds from the
+// start of the clip's audio.
+export const TranscriptPiece = Schema.Struct({
+  text: Schema.String,
+  from: Schema.Finite,
+  to: Schema.Finite,
+})
+
+// An upload's text as Whisper wrote it out on this device: the pieces,
+// each with its time, matched to the lines each time they are read, so a
+// moved, split or merged line gets the words of its new span. It is for
+// display only: no score reads it.
+export const ClipTranscript = Schema.Struct({
+  model: TextModelId,
+  // The model's directory version (build/models.ts), so a transcript
+  // tells which files wrote it.
+  version: Schema.String,
+  // Where the encoder ran.
+  device: Schema.Literals(['WebGpu', 'Wasm']),
+  // Milliseconds since 1970.
+  at: Schema.Finite,
+  pieces: Schema.Array(TranscriptPiece),
+})
+export type ClipTranscript = typeof ClipTranscript.Type
+
 export const ClipEntry = Schema.Struct({
   format: Format,
   id: Schema.String,
@@ -279,8 +311,23 @@ export const ClipEntry = Schema.Struct({
   // one. Its `audio` is null, and its lines change only by importing its
   // manifest again.
   pack: Schema.optionalKey(ClipPack),
+  // An upload's text, written out on the device once the learner agreed
+  // to the model's download.
+  transcript: Schema.optionalKey(ClipTranscript),
 })
 export type ClipEntry = typeof ClipEntry.Type
+
+// Each line's text, in the order of the clip's lines: the text it was
+// given, else its words in the transcript, else none.
+export const clipLineTexts = (
+  clip: ClipEntry,
+): ReadonlyArray<string | undefined> => {
+  const matched =
+    clip.transcript === undefined
+      ? []
+      : lineTextsOf(clip.transcript.pieces, clip.lines)
+  return clip.lines.map((line, k) => line.text ?? matched[k])
+}
 
 // Every audio file a clip keeps: an upload's one, or its pack's.
 export const clipAudioFiles = (clip: ClipEntry): ReadonlyArray<ClipAudio> =>
@@ -349,10 +396,19 @@ export const clipNativeIds = (clip: ClipEntry): ReadonlyArray<string> =>
     line.native._tag === 'Tracked' ? [line.native.nativeId] : [],
   )
 
+// What the learner said to the text model's download: yes to one of
+// the two, or not now; none until they were asked.
+export const TextChoice = Schema.Union([
+  Schema.TaggedStruct('Agreed', { model: TextModelId }),
+  Schema.TaggedStruct('Declined', {}),
+])
+export type TextChoice = typeof TextChoice.Type
+
 export const Settings = Schema.Struct({
   // Whether each take's audio is kept with it; off until the learner
   // turns it on.
   keepTakeAudio: Schema.Boolean,
+  textChoice: Schema.optionalKey(TextChoice),
 })
 export type Settings = typeof Settings.Type
 

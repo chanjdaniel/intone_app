@@ -4,6 +4,7 @@ import { Calendar, Command, File } from 'foldkit'
 import { reasonOf } from '../../engine/reason'
 import { clipHasAudio } from '../../services/history-records'
 import { HistoryError, HistoryStore } from '../../services/history-store'
+import { textModelCacheName } from '../../workers/text-model-cache'
 import { isoDayOf } from '../history/format'
 import { Message } from '../message'
 import { forgetTakeAudio } from '../take/takeAudio'
@@ -111,7 +112,11 @@ export const SetKeepTakeAudio = Command.define('SetKeepTakeAudio', {
   messages: [Message.SucceededSetKeepTakeAudio, Message.FailedSetKeepTakeAudio],
   execute: ({ keep }) =>
     HistoryStore.use(history =>
-      history.setSettings({ keepTakeAudio: keep }),
+      history.settings.pipe(
+        Effect.flatMap(settings =>
+          history.setSettings({ ...settings, keepTakeAudio: keep }),
+        ),
+      ),
     ).pipe(
       Effect.as(Message.SucceededSetKeepTakeAudio({ keep })),
       Effect.provide(HistoryStore.layer),
@@ -228,6 +233,14 @@ export const ClearAllData = Command.define('ClearAllData', {
   messages: [Message.SucceededClearAllData, Message.FailedClearAllData],
   execute: HistoryStore.use(history => history.clear).pipe(
     Effect.andThen(forgetTakeAudio),
+    // The text model's files go too: everything Intone keeps here.
+    Effect.andThen(
+      Effect.promise(() =>
+        'caches' in globalThis
+          ? caches.delete(textModelCacheName).catch(() => false)
+          : Promise.resolve(false),
+      ),
+    ),
     Effect.as(Message.SucceededClearAllData()),
     Effect.provide(HistoryStore.layer),
     Effect.catch(error =>

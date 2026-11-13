@@ -30,6 +30,7 @@ export const sampleClip = (count: number, hasAudio = true): LevelClip => ({
   })),
   maybeUndo: Option.none(),
   origin: 'Upload',
+  maybeWrittenBy: Option.none(),
 })
 
 // What a line of an upload has none of.

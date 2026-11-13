@@ -35,6 +35,7 @@
   "dependencies": {
     "@effect/platform-browser": "4.1.2",
     "@foldkit/ui": "0.170.0",
+    "@huggingface/transformers": "4.3.2",
     "effect": "4.1.2",
     "fflate": "0.8.3",
     "foldkit": "0.170.0",

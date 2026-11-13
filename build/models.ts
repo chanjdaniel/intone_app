@@ -294,6 +294,10 @@ export const models = (options: ModelsOptions = {}): Plugin => {
       return [
         `export const modelDirectories = Object.freeze(${JSON.stringify(modelDirectories(listed, base))})`,
         `export const modelUrls = Object.freeze(${JSON.stringify(modelUrls(listed, base))})`,
+        `export const modelsRoot = ${JSON.stringify(`${base}models/`)}`,
+        `export const modelVersions = Object.freeze(${JSON.stringify(Object.fromEntries(listed.map(model => [model.id, modelVersion(model)])))})`,
+        `export const modelFiles = Object.freeze(${JSON.stringify(Object.fromEntries(listed.map(model => [model.id, model.files.map(file => ({ path: file.path, bytes: file.bytes }))])))})`,
+        `export const modelCredits = Object.freeze(${JSON.stringify(listed.map(({ id, name, licence, source }) => ({ id, name, licence, source })))})`,
         '',
       ].join('\n')
     },

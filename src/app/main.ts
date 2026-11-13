@@ -47,6 +47,17 @@ import { DrawCurvePair } from './take/curvePair'
 import { subscriptions as takeSubscriptions } from './take/subscriptions'
 import { Take } from './take/take'
 import * as TakeUpdate from './take/update'
+import { LoadTextChoice } from './text/commands'
+import { textSubscriptions } from './text/subscriptions'
+import {
+  LineTextEdit,
+  TextChoiceState,
+  TextJob,
+  TextOffer,
+  textDialogId,
+} from './text/text'
+import type { TextEvents } from './text/textView'
+import * as TextUpdate from './text/update'
 import * as PackUpdate from './upload/packUpdate'
 import { uploadSubscriptions } from './upload/subscriptions'
 import * as UploadUpdate from './upload/update'
@@ -62,6 +73,7 @@ export const subscriptions = Subscription.aggregate(
   takeSubscriptions,
   uploadSubscriptions,
   levelSubscriptions,
+  textSubscriptions,
 )
 
 // INIT
@@ -86,6 +98,12 @@ export const initialModel = (route: AppRoute): Model => ({
   level: LevelPage.NotLoaded(),
   deleteClipDialog: Dialog.init({ id: deleteClipDialogId }),
   maybeHomeNotice: Option.none(),
+  textChoice: TextChoiceState.NotRead(),
+  textOffer: TextOffer.Closed(),
+  textDialog: Dialog.init({ id: textDialogId }),
+  textJob: TextJob.Idle(),
+  textJobsStarted: 0,
+  lineText: LineTextEdit.Idle(),
 })
 
 type UpdateReturn = Update.Return<Model, Message, AppResourceServices>
@@ -121,7 +139,11 @@ export const init: Runtime.RoutingApplicationInit<
   AppResourceServices
 > = (url: Url) => {
   const model = initialModel(urlToAppRoute(url))
-  return opened(model, model.route)
+  const opening = opened(model, model.route)
+  return {
+    model: opening.model,
+    commands: [...(opening.commands ?? []), LoadTextChoice()],
+  }
 }
 
 // COMMAND
@@ -189,7 +211,11 @@ export const update = (model: Model, message: Message) =>
         route._tag === 'Home'
           ? leftUpload
           : modifyFields(leftUpload, { maybeHomeNotice: () => Option.none() })
-      const left = leftLine ? TakeUpdate.leftLine(leftHome) : leftHome
+      const leftLevel =
+        model.route._tag === 'Level' && !staysOnList(model.route, route)
+          ? TextUpdate.leftLevel(leftHome)
+          : leftHome
+      const left = leftLine ? TakeUpdate.leftLine(leftLevel) : leftLevel
       const arrived = staysOnList(model.route, route)
         ? findOf(model.route) === findOf(route)
           ? { model: left }
@@ -249,7 +275,14 @@ export const update = (model: Model, message: Message) =>
     ProgressedUpload: ({ jobNumber, step }) =>
       UploadUpdate.progressedUpload(model, jobNumber, step),
     SucceededUpload: ({ jobNumber, clipId }) =>
-      UploadUpdate.succeededUpload(model, jobNumber, clipId),
+      model.upload.job._tag === 'Working' &&
+      model.upload.job.jobNumber === jobNumber
+        ? Update.combine(model, [
+            stepModel =>
+              UploadUpdate.succeededUpload(stepModel, jobNumber, clipId),
+            stepModel => TextUpdate.offeredUploadText(stepModel, clipId),
+          ])
+        : UploadUpdate.succeededUpload(model, jobNumber, clipId),
     FailedUpload: ({ jobNumber, reason }) =>
       UploadUpdate.failedUpload(model, jobNumber, reason),
     ClickedCancelUpload: () => UploadUpdate.clickedCancelUpload(model),
@@ -434,10 +467,59 @@ export const update = (model: Model, message: Message) =>
       SettingsUpdate.foldClearDialog(model, message),
     ClickedKeepEverything: () => SettingsUpdate.clickedKeepEverything(model),
     SubmittedClearAll: () => SettingsUpdate.submittedClearAll(model),
-    SucceededClearAllData: () => SettingsUpdate.succeededClearAllData(model),
+    SucceededClearAllData: () =>
+      SettingsUpdate.succeededClearAllData(TextUpdate.clearedAllData(model)),
     FailedClearAllData: ({ reason }) =>
       SettingsUpdate.failedClearAllData(model, reason),
+    SucceededLoadTextChoice: ({ maybeChoice }) =>
+      TextUpdate.succeededLoadTextChoice(model, maybeChoice),
+    FailedLoadTextChoice: () => TextUpdate.failedLoadTextChoice(model),
+    ClickedWriteOutText: () => TextUpdate.clickedWriteOutText(model),
+    ClickedChooseTextModel: () => TextUpdate.clickedChooseTextModel(model),
+    GotTextDialogMessage: ({ message }) =>
+      TextUpdate.foldTextDialog(model, message),
+    SelectedTextModel: ({ model: textModel }) =>
+      TextUpdate.selectedTextModel(model, textModel),
+    SubmittedTextDownload: () => TextUpdate.submittedTextDownload(model),
+    ClickedNotNowText: () => TextUpdate.clickedNotNowText(model),
+    SucceededSetTextChoice: () => ({ model }),
+    // The answer is still taken this time; the next visit asks again.
+    FailedSetTextChoice: () => ({ model }),
+    ProgressedTextJob: ({ jobNumber, step }) =>
+      TextUpdate.progressedTextJob(model, jobNumber, step),
+    SucceededTextJob: ({ jobNumber, maybeClip }) =>
+      TextUpdate.succeededTextJob(model, jobNumber, maybeClip),
+    FailedTextJob: ({ jobNumber, reason }) =>
+      TextUpdate.failedTextJob(model, jobNumber, reason),
+    ClickedStopTextJob: () => TextUpdate.clickedStopTextJob(model),
+    ClickedEditLineText: ({ lineId }) =>
+      TextUpdate.clickedEditLineText(model, lineId),
+    ClickedPasteText: () => TextUpdate.clickedPasteText(model),
+    ChangedTextDraft: ({ text }) => TextUpdate.changedTextDraft(model, text),
+    SubmittedLineText: () => TextUpdate.submittedLineText(model),
+    ClickedCancelLineText: () => TextUpdate.clickedCancelLineText(model),
+    SucceededSetLineTexts: ({ clipId, clip }) =>
+      TextUpdate.succeededSetLineTexts(model, clipId, clip),
+    FailedSetLineTexts: ({ clipId, reason }) =>
+      TextUpdate.failedSetLineTexts(model, clipId, reason),
+    CompletedFocusLineText: () => ({ model }),
   })
+
+// The text's controls, the same on every screen that has them.
+const textEvents: TextEvents<Message> = {
+  writeOut: Message.ClickedWriteOutText(),
+  paste: Message.ClickedPasteText(),
+  editLine: lineId => Message.ClickedEditLineText({ lineId }),
+  changeDraft: text => Message.ChangedTextDraft({ text }),
+  submitText: Message.SubmittedLineText(),
+  cancelText: Message.ClickedCancelLineText(),
+  stop: Message.ClickedStopTextJob(),
+  chooseModel: Message.ClickedChooseTextModel(),
+  dialog: message => Message.GotTextDialogMessage({ message }),
+  selectModel: textModel => Message.SelectedTextModel({ model: textModel }),
+  agree: Message.SubmittedTextDownload(),
+  notNow: Message.ClickedNotNowText(),
+}
 
 // VIEW
 
@@ -678,6 +760,12 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
         maybeFind,
         model.deleteClipDialog,
         {
+          job: model.textJob,
+          edit: model.lineText,
+          offer: model.textOffer,
+          dialog: model.textDialog,
+        },
+        {
           changedWords: words => Message.ChangedFindLevelLines({ words }),
           showMore: Message.ClickedShowMoreLevelLines(),
           editLine: lineId => Message.ClickedEditLevelLine({ lineId }),
@@ -700,6 +788,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
           keepClip: Message.ClickedKeepClip(),
           confirmDelete: Message.SubmittedDeleteClip(),
           dialog: message => Message.GotDeleteClipDialogMessage({ message }),
+          text: textEvents,
         },
         h,
       ),
@@ -728,6 +817,12 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
         model.maybeSettingsNotice,
         model.clearDialog,
         {
+          choice: model.textChoice,
+          job: model.textJob,
+          offer: model.textOffer,
+          dialog: model.textDialog,
+        },
+        {
           keepTakeAudio: keep => Message.ToggledKeepTakeAudio({ keep }),
           askToPersist: Message.ClickedAskToPersistStorage(),
           includeAudio: include => Message.ToggledBackupAudio({ include }),
@@ -737,6 +832,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
           keepEverything: Message.ClickedKeepEverything(),
           confirmClearAll: Message.SubmittedClearAll(),
           dialog: message => Message.GotClearDialogMessage({ message }),
+          text: textEvents,
         },
         h,
       ),

@@ -9,6 +9,13 @@ import { sourceLink } from '../line/sourceLink'
 import { listFrame } from '../listFrame'
 import { pageFrame } from '../pageFrame'
 import { homeRouter, lineRouter } from '../route'
+import type { LineTextEdit, TextJob, TextOffer } from '../text/text'
+import {
+  type TextEvents,
+  levelTextSection,
+  lineTextControls,
+  textDialogView,
+} from '../text/textView'
 import { levelRowAttribute } from './commands'
 import {
   type DeleteState,
@@ -45,6 +52,16 @@ export type LevelEvents<ViewMessage> = Readonly<{
   keepClip: ViewMessage
   confirmDelete: ViewMessage
   dialog: (message: Dialog.Message) => ViewMessage
+  text: TextEvents<ViewMessage>
+}>
+
+// What a level shows of its clip's text: the one job, the text being
+// typed or pasted, and the consent dialog.
+export type LevelText = Readonly<{
+  job: TextJob
+  edit: LineTextEdit
+  offer: TextOffer
+  dialog: Dialog.Model
 }>
 
 const secondaryButton = 'button-secondary disabled:text-muted'
@@ -156,6 +173,7 @@ export const levelRow = <ViewMessage>(
   stars: StarCount | null,
   index: number,
   editLine: ((lineId: string) => ViewMessage) | null,
+  below: ReadonlyArray<Html>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
   const maybeWhy = unplayable(line, hasAudio)
@@ -226,6 +244,7 @@ export const levelRow = <ViewMessage>(
           h.div([h.Class('flex px-4')], [sourceLink(source, h)]),
         ],
       }),
+      ...below,
     ],
   )
 }
@@ -243,6 +262,8 @@ export const levelLineList = <ViewMessage>(
   events: Pick<LevelEvents<ViewMessage>, 'changedWords' | 'showMore'> &
     Partial<Pick<LevelEvents<ViewMessage>, 'editLine'>>,
   h: HtmlBuilder<ViewMessage>,
+  // What goes under a line's row: an upload's line has its own text.
+  belowRow: (line: LevelLine) => ReadonlyArray<Html> = () => [],
 ): Html => {
   const found = levelLinesFound(clip.lines, words)
   return listFrame(
@@ -272,6 +293,7 @@ export const levelLineList = <ViewMessage>(
           clip.hasAudio && clip.origin === 'Upload'
             ? (events.editLine ?? null)
             : null,
+          belowRow(line),
           h,
         ),
     },
@@ -419,10 +441,12 @@ const readyBody = <ViewMessage>(
   page: Extract<LevelPage, { _tag: 'Ready' }>,
   words: string,
   dialog: Dialog.Model,
+  text: LevelText,
   events: LevelEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): ReadonlyArray<Html> => {
   const { clip } = page
+  const isUpload = clip.origin === 'Upload'
   return [
     h.header(
       [h.Class('flex flex-col gap-2')],
@@ -449,8 +473,11 @@ const readyBody = <ViewMessage>(
             h,
           ),
         ]),
-    ...(clip.hasAudio && clip.origin === 'Upload'
+    ...(clip.hasAudio && isUpload
       ? [lineEditorView(clip, page.editor, events.editor, h)]
+      : []),
+    ...(isUpload
+      ? [levelTextSection(clip, text.job, text.edit, events.text, h)]
       : []),
     h.section(
       [h.AriaLabelledBy('level-lines-heading'), h.Class('flex flex-col gap-4')],
@@ -459,7 +486,17 @@ const readyBody = <ViewMessage>(
           [h.Id('level-lines-heading'), h.Class('text-xl font-bold')],
           ['Lines to copy'],
         ),
-        levelLineList(clip, page.stars, words, page.shownRows, events, h),
+        levelLineList(
+          clip,
+          page.stars,
+          words,
+          page.shownRows,
+          events,
+          h,
+          isUpload
+            ? line => lineTextControls(line, text.edit, events.text, h)
+            : () => [],
+        ),
       ],
     ),
     ...(clip.origin === 'Bundled'
@@ -561,6 +598,7 @@ export const levelView = <ViewMessage>(
   page: LevelPage,
   maybeFind: Option.Option<string>,
   dialog: Dialog.Model,
+  text: LevelText,
   events: LevelEvents<ViewMessage>,
   h: HtmlBuilder<ViewMessage>,
 ): Html => {
@@ -586,9 +624,20 @@ export const levelView = <ViewMessage>(
         ready,
         Option.getOrElse(maybeFind, () => ''),
         dialog,
+        text,
         events,
         h,
       ),
   })
-  return pageFrame('Lines', [backLink(h), ...body], h)
+  // The consent dialog is on the page whatever its state, since an
+  // upload's level offers the download as it opens.
+  return pageFrame(
+    'Lines',
+    [
+      backLink(h),
+      ...body,
+      textDialogView(text.dialog, text.offer, events.text, h),
+    ],
+    h,
+  )
 }

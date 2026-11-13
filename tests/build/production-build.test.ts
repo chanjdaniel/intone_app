@@ -20,6 +20,8 @@ import {
 import {
   onnxRuntimeFiles,
   onnxRuntimeVersion,
+  textRuntimeFiles,
+  textRuntimeVersion,
 } from '../../build/onnx-runtime.ts'
 import { chunksOf, productionBuild } from '../support/build'
 import { root } from '../support/run'
@@ -34,6 +36,9 @@ const files = (): ReadonlyArray<string> =>
   readdirSync(dist, { recursive: true, withFileTypes: true })
     .filter(entry => entry.isFile())
     .map(entry => relative(dist, join(entry.parentPath, entry.name)))
+
+// A string in minified code, whichever quotes it chose.
+const quoted = (value: string): RegExp => new RegExp(`["'\`]${value}["'\`]`)
 
 // A key and its string value in minified code, whichever quotes it chose.
 const quotedPair = (key: string, value: string): RegExp =>
@@ -146,7 +151,7 @@ describe('the production build', () => {
     )
   })
 
-  test("ships ONNX Runtime's WebAssembly from its own origin, unchanged", async () => {
+  test("ships both ONNX Runtime builds' WebAssembly from its own origin, unchanged", async () => {
     const version = await onnxRuntimeVersion()
     for (const file of onnxRuntimeFiles) {
       expect(readFileSync(join(dist, 'ort', version, file))).toStrictEqual(
@@ -155,9 +160,29 @@ describe('the production build', () => {
         ),
       )
     }
-    expect(files().filter(file => file.endsWith('.wasm'))).toStrictEqual([
-      join('ort', version, 'ort-wasm-simd-threaded.wasm'),
-    ])
+    // Transformers.js pins its own ONNX Runtime, installed beside it.
+    const textVersion = await textRuntimeVersion()
+    for (const file of textRuntimeFiles) {
+      expect(readFileSync(join(dist, 'ort', textVersion, file))).toStrictEqual(
+        readFileSync(
+          join(
+            root,
+            'node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist',
+            file,
+          ),
+        ),
+      )
+    }
+    expect(
+      files()
+        .filter(file => file.endsWith('.wasm'))
+        .sort(),
+    ).toStrictEqual(
+      [
+        join('ort', version, 'ort-wasm-simd-threaded.wasm'),
+        join('ort', textVersion, 'ort-wasm-simd-threaded.asyncify.wasm'),
+      ].sort(),
+    )
   })
 
   test('maps each model id to its directory, each one-file model to its file, and ONNX Runtime to its directory, all same-origin', async () => {
@@ -165,9 +190,9 @@ describe('the production build', () => {
     writeFileSync(
       entry,
       [
-        "import { modelDirectories, modelUrls } from 'virtual:intone/models'",
-        "import { onnxRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'",
-        'export const read = [modelDirectories, modelUrls, onnxRuntimeWasmPaths]',
+        "import { modelCredits, modelDirectories, modelFiles, modelUrls, modelVersions, modelsRoot } from 'virtual:intone/models'",
+        "import { onnxRuntimeWasmPaths, textRuntimeWasmPaths } from 'virtual:intone/onnx-runtime'",
+        'export const read = [modelCredits, modelDirectories, modelFiles, modelUrls, modelVersions, modelsRoot, onnxRuntimeWasmPaths, textRuntimeWasmPaths]',
         '',
       ].join('\n'),
     )
@@ -197,6 +222,20 @@ describe('the production build', () => {
         }
       }
       expect(code).toContain(`${base}ort/${version}/`)
+      expect(code).toContain(`${base}ort/${await textRuntimeVersion()}/`)
+      expect(code).toMatch(quoted(`${base}models/`))
+      for (const model of models) {
+        expect(code).toMatch(quotedPair(model.id, modelVersion(model)))
+        for (const file of model.files) {
+          expect(code).toMatch(
+            new RegExp(
+              `${quotedPair('path', file.path).source},\\s*["'\`]?bytes["'\`]?:\\s*${file.bytes}\\b`,
+            ),
+          )
+        }
+        expect(code).toMatch(quotedPair('licence', model.licence))
+        expect(code).toMatch(quotedPair('source', model.source))
+      }
     }
   })
 
