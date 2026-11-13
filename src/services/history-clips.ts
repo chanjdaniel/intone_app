@@ -644,7 +644,16 @@ export const makeClipOperations = (
         ...before,
         lines: before.lines.map(line => {
           const text = given.get(line.id)
-          return text === undefined ? line : { ...line, text }
+          if (text === undefined) {
+            return line
+          }
+          // A text cleared to nothing is no text of the learner's own, so
+          // the line shows the transcript's words again.
+          if (text.trim() === '') {
+            const { text: _cleared, ...rest } = line
+            return rest
+          }
+          return { ...line, text }
         }),
       }),
       'The text was not kept.',

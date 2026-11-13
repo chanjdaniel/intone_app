@@ -10,11 +10,13 @@ This file says how it works, what was chosen and why, and what it measured; `doc
   The spec's wording said 73 MB, the two model files alone; the dialog adds the five small files Transformers.js loads with them, read from `models.json`, so the size it names is what downloads.
 - "Not now" is kept with the settings, so a later upload does not ask again; `/settings` ("Text for your lines") offers the download again, and the level's "Write out the text" asks again.
   Declining leaves practice as it was: `tests/e2e/uploads.spec.ts` says "Not now" and then practises a line of the clip to a score, with no request for a model file.
-- Agreeing keeps the model chosen, and later uploads are written out at once with it.
+- Agreeing keeps the model chosen, and later uploads are written out at once with it while its files are on the device.
+  When they are not, as after a backup restored on another device or a store the browser evicted, the dialog asks again, with the size, before anything downloads.
   The job runs in the background, on any screen: the level shows its step ("Downloading the text model: 30 of 75 MB.", "Writing out the text: part 2 of 4.") with a bar and a Stop, and says "It runs in the background: practise any line meanwhile."
 - Each line of the level is then named by its text, with its number and times under it, and its practice screen is titled by it.
   Under each row, "Edit the text" (or "Add its text") opens a field for that line; "Paste your own text" takes one line of text for each line of the clip, in order, and refuses a count that differs, saying both counts.
   The learner's own text stands over the transcript's, and survives writing the clip out again.
+  A line's text cleared to nothing is no text of the learner's own: the line shows the transcript's words again.
 - `/credits` names every model the app ships, with its licence and source, read from `models.json` through the build, and the bundled recording's voice; `NOTICES.md` lists the same models with their files.
 
 ## The models

@@ -730,6 +730,26 @@ describe('the text of a clip’s lines', () => {
       }),
   )
 
+  it.effect(
+    'a line’s own text cleared to nothing gives the line back the transcript’s words',
+    () =>
+      Effect.gen(function* () {
+        const { run } = harness()
+        const clip = yield* run(store => store.addClip(newClip()))
+        yield* run(store => store.setClipTranscript(clip.id, transcript))
+        yield* run(store =>
+          store.setLineTexts(clip.id, [{ lineId: '2', text: '大好き' }]),
+        )
+        const cleared = Option.getOrThrow(
+          yield* run(store =>
+            store.setLineTexts(clip.id, [{ lineId: '2', text: '' }]),
+          ),
+        )
+        expect(cleared.lines[1]).not.toHaveProperty('text')
+        expect(clipLineTexts(cleared)).toStrictEqual(['雨が', '好き', '晴れも'])
+      }),
+  )
+
   it.effect('gives no line text before anything is written out or given', () =>
     Effect.gen(function* () {
       const { run } = harness()
