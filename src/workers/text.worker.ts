@@ -1,14 +1,18 @@
 import { Effect, Exit, Fiber, Match, Schema, Scope, Stream } from 'effect'
 
 import type { TextPiece } from '../engine/text/pieces'
-import { ensureTextModel } from './text-model-cache'
+import { type TextModelFetchError, ensureTextModel } from './text-model-cache'
 import {
   type FromText,
   type TextModel,
   ToText,
   transferables,
 } from './text-protocol'
-import { configureTransformers, openWhisper } from './whisper-session'
+import {
+  type WhisperError,
+  configureTransformers,
+  openWhisper,
+} from './whisper-session'
 import { incoming, poster } from './worker-host'
 
 // The text Worker: a clip's audio in, the pieces of its text out, each
@@ -94,7 +98,7 @@ const program = Effect.gen(function* () {
       }),
     )
 
-  const run = (job: Effect.Effect<void, Readonly<{ reason: string }>>) =>
+  const run = (job: Effect.Effect<void, TextModelFetchError | WhisperError>) =>
     Effect.gen(function* () {
       if (state.job !== null) {
         return yield* post({

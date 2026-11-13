@@ -16,6 +16,11 @@ import { incoming, poster } from './worker-host'
 
 const post = poster<FromReadings>(() => [])
 
+class DictionaryFetchError extends Schema.TaggedError<
+  DictionaryFetchError,
+  { readonly brand: unique symbol }
+>()('DictionaryFetchError', { reason: Schema.String }) {}
+
 const fetchedZip = (url: string, bytes: number) =>
   Effect.tryPromise({
     try: async signal => {
@@ -32,9 +37,9 @@ const fetchedZip = (url: string, bytes: number) =>
       return zip
     },
     catch: error =>
-      ({
+      new DictionaryFetchError({
         reason: `The reading dictionary could not be downloaded: ${reasonOf(error)}`,
-      }) as const,
+      }),
   })
 
 const program = Effect.gen(function* () {
