@@ -1,4 +1,4 @@
-import { Effect, Exit, Fiber } from 'effect'
+import { Deferred, Effect, Exit, Fiber } from 'effect'
 import { TestClock } from 'effect/testing'
 
 import { describe, expect, it } from '@effect/vitest'
@@ -26,10 +26,7 @@ const fakeElement = (
   const dispatch = (type: string): void => {
     target.dispatchEvent(new Event(type))
   }
-  let markPlayed = (): void => undefined
-  const played = new Promise<void>(resolve => {
-    markPlayed = resolve
-  })
+  const played = Deferred.makeUnsafe<void>()
   const element: MediaElement = {
     src: '',
     currentTime: 0,
@@ -40,7 +37,7 @@ const fakeElement = (
       did.push(
         `play ${element.src}${element.currentTime > 0 ? ` from ${element.currentTime}` : ''} at ${element.playbackRate}, pitch ${element.preservesPitch ? 'kept' : 'moved'}`,
       )
-      markPlayed()
+      Deferred.doneUnsafe(played, Effect.void)
       return play(dispatch)
     },
     pause: () => {
@@ -59,7 +56,7 @@ const fakeElement = (
     element,
     did,
     dispatch,
-    played: Effect.promise(() => played),
+    played: Deferred.await(played),
   }
 }
 
@@ -159,12 +156,15 @@ describe('playing the line', () => {
     'hears where it has got to when the sound starts the moment it is played',
     () =>
       Effect.gen(function* () {
-        // A browser fires `playing` from a task of its own, which may run
-        // before the Effect scheduler's next one: here it comes in the
-        // microtask after `play()`, before any task.
-        let started = Promise.resolve()
+        // `playing` comes in the microtask after `play()`, before any
+        // task: under Effect's default scheduler, a fork that waits for
+        // the scheduler's next task would miss it.
+        const sentPlaying = Deferred.makeUnsafe<void>()
         const fake = fakeElement(dispatch => {
-          started = Promise.resolve().then(() => dispatch('playing'))
+          void Promise.resolve().then(() => {
+            dispatch('playing')
+            Deferred.doneUnsafe(sentPlaying, Effect.void)
+          })
           return Promise.resolve()
         })
         const heard: Array<number> = []
@@ -175,7 +175,7 @@ describe('playing the line', () => {
           seconds => heard.push(seconds),
         ).pipe(Effect.forkChild)
         yield* fake.played
-        yield* Effect.promise(() => started)
+        yield* Deferred.await(sentPlaying)
         expect(heard).toStrictEqual([2])
         yield* Fiber.interrupt(fiber)
       }),
@@ -183,8 +183,8 @@ describe('playing the line', () => {
 
   it.effect('ends a stretch early if the line itself ends first', () =>
     Effect.gen(function* () {
-      // The line starts and ends the moment it is played, as one shorter
-      // than the stretch's start may.
+      // The line starts and ends the moment it is played, as a line
+      // shorter than the stretch's start does.
       const fake = fakeElement(dispatch => {
         void Promise.resolve().then(() => {
           dispatch('playing')
@@ -228,10 +228,7 @@ describe('playing the line', () => {
 const fakeContext = () => {
   const did: Array<string> = []
   const source = new EventTarget()
-  let markStarted = (): void => undefined
-  const started = new Promise<void>(resolve => {
-    markStarted = resolve
-  })
+  const started = Deferred.makeUnsafe<void>()
   const context: PlaybackContext = Object.assign(Object.create(null), {
     destination: {},
     createBuffer: (channels: number, length: number, sampleRate: number) => {
@@ -248,7 +245,7 @@ const fakeContext = () => {
         disconnect: () => did.push('disconnect'),
         start: () => {
           did.push('start')
-          markStarted()
+          Deferred.doneUnsafe(started, Effect.void)
         },
       }),
     resume: () => Promise.resolve(),
@@ -260,7 +257,7 @@ const fakeContext = () => {
   return {
     context,
     did,
-    started: Effect.promise(() => started),
+    started: Deferred.await(started),
     end: () => source.dispatchEvent(new Event('ended')),
   }
 }

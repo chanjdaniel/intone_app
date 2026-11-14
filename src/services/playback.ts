@@ -77,9 +77,8 @@ export const playMedia =
         )
         const ended = heard('ended')
         if (heardAt !== undefined) {
-          // Started at once, so its listener is in place before `play()`:
-          // a fork the scheduler starts later may miss a `playing` the
-          // browser fires first.
+          // Started at once, so its listener is in place before `play()`
+          // (see the NOTE below).
           yield* heard('playing').pipe(
             Effect.andThen(
               Effect.repeat(
@@ -123,10 +122,14 @@ export const playMedia =
               ),
             )
         })
-        // NOTE: a media element fires its events from queued tasks, never
-        // during `play()` itself, but one may run before the scheduler's
-        // next, so every listener is attached in this same run, before
-        // `play()`: `raceFirst` starts its sides at once, in order.
+        // NOTE: every listener is attached in this one run, before
+        // `play()`: `raceFirst` starts its sides at once, in order, and so
+        // does the playhead's fork above. A media element fires its events
+        // from queued tasks. Foldkit's scheduler starts a deferred fork in
+        // a microtask, ahead of any of them, but Effect's default
+        // scheduler, which tests run on, starts it in a later task, which
+        // a media task may beat. Started at once, no listener waits on
+        // whichever scheduler runs this.
         yield* Effect.raceFirst(Effect.raceFirst(done, failed), play)
       }),
     )
