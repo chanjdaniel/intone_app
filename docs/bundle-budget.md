@@ -125,4 +125,5 @@ Remove the scratch directory by the path `mktemp` printed when done.
 
 A raise is justified in its pull request by two builds made the same way: the base and the head, each in a clean tree as above.
 Give both sizes and the delta, say which chunk grew, and, when it is not obvious, which change grew it, found by swapping one changed file at a time into the base build.
-Today the file and the script know only the entry chunk; as the Workers, the worklet, ONNX Runtime and Transformers.js land, each as a lazily loaded chunk of its own, each gets its own line in both.
+A line under "Every other chunk" is raised the same way, by that chunk's size in the two builds.
+A new chunk comes with a line of its own in the same pull request, set as that section says: the check fails on a chunk with no line.
