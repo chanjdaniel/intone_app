@@ -32,6 +32,7 @@ What a test on the fake microphone must allow for:
 - **The comparison.** `tests/support/audio-compare.ts` places the source in the capture by its onset, then follows it in 20 ms segments, so a slip shows as a slip rather than as noise over everything after it, then finds each slip's splice to the sample, then finds each stretch's fractional delay and fits one gain over them all.
   Each segment is searched for within 15 ms of where the last one sat, or within 60 ms when nothing there matches it to 37 dB: a loaded machine's slips add up to four buffers at once, and past one of those a steady vowel can match itself a pitch period off.
   The splice is the sample either side of which the capture follows the source at the two lags with the least difference, searched over the segments around the slip, since a segment the splice falls in can still place at the lag on one side.
+  Two slips closer together than a segment can place the voice between them look like one slip of both, so the search also tries two splices with the source at a lag between them, and keeps them when they leave less than half the difference one splice leaves: a 16 kHz file's take on a loaded machine came out as one 20 ms slip at 19.9 dB, as two buffers with 11 ms of voice between them do without that search.
   The SNR is the signal against everything else over the stretches between slips, each stretch giving up 2 ms either side of a splice, past the resampler's reach (CI's run 43223000556 measured 50 dB with a splice counted, where the rest of the take was at 89).
   `tests/support/pitch.ts` is a plain YIN estimate, never the app's tracker; it reads a steady pitch within a cent, and up to about 16 cents on the voices' fastest glides.
 
@@ -67,7 +68,7 @@ A test that reads the curve by time without allowing for the slip finds the rest
 ### When does the voice start?
 
 The voice's first sample lands 32.1 ms after the capture's first sample in most takes: the probe opens the microphone after the worklet's first batch, 20 ms in, and the file's audio reaches the worklet about 12 ms after that.
-Others start at 32.7 ms, or later: 42.1, 42.7, 43.4, 52.1 and 53.4 ms were seen, mostly whole 10 ms device buffers after one of the two, and under load up to 82.7 ms, not always on a buffer, since a busy main thread opens the microphone later.
+Others start at 32.7 ms, or later: 42.1, 42.7, 43.4, 52.1 and 53.4 ms were seen, mostly whole 10 ms device buffers after one of the two, and under load up to 82.7 ms at a load average of 32 and 128.7 ms at 48, not always on a buffer, since a busy main thread opens the microphone later.
 The file starts playing at `getUserMedia`, not when a source is connected, so the worklet must be running first: before the probe waited for the first batch, a take on a busy machine lost 158 ms of the file's start.
 
 So each take's start is checked against what the probe controls, the order: the file's first sample must land after the worklet's first batch, 20 ms in, which it does only if the microphone was asked for after the worklet ran.

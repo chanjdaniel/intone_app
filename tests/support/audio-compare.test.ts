@@ -141,6 +141,17 @@ describe('compareWithSource', () => {
         [1.0235, 960],
       ],
     ],
+    // Closer than a segment can place the voice between them.
+    ...[0.005, 0.011, 0.02, 0.03].map(
+      gap =>
+        [
+          `one buffer, then another ${gap * 1000} ms on`,
+          [
+            [1.3314, 480],
+            [1.3314 + gap, 480],
+          ],
+        ] as const,
+    ),
   ] as const)(
     'finds each slip where it falls, and fits around it: %s',
     (_, splices) => {
@@ -163,6 +174,36 @@ describe('compareWithSource', () => {
       expect(result?.snrDb).toBeGreaterThan(100)
     },
   )
+
+  test('tells two close slips from one through the device resampler, at a 16 kHz source', () => {
+    // As a loaded machine's run of the 16 kHz format test fell: one 20 ms
+    // slip found at 1.3514 s, 19.9 dB, a gain of 0.98999. The device plays
+    // its file through 44.1 kHz, where its 10 ms buffers slip, so the
+    // silence reaches the capture through a second resampler. Two buffers
+    // there with 11 ms of voice between them came out, before the
+    // comparison tried two splices, as one 20 ms slip at the same place, at
+    // 22.7 dB and a gain of 0.995.
+    const sourceRate = 16000
+    const deviceRate = 44100
+    const { samples: voice } = synthesiseVoice('middle', sourceRate)
+    const atDevice = Float32Array.from(
+      sourceAsCaptured(voice, sourceRate, deviceRate, 0.0227, 3 * deviceRate),
+    )
+    const first = Math.round(1.311 * deviceRate)
+    const second = first + Math.round(0.011 * deviceRate)
+    const onDevice = slipped(slipped(atDevice, second, 441), first, 441)
+    const capture = Float32Array.from(
+      sourceAsCaptured(onDevice, deviceRate, rate, 0.02, captureLength),
+    )
+    const result = compareWithSource(capture, rate, voice, sourceRate)
+    expect(result?.delaySeconds).toBeCloseTo(0.0427, 6)
+    expect(result?.slips.map(slip => slip.bySeconds)).toHaveLength(2)
+    for (const slip of result?.slips ?? []) {
+      expect(slip.bySeconds).toBeCloseTo(0.01, 4)
+    }
+    expect(result?.snrDb).toBeGreaterThan(100)
+    expect(result?.gain).toBeCloseTo(1, 5)
+  })
 
   test('reports 10 ms lost as a slip back', () => {
     const at = Math.round(0.8137 * rate)
