@@ -118,6 +118,52 @@ describe('compareWithSource', () => {
     expect(result?.snrDb).toBeGreaterThan(100)
   })
 
+  // Slips as the fake microphone made them on a loaded machine (load
+  // average 22 to 32), each where it fell in a capture whose voice the
+  // comparison placed 32.7 ms late, as seconds into the capture and samples
+  // of silence: one buffer, several at once, and two close together.
+  test.each([
+    ['one buffer', [[0.7128, 480]]],
+    ['two buffers', [[1.0235, 960]]],
+    ['three buffers', [[1.3735, 1440]]],
+    ['four buffers', [[1.4041, 1920]]],
+    [
+      'one buffer, then another 40 ms on',
+      [
+        [0.6935, 480],
+        [0.7335, 480],
+      ],
+    ],
+    [
+      'one buffer, then two',
+      [
+        [0.8535, 480],
+        [1.0235, 960],
+      ],
+    ],
+  ] as const)(
+    'finds each slip where it falls, and fits around it: %s',
+    (_, splices) => {
+      const delay = Math.round(0.0327 * rate)
+      const capture = splices.reduceRight(
+        (slippedSoFar, [atSeconds, count]) =>
+          slipped(slippedSoFar, Math.round(atSeconds * rate), count),
+        delayed(source, delay, captureLength),
+      )
+      const result = compareWithSource(capture, rate, source, rate)
+      expect(result?.delaySeconds).toBeCloseTo(delay / rate, 7)
+      expect(result?.slips).toHaveLength(splices.length)
+      splices.forEach(([atSeconds, count], index) => {
+        const slip = result?.slips[index]
+        expect(slip?.bySeconds).toBeCloseTo(count / rate, 6)
+        // Found within a segment of where the source resumes.
+        expect(slip?.atSeconds).toBeGreaterThanOrEqual(atSeconds)
+        expect(slip?.atSeconds).toBeLessThan(atSeconds + count / rate + 0.02)
+      })
+      expect(result?.snrDb).toBeGreaterThan(100)
+    },
+  )
+
   test('reports 10 ms lost as a slip back', () => {
     const at = Math.round(0.8137 * rate)
     const capture = slipped(delayed(source, 960, captureLength), at, -480)

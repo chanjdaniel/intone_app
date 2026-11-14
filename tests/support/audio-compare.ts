@@ -186,17 +186,25 @@ const fractionalDelay = (
 }
 
 // The source is followed through the capture in 20 ms segments, each
-// matched to the source within 15 ms of where the last one sat, so a
-// capture path that drops or adds a stretch of samples shows as a slip
-// rather than as noise over everything after it.
+// matched to the source within 15 ms of where the last one sat, or, when
+// none matches there for sure, within 60 ms, so a capture path that drops or adds a
+// stretch of samples shows as a slip rather than as noise over everything
+// after it. A loaded machine's fake microphone adds up to four 10 ms
+// buffers at once (docs/fake-microphone.md).
 const segmentSeconds = 0.02
 const followSeconds = 0.015
+const widerFollowSeconds = 0.06
 // A segment this far below the capture's peak power is too quiet to place.
 const quietSegment = 1e-4
 // A segment that matches the source no better than this at any lag, about
 // 17 dB of signal over the rest, holds a slip or audio the path changed:
 // it places nothing.
 const matched = 0.99
+// A segment that matches this well, 40 dB of signal over the rest, sits at
+// the source's own lag; one that matches less well near the last lag may
+// be the voice a pitch period off, which a steady vowel matches to 0.99,
+// with the source itself a slip of more than 15 ms away.
+const sure = 0.9999
 
 export type Slip = Readonly<{
   // Where in the capture the source was first found at its new delay.
@@ -244,22 +252,23 @@ const followSource = (
   startLag: number,
 ): Followed => {
   const segment = Math.round(segmentSeconds * captureRate)
-  const reach = Math.round(followSeconds * captureRate)
   const quiet = quietSegment * peakOf(capture) ** 2 * segment
   const bestLags: Array<number> = []
   const placed: Array<Placed> = []
-  let lag = startLag
-  for (let from = 0; from + segment <= capture.length; from += segment) {
-    let energy = 0
-    for (let i = from; i < from + segment; i++) {
-      energy += (capture[i] ?? 0) ** 2
-    }
-    if (energy < quiet) {
-      continue
-    }
+  // The lag within `reach` of `around` that matches the segment best.
+  const search = (
+    from: number,
+    energy: number,
+    around: number,
+    reach: number,
+  ) => {
     let best = Number.NEGATIVE_INFINITY
-    let bestLag = lag
-    for (let candidate = lag - reach; candidate <= lag + reach; candidate++) {
+    let bestLag = around
+    for (
+      let candidate = around - reach;
+      candidate <= around + reach;
+      candidate++
+    ) {
       let cross = 0
       let power = 0
       for (let i = from; i < from + segment; i++) {
@@ -273,10 +282,36 @@ const followSource = (
         bestLag = candidate
       }
     }
-    bestLags.push(bestLag)
-    if (best >= matched) {
-      placed.push({ from, lag: bestLag })
-      lag = bestLag
+    return { best, bestLag }
+  }
+  let lag = startLag
+  for (let from = 0; from + segment <= capture.length; from += segment) {
+    let energy = 0
+    for (let i = from; i < from + segment; i++) {
+      energy += (capture[i] ?? 0) ** 2
+    }
+    if (energy < quiet) {
+      continue
+    }
+    const near = search(
+      from,
+      energy,
+      lag,
+      Math.round(followSeconds * captureRate),
+    )
+    const found =
+      near.best >= sure
+        ? near
+        : search(
+            from,
+            energy,
+            lag,
+            Math.round(widerFollowSeconds * captureRate),
+          )
+    bestLags.push(found.bestLag)
+    if (found.best >= matched) {
+      placed.push({ from, lag: found.bestLag })
+      lag = found.bestLag
     }
   }
 
@@ -289,31 +324,84 @@ const followSource = (
       stretches[stretches.length - 1] = { ...last, to: from + segment }
       return
     }
-    // A new lag holds only if the next segment placed agrees: one segment
-    // alone at its own lag straddles a slip, half at each side.
+    // A new lag holds only if the next segment placed agrees, or has moved
+    // on from the last lag too, as it has between two slips close together:
+    // one segment alone at its own lag between two at the last one's
+    // straddles a slip, half at each side.
     const next = placed[index + 1]
     if (
       last === undefined ||
-      (next !== undefined && near(next.lag, segmentLag))
+      (next !== undefined &&
+        (near(next.lag, segmentLag) || !near(next.lag, last.lag)))
     ) {
       stretches.push({ lag: segmentLag, from, to: from + segment })
     }
   })
-  return { stretches, bestLags, placed: placed.length }
+  return {
+    stretches: spliced(capture, expected, stretches, segment),
+    bestLags,
+    placed: placed.length,
+  }
 }
 
-// A segment that straddles a slip can still place at the lag on one side,
-// so the slip itself lies anywhere in the last segment before the new lag
-// or the first segment at it. Each stretch gives up that segment at a
-// slip, and the resampler's reach either side of the splice, so the delay
-// and the fit read only audio clear of it.
+// Each pair of stretches met at the splice: the one sample at which the
+// capture stops following the source at the earlier lag, and, past the
+// samples a slip added, follows it at the later one. It lies in the last
+// segment placed at the earlier lag, the first placed at the later one, or
+// anywhere between them, so it is found by the least difference from the
+// source either side of it over all of that.
+const spliced = (
+  capture: Float32Array,
+  expected: Float64Array,
+  stretches: ReadonlyArray<Stretch>,
+  segment: number,
+): ReadonlyArray<Stretch> => {
+  const result = stretches.map(stretch => ({ ...stretch }))
+  for (let index = 1; index < result.length; index++) {
+    const before = result[index - 1]
+    const after = result[index]
+    if (before === undefined || after === undefined) {
+      continue
+    }
+    const added = Math.max(0, after.lag - before.lag)
+    const from = Math.max(before.from, before.to - segment)
+    const to = Math.min(after.to, after.from + segment)
+    // Running sums of the squared difference at each lag from `from`.
+    const differences = (lag: number) => {
+      const sums = new Float64Array(to - from + 1)
+      for (let i = from; i < to; i++) {
+        const difference = (capture[i] ?? 0) - (expected[i - lag] ?? 0)
+        sums[i - from + 1] = (sums[i - from] ?? 0) + difference * difference
+      }
+      return sums
+    }
+    const earlier = differences(before.lag)
+    const later = differences(after.lag)
+    let best = Number.POSITIVE_INFINITY
+    let splice = from
+    for (let at = from; at + added <= to; at++) {
+      const left = (earlier[at - from] ?? 0) - (earlier[0] ?? 0)
+      const right = (later[to - from] ?? 0) - (later[at + added - from] ?? 0)
+      if (left + right < best) {
+        best = left + right
+        splice = at
+      }
+    }
+    result[index - 1] = { ...before, to: splice }
+    result[index] = { ...after, from: splice + added }
+  }
+  return result
+}
+
+// Each stretch gives up the resampler's reach either side of a splice, so
+// the delay and the fit read only audio clear of it.
 const slipGuardSeconds = 0.002
 
 const clearOfSlips = (
   stretches: ReadonlyArray<Stretch>,
   captureRate: number,
 ): ReadonlyArray<Stretch> => {
-  const cut = Math.round((segmentSeconds + slipGuardSeconds) * captureRate)
+  const cut = Math.round(slipGuardSeconds * captureRate)
   return stretches.map((stretch, index) => {
     const from = index > 0 ? stretch.from + cut : stretch.from
     const to = index < stretches.length - 1 ? stretch.to - cut : stretch.to
