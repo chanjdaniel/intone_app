@@ -33,10 +33,11 @@ describe('home screen lines', () => {
       { update, view },
       given(on(AppRoute.Home({ maybeFind: Option.none() }))),
       expect(role('heading', { name: 'Lines to copy', level: 2 })).toExist(),
-      expect(role('link', { name: 'Copy 雨が好き, あめがすき' })).toHaveAttr(
-        'href',
-        '/line/ame-ga-suki/1',
-      ),
+      expect(
+        role('link', {
+          name: 'Copy 雨が好き, あめがすき, Voice: VOICEVOX:冥鳴ひまり, made with VOICEVOX.',
+        }),
+      ).toHaveAttr('href', '/line/ame-ga-suki/1'),
     )
   })
 
