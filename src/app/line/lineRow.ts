@@ -16,7 +16,7 @@ export const lineRow = <ViewMessage>(
   h.a(
     [
       h.Href(linePath(line)),
-      // NOTE: the name holds every line the row shows, the credit's too, so
+      // NOTE: the name holds all the text the row shows, the credit too, so
       // speaking what is on screen reaches it (WCAG 2.5.3, Label in Name).
       h.AriaLabel(`Copy ${line.text}, ${line.reading}, ${line.credit}`),
       h.Class(
