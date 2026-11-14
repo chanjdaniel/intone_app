@@ -24,7 +24,18 @@ Restart `npm start` after pulling a change to practise on it.
 `npm run build` writes the production build to `dist/`, and `npm run preview` serves that build.
 [`docs/deploying.md`](docs/deploying.md) says how both servers serve the app and its models, and what the deploy, shelved for now, will take.
 
-The checks CI runs:
+`npm run dev` also serves a component library at http://localhost:5173/dev, which production builds leave out.
+
+The app is built with [Foldkit](https://foldkit.dev) on [Effect](https://effect.website).
+[`AGENTS.md`](AGENTS.md) says how the code is laid out and checked, [`CONTEXT.md`](CONTEXT.md) what its words mean, and [`docs/upgrading.md`](docs/upgrading.md) how Foldkit and Effect are upgraded.
+`repos/foldkit/` holds Foldkit's own repository at the installed release, vendored as reading only.
+
+## Checks
+
+CI runs every check on each pull request and each push to `dev`, in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)'s two jobs, which run side by side.
+Run each job's checks locally with the commands below.
+
+`check`, the static checks and the unit, Story and Scene tests in Vitest:
 
 ```bash
 npm run format:check
@@ -33,20 +44,20 @@ npm run typecheck
 npm run check:effect
 npm run generate:check
 npm test
+```
+
+`e2e`, the production build, its bundle budget and the Playwright tests:
+
+```bash
 npm run build
 npm run check:budget
 npx playwright install chromium
-npm run test:e2e
+npx playwright test
 ```
 
-`npm test` runs the unit, Story and Scene tests in Vitest.
-`npm run test:e2e` builds the app and runs the Playwright tests against that build in headless Chromium, with Chromium's fake microphone playing the synthetic voices in `fixtures/synthetic/` ([`docs/fake-microphone.md`](docs/fake-microphone.md)).
-The first build fetches the model files listed in `models.json`, about 314 MB, most of it the two Whisper models, into `.cache/models/`, so it needs the network.
-`npm run dev` also serves a component library at http://localhost:5173/dev, which production builds leave out.
-
-The app is built with [Foldkit](https://foldkit.dev) on [Effect](https://effect.website).
-[`AGENTS.md`](AGENTS.md) says how the code is laid out and checked, [`CONTEXT.md`](CONTEXT.md) what its words mean, and [`docs/upgrading.md`](docs/upgrading.md) how Foldkit and Effect are upgraded.
-`repos/foldkit/` holds Foldkit's own repository at the installed release, vendored as reading only.
+`npx playwright test` runs the Playwright tests in headless Chromium against whatever build is in `dist/`, so run `npm run build` first after any change; `npm run test:e2e` does both.
+The tests use Chromium's fake microphone, playing the synthetic voices in `fixtures/synthetic/` ([`docs/fake-microphone.md`](docs/fake-microphone.md)).
+The first `npm run build` or `npm test` fetches the model files listed in `models.json`, about 314 MB, most of it the two Whisper models, into `.cache/models/`, so it needs the network.
 
 ## The 2023 iOS project
 
