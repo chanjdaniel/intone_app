@@ -55,8 +55,9 @@ npx playwright install chromium
 npx playwright test
 ```
 
-`npx playwright test` runs the Playwright tests against the build in `dist/` in headless Chromium, with Chromium's fake microphone playing the synthetic voices in `fixtures/synthetic/` ([`docs/fake-microphone.md`](docs/fake-microphone.md)); `npm run test:e2e` builds first, then runs them.
-The first build or test run fetches the model files listed in `models.json`, about 314 MB, most of it the two Whisper models, into `.cache/models/`, so it needs the network.
+`npx playwright test` runs the Playwright tests in headless Chromium against whatever build is in `dist/`, so run `npm run build` first after any change; `npm run test:e2e` does both.
+The tests use Chromium's fake microphone, playing the synthetic voices in `fixtures/synthetic/` ([`docs/fake-microphone.md`](docs/fake-microphone.md)).
+The first `npm run build` or `npm test` fetches the model files listed in `models.json`, about 314 MB, most of it the two Whisper models, into `.cache/models/`, so it needs the network.
 
 ## The 2023 iOS project
 
