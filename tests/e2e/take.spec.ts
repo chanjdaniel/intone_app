@@ -39,10 +39,11 @@ const voiceStartSeconds = 0.5
 // drawn. Read off the live canvas at 4 s, as now, two runs each at a load
 // average of 3: a median of 0.017 to 0.055, a 95th percentile of 0.05 to
 // 0.11 and a largest of 0.14, every frame drawn.
-// The allowance above that is for a slip of the fake microphone, which
-// moves the rest of a take 10 ms (up to 0.4 semitones on the fastest
-// glide), or a few times that under load, and loses the frames near it
-// (docs/fake-microphone.md).
+// The allowance above that is for one slip of one 10 ms buffer of the
+// fake microphone, which moves the rest of a take 10 ms (up to 0.4
+// semitones on the fastest glide) and loses the frames near it
+// (docs/fake-microphone.md); a slip of several buffers, which comes only
+// under load, moves it as many times as far, and was not measured here.
 const tolerance = { medianSemitones: 0.1, p95Semitones: 0.45, coverage: 0.95 }
 
 const wavOf = (name: VoiceName): string => join(fixtures, `${name}.wav`)

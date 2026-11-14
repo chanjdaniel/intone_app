@@ -28,7 +28,7 @@ import {
   StarterPack,
   StarterPackFiles,
 } from '../../src/services/starter-records.ts'
-import { buildTimeout, chunksOf, productionBuild } from '../support/build'
+import { chunksOf, productionBuild } from '../support/build'
 import { root } from '../support/run'
 import { audioExtensions } from '../support/starter-pack.ts'
 
@@ -59,7 +59,7 @@ beforeAll(async () => {
   dist = mkdtempSync(join(tmpdir(), 'production-build-'))
   planted = mkdtempSync(join(tmpdir(), 'production-build-entry-'))
   await productionBuild({ build: { outDir: dist, emptyOutDir: true } })
-}, buildTimeout)
+})
 
 afterAll(() => {
   rmSync(dist, { recursive: true, force: true })

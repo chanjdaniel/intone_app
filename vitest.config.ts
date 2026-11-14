@@ -40,6 +40,11 @@ export default defineConfig({
           ],
           environment: 'node',
           testTimeout: 180_000,
+          // A hook gets as long as a test, not Vitest's 10 s: several run a
+          // production build, the same work every run and slower only by
+          // the machine's load (4.4 s in `npm test` at a load average of
+          // 22, and past 10 s at 45).
+          hookTimeout: 180_000,
           // They run the project's own lint, whose first step may patch the
           // oxlint binary in node_modules, and its build: one file at a time.
           fileParallelism: false,
