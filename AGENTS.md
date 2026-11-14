@@ -293,7 +293,8 @@ node_modules/.bin/effect-tsgo tsc -p tsconfig.json
 npm test
 ```
 
-`npm run check:effect` runs the `effect-tsgo` check on both tsconfigs, `npm run format:check` the formatter, `npm run generate:check` that the generated files are current, `npm run check:budget` the bundle budget against `dist/`, and `npm run test:e2e` builds and runs Playwright against the production build; CI runs all of them.
+`npm run check:effect` runs the `effect-tsgo` check on both tsconfigs, `npm run format:check` the formatter, `npm run generate:check` that the generated files are current, `npm run check:budget` the bundle budget against `dist/`, and `npm run test:e2e` builds and runs Playwright against the production build.
+CI runs all of them in `.github/workflows/ci.yml`'s two jobs, side by side: `check`, the static checks and `npm test`, and `e2e`, which builds once and runs the bundle budget and Playwright against that build.
 The build and its tests fetch the listed model files once, about 314 MB, most of it the two Whisper models (`npm run fetch:models` fetches them alone, as CI does first), so they need the network until `.cache/models/` holds them.
 `npm test` has two Vitest projects: `src` (the app's unit, Story and Scene tests, beside their code, in happy-dom) and `tooling` (`tests/lint`, `tests/build`, `tests/scripts`, `tests/support`, `tests/tracker`, `tests/score`, `tests/readings`, in Node, type checked by `tsconfig.node.json`).
 
