@@ -25,10 +25,12 @@
 # template, and commits. Run again at the same release, it changes nothing.
 #
 # scripts/vendor-foldkit.pin names the release tag and the commit it named
-# when it was vendored. The script records it on a release's first run and,
-# at the same release, fails before changing anything when the tag names
-# another commit now, so an upstream re-tag cannot vendor another tree
-# unseen.
+# when it was vendored. The script records it on a release's first run,
+# printing the pin it replaces, and, at the same release, fails before
+# changing anything when the tag names another commit now, so an upstream
+# re-tag cannot vendor another tree unseen. A pin that is not one line of a
+# release tag and a full commit fails too, so a damaged pin cannot pass for
+# another release's.
 #
 # FOLDKIT_REPOSITORY overrides where Foldkit is fetched from; the script's
 # test points it at a local stand-in.
@@ -61,9 +63,18 @@ git fetch --quiet --no-tags "$repository" "refs/tags/$tag"
 release="$(git rev-parse 'FETCH_HEAD^{commit}')"
 
 if [ -f "$pin" ]; then
-  read -r pinned_tag pinned_commit <"$pin"
+  # A last line with no newline still reads; read returns 1 at its end.
+  pinned_tag='' pinned_commit='' pinned_rest=''
+  read -r pinned_tag pinned_commit pinned_rest <"$pin" || true
+  [[ "$pinned_tag" =~ ^foldkit@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$ ]] &&
+    [[ "$pinned_commit" =~ ^[0-9a-f]{40}$ ]] && [ -z "$pinned_rest" ] ||
+    fail "$pin is not one line of a release tag and its full commit; restore it from git before vendoring"
   if [ "$pinned_tag" = "$tag" ] && [ "$pinned_commit" != "$release" ]; then
     fail "$tag names $release now, not $pinned_commit as $pin records; check the release upstream before changing the pin"
+  fi
+  if [ "$pinned_tag" != "$tag" ]; then
+    printf 'vendor-foldkit: pinning %s at %s, replacing %s at %s\n' \
+      "$tag" "$release" "$pinned_tag" "$pinned_commit"
   fi
 fi
 

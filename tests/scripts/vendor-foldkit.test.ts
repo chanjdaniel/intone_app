@@ -194,6 +194,52 @@ describe('vendoring Foldkit', () => {
     )
   })
 
+  // A pin edited by hand: empty, missing its commit or with a short one, or
+  // naming a tag that is no release's.
+  for (const [name, pin] of [
+    ['empty', () => ''],
+    ['with no commit', () => 'foldkit@1.0.0\n'],
+    ['with a short commit', () => 'foldkit@1.0.0 abc123\n'],
+    ['naming no release', () => `foldkit@1.0.00 ${tagCommit('1.0.0')}\n`],
+  ] as const) {
+    test(`refuses a pin ${name}, naming it`, () => {
+      expect(vendor().status).toBe(0)
+      write(project, { [pinFile]: pin() })
+      git(project, 'commit', '--quiet', '--all', '--message', 'chore: pin')
+      const head = git(project, 'rev-parse', 'HEAD')
+
+      const result = vendor()
+
+      expect(result.status).not.toBe(0)
+      expect(result.output).toContain(pinFile)
+      expect(git(project, 'rev-parse', 'HEAD')).toBe(head)
+      expect(git(project, 'status', '--porcelain')).toBe('')
+    })
+  }
+
+  test('reads a pin with no final newline', () => {
+    expect(vendor().status).toBe(0)
+    write(project, { [pinFile]: `foldkit@1.0.0 ${tagCommit('1.0.0')}` })
+    git(project, 'commit', '--quiet', '--all', '--message', 'chore: pin')
+
+    const result = vendor()
+
+    expect(result.status, result.output).toBe(0)
+  })
+
+  test('says so when it re-pins from another release', () => {
+    expect(vendor().status).toBe(0)
+    release('1.1.0', { [template]: 'Foldkit conventions, 1.1.0.\n' })
+    install('1.1.0')
+
+    const result = vendor()
+
+    expect(result.status, result.output).toBe(0)
+    expect(result.output).toContain(
+      `foldkit@1.1.0 at ${tagCommit('1.1.0')}, replacing foldkit@1.0.0 at ${tagCommit('1.0.0')}`,
+    )
+  })
+
   test('re-pins to a newer release, keeping the dropped files out', () => {
     expect(vendor().status).toBe(0)
     release('1.1.0', {
