@@ -79,9 +79,10 @@ The middle voice twenty times, each in a fresh browser, at a load average of 13 
 | Gain                     | 1.000019 | 1.000019 | 8e-9   | 1e-4                                      |
 | Signal over the rest, dB | 89.43    | 89.46    | 0.03   | 3, and each above 70                      |
 | Pitch median, cents      | 1.51     | 1.67     | 0.16   | 0.5                                       |
-| Pitch largest, cents     | 16.22    | 16.22    | 0      | 2                                         |
+| Pitch largest, cents     | 16.22    | 16.22    | 0      | 2, over the runs with no slip             |
 
 One run of the twenty slipped; a second run of the twenty, at the same load, had no slip and stayed within the spreads above.
+The largest pitch error is spread over the runs with no slip only, as each run's own bound is: a slip inside voice puts a frame's pitch tens of cents out (see the slips above), so one slipped run among twenty would fail a spread that every run passes alone.
 Over the whole spec, 6 of its 34 microphone takes slipped in the first run and 3 in the second, and 2 takes in 10 slipped at a load average of 17.
 Every slip seen added 10 ms; none lost any.
 

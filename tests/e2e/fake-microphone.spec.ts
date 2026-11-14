@@ -343,6 +343,11 @@ test.describe('the fake microphone', () => {
       )
     }
     const found = runs.filter(run => run !== null)
+    // A frame a slip falls in reads the wrong pitch, so the largest pitch
+    // error is spread over the runs with no slip only, as expectFaithful
+    // bounds it: a slip in voice puts one run tens of cents out, and slips
+    // come more often under load.
+    const unslipped = found.filter(run => run.slips.length === 0)
     const spread = (values: ReadonlyArray<number>) => ({
       min: Math.min(...values),
       max: Math.max(...values),
@@ -354,15 +359,20 @@ test.describe('the fake microphone', () => {
       gain: spread(found.map(run => run.gain)),
       snrDb: spread(found.map(run => run.snrDb)),
       pitchMedianCents: spread(found.map(run => run.pitch.medianCents)),
-      pitchMaxCents: spread(found.map(run => run.pitch.maxCents)),
+      pitchMaxCents: spread(unslipped.map(run => run.pitch.maxCents)),
     }
-    await report(testInfo, 'microphone-twenty-runs.json', { variation, runs })
+    await report(testInfo, 'microphone-twenty-runs.json', {
+      variation,
+      unslipped: unslipped.length,
+      runs,
+    })
     for (const run of runs) {
       expectFaithful(run)
     }
     expect(variation.gain.range).toBeLessThan(1e-4)
     expect(variation.snrDb.range).toBeLessThan(3)
     expect(variation.pitchMedianCents.range).toBeLessThan(0.5)
+    expect(unslipped.length).toBeGreaterThan(0)
     expect(variation.pitchMaxCents.range).toBeLessThan(2)
     // The start moves in whole 10 ms device buffers.
     expect(variation.delaySeconds.range).toBeLessThan(0.035)
