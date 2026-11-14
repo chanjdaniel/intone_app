@@ -247,9 +247,9 @@ const expectFaithful = (measurement: Measurement | null): void => {
   // it only once the worklet has posted its first batch, as the app should,
   // so the file's first sample lands after that batch: asked for before the
   // worklet ran, the file loses its start and lands before it. How long
-  // getUserMedia and the connection then take is the machine's, and the
-  // file's first stretch of silence plays before the source is connected
-  // and is lost (docs/fake-microphone.md, "When does the voice start?").
+  // getUserMedia and the connection then take is the machine's, and what
+  // of the file's leading silence plays before the source is connected is
+  // lost (docs/fake-microphone.md, "When does the voice start?").
   expect(measurement.delaySeconds).toBeGreaterThan(
     measurement.firstBatchSeconds,
   )
@@ -410,9 +410,10 @@ test.describe('the fake microphone', () => {
     expect(unslipped.length).toBeGreaterThan(0)
     expect(variation.pitchMaxCents.range).toBeLessThan(2)
     // The start's spread is reported, not bounded: expectFaithful holds each
-    // start to the probe's order, and the rest of it is how long the main
-    // thread took to connect the source, which grows with the machine's
-    // load (docs/fake-microphone.md, "Twenty runs").
+    // start to the probe's order, and the rest of it is the device's buffers
+    // and how long the main thread took to open and connect the microphone,
+    // which grows with the machine's load (docs/fake-microphone.md, "When
+    // does the voice start?").
   })
 
   test('alters the audio when the browser processing is left on', async ({

@@ -187,10 +187,10 @@ const fractionalDelay = (
 
 // The source is followed through the capture in 20 ms segments, each
 // matched to the source within 15 ms of where the last one sat, or, when
-// none matches there for sure, within 60 ms, so a capture path that drops or adds a
-// stretch of samples shows as a slip rather than as noise over everything
-// after it. A loaded machine's fake microphone adds up to four 10 ms
-// buffers at once (docs/fake-microphone.md).
+// none matches there for sure, within 60 ms, so a capture path that drops
+// or adds a stretch of samples shows as a slip rather than as noise over
+// everything after it. A loaded machine's fake microphone adds up to four
+// 10 ms buffers at once (docs/fake-microphone.md).
 const segmentSeconds = 0.02
 const followSeconds = 0.015
 const widerFollowSeconds = 0.06
@@ -200,7 +200,7 @@ const quietSegment = 1e-4
 // 17 dB of signal over the rest, holds a slip or audio the path changed:
 // it places nothing.
 const matched = 0.99
-// A segment that matches this well, 40 dB of signal over the rest, sits at
+// A segment that matches this well, 37 dB of signal over the rest, sits at
 // the source's own lag; one that matches less well near the last lag may
 // be the voice a pitch period off, which a steady vowel matches to 0.99,
 // with the source itself a slip of more than 15 ms away.
@@ -344,7 +344,7 @@ const followSource = (
   }
 }
 
-// Each pair of stretches met at the splice: the one sample at which the
+// Each pair of stretches meets at its splice: the one sample at which the
 // capture stops following the source at the earlier lag, and, past the
 // samples a slip added, follows it at the later one. It lies in the last
 // segment placed at the earlier lag, the first placed at the later one, or
@@ -393,8 +393,8 @@ const spliced = (
   return result
 }
 
-// Each stretch gives up the resampler's reach either side of a splice, so
-// the delay and the fit read only audio clear of it.
+// Each stretch gives up 2 ms either side of a splice, past the resampler's
+// reach, so the delay and the fit read only audio clear of it.
 const slipGuardSeconds = 0.002
 
 const clearOfSlips = (

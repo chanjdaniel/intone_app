@@ -14,7 +14,7 @@ A test that needs the exact samples drives the capture worklet with the buffer s
 
 What a test on the fake microphone must allow for:
 
-- the file starts after the worklet's first batch, 32 ms into the capture in most takes, and later by the device's 10 ms buffers and by however long a busy main thread takes to open and connect the microphone: up to 82.7 ms at a load average of 32, 129 ms at 48;
+- the file starts after the worklet's first batch, 32 ms into the capture in most takes, and later by the device's 10 ms buffers and by however long a busy main thread takes to open and connect the microphone: up to 82.7 ms at a load average of 32, 128.7 ms at 48;
 - each slip adds a whole number of 10 ms device buffers of silence, to within 0.05 ms (one in most slips seen, up to four under load), and most takes have none;
 - only the frames whose span reaches what a slip added read no pitch (up to four of the estimate's frames for a 10 or 20 ms slip), and the curve after it is that much late;
 - 16-bit quantisation and the resampler, about 89 dB below the voice.
@@ -30,9 +30,9 @@ What a test on the fake microphone must allow for:
   It makes the `AudioContext` at 48 kHz and the capture node, waits for the first batch, then opens the microphone with echo cancellation, noise suppression and auto gain off and connects it, as the app should.
 - **The browser.** Playwright's Chromium, one launch per take, with `--use-fake-device-for-media-stream`, `--use-fake-ui-for-media-stream`, `--use-file-for-fake-audio-capture=<wav>%noloop` and `--autoplay-policy=no-user-gesture-required`.
 - **The comparison.** `tests/support/audio-compare.ts` places the source in the capture by its onset, then follows it in 20 ms segments, so a slip shows as a slip rather than as noise over everything after it, then finds each slip's splice to the sample, then finds each stretch's fractional delay and fits one gain over them all.
-  Each segment is searched for within 15 ms of where the last one sat, or within 60 ms when nothing there matches it to 40 dB: a loaded machine's slips add up to four buffers at once, and past one of those a steady vowel can match itself a pitch period off.
+  Each segment is searched for within 15 ms of where the last one sat, or within 60 ms when nothing there matches it to 37 dB: a loaded machine's slips add up to four buffers at once, and past one of those a steady vowel can match itself a pitch period off.
   The splice is the sample either side of which the capture follows the source at the two lags with the least difference, searched over the segments around the slip, since a segment the splice falls in can still place at the lag on one side.
-  The SNR is the signal against everything else over the stretches between slips, each stretch giving up 2 ms, the resampler's reach, either side of a splice (CI's run 43223000556 measured 50 dB with a splice counted, where the rest of the take was at 89).
+  The SNR is the signal against everything else over the stretches between slips, each stretch giving up 2 ms either side of a splice, past the resampler's reach (CI's run 43223000556 measured 50 dB with a splice counted, where the rest of the take was at 89).
   `tests/support/pitch.ts` is a plain YIN estimate, never the app's tracker; it reads a steady pitch within a cent, and up to about 16 cents on the voices' fastest glides.
 
 ## Results
@@ -61,17 +61,17 @@ Over the 75 voiced frames at least 50 ms from a voicing edge, in cents:
 | High   | 1.4, 8.5, 16.5, 0                                          | 1.4, 8.5, 16.4, 0 |
 
 What is left is the estimate's own error on a glide; the fake microphone adds less than 0.1 cent.
-A slip inside voice loses the frames whose span reaches it: the estimate reads 41.7 ms around each frame, two 25 ms windows up to its longest lag apart, so a slip of 10 or 20 ms can reach four frames 16 ms apart, and 3 is the most seen (`framesReaching` in `tests/support/pitch.ts`).
+A slip inside voice loses the frames whose span reaches it: the estimate reads 41.7 ms around each frame, two 25 ms windows up to its longest lag apart, so a slip of 10 or 20 ms can reach four frames 16 ms apart; 3 is the most seen, for a 20 ms slip (`framesReaching` in `tests/support/pitch.ts`).
 A test that reads the curve by time without allowing for the slip finds the rest of it 10 ms late, up to about 40 cents off on the fastest glides.
 
 ### When does the voice start?
 
 The voice's first sample lands 32.1 ms after the capture's first sample in most takes: the probe opens the microphone after the worklet's first batch, 20 ms in, and the file's audio reaches the worklet about 12 ms after that.
-Others start at 32.7 ms, or one to three 10 ms device buffers later than either, or between them: 42.1, 42.7, 43.4, 52.1, 53.4 and 64.1 ms were seen.
+Others start at 32.7 ms, or later: 42.1, 42.7, 43.4, 52.1 and 53.4 ms were seen, mostly whole 10 ms device buffers after one of the two, and under load up to 82.7 ms, not always on a buffer, since a busy main thread opens the microphone later.
 The file starts playing at `getUserMedia`, not when a source is connected, so the worklet must be running first: before the probe waited for the first batch, a take on a busy machine lost 158 ms of the file's start.
 
 So each take's start is checked against what the probe controls, the order: the file's first sample must land after the worklet's first batch, 20 ms in, which it does only if the microphone was asked for after the worklet ran.
-What the file plays before the source is connected is lost too: on a loaded machine, where the worklet had posted two batches by the time the probe connected the source, the file's first sample still landed 31.4 and 33.4 ms in, 6.6 and 8.6 ms before the connection, so the file's leading silence lost that much.
+What the file plays before the source is connected is lost too: on a loaded machine, a probe that counted the batches posted by the time it connected the source found two in a few takes, and the file's first sample still landed 31.4 and 33.4 ms in, before the connection, so at least 6.6 and 8.6 ms of the file's leading silence was lost.
 Where past the first batch the start lands is the device's and the machine's, and so is the spread of the starts over twenty runs: up to 43 ms at load averages of 22 to 26 and 51 ms at 32, against the 35 ms it was once held to, and 98 ms at 48, so it is reported, not bounded.
 
 ### Twenty runs
