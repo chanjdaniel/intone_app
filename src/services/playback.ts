@@ -77,6 +77,9 @@ export const playMedia =
         )
         const ended = heard('ended')
         if (heardAt !== undefined) {
+          // Started at once, so its listener is in place before `play()`:
+          // a fork the scheduler starts later may miss a `playing` the
+          // browser fires first.
           yield* heard('playing').pipe(
             Effect.andThen(
               Effect.repeat(
@@ -84,7 +87,7 @@ export const playMedia =
                 Schedule.spaced(heardEvery),
               ),
             ),
-            Effect.forkScoped,
+            Effect.forkScoped({ startImmediately: true }),
           )
         }
         const done =
@@ -121,7 +124,9 @@ export const playMedia =
             )
         })
         // NOTE: a media element fires its events from queued tasks, never
-        // during `play()` itself, so every listener is in place first.
+        // during `play()` itself, but one may run before the scheduler's
+        // next, so every listener is attached in this same run, before
+        // `play()`: `raceFirst` starts its sides at once, in order.
         yield* Effect.raceFirst(Effect.raceFirst(done, failed), play)
       }),
     )
