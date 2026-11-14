@@ -34,6 +34,7 @@ What a test on the fake microphone must allow for:
   The splice is the sample either side of which the capture follows the source at the two lags with the least difference, searched over the segments around the slip, since a segment the splice falls in can still place at the lag on one side.
   Two slips closer together than a segment can place the voice between them look like one slip of both, so the search also tries two splices with the source at a lag between them, and keeps them when they leave less than half the difference one splice leaves: a 16 kHz file's take on a loaded machine came out as one 20 ms slip at 19.9 dB, as two buffers with 11 ms of voice between them do without that search.
   The SNR is the signal against everything else over the stretches between slips, each stretch giving up 2 ms either side of a splice, past the resampler's reach (CI's run 43223000556 measured 50 dB with a splice counted, where the rest of the take was at 89).
+  A stretch those 2 ms leave shorter than 1 ms, as they leave the voice between two slips less than 5 ms apart, is too short to place to a fraction of a sample, so it is left out of the fit and sits from the stretch before it by its whole lag.
   `tests/support/pitch.ts` is a plain YIN estimate, never the app's tracker; it reads a steady pitch within a cent, and up to about 16 cents on the voices' fastest glides.
 
 ## Results

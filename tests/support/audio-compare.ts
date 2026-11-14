@@ -485,6 +485,13 @@ const joins = (
 // reach, so the delay and the fit read only audio clear of it.
 const slipGuardSeconds = 0.002
 
+// A stretch the guards leave shorter than this, as they leave the voice
+// between two slips less than 5 ms apart, is too short to place to a
+// fraction of a sample: with none of it left, the delay search runs to its
+// edge, 1.5 samples off, and with one sample it is 1.2 samples off and
+// pulls the fit to 69 dB. 1 ms, what a 5 ms gap leaves, places exactly.
+const shortestPlacedSeconds = 0.001
+
 const clearOfSlips = (
   stretches: ReadonlyArray<Stretch>,
   captureRate: number,
@@ -540,17 +547,30 @@ export const compareWithSource = (
             to: Math.min(capture.length, wholeLag + expectedLength),
           },
         ]
-  const fitted = clearOfSlips(stretches, captureRate)
-  const delays = fitted.map(range =>
-    fractionalDelay(
-      capture,
-      captureRate,
-      source,
-      sourceRate,
-      range.lag / captureRate,
-      range,
-    ),
+  const guarded = clearOfSlips(stretches, captureRate)
+  // A stretch too short to place is left out of the fit, and sits from the
+  // one before it by its whole lag.
+  const shortest = Math.round(shortestPlacedSeconds * captureRate)
+  const fitted = guarded.map(range =>
+    range.to - range.from < shortest ? { ...range, to: range.from } : range,
   )
+  const delays: Array<number> = []
+  fitted.forEach((range, index) => {
+    const before = fitted[index - 1]
+    const delayBefore = delays[index - 1]
+    delays.push(
+      range.to > range.from || before === undefined || delayBefore === undefined
+        ? fractionalDelay(
+            capture,
+            captureRate,
+            source,
+            sourceRate,
+            range.lag / captureRate,
+            range,
+          )
+        : delayBefore + (range.lag - before.lag) / captureRate,
+    )
+  })
   const expected = new Float64Array(capture.length)
   fitted.forEach((range, index) => {
     expected.set(

@@ -142,10 +142,12 @@ describe('compareWithSource', () => {
       ],
     ],
     // Closer than a segment can place the voice between them.
-    ...[0.005, 0.011, 0.02, 0.03].map(
+    // Closer than 4 ms, the guards leave none of it: 4.02 ms leaves one
+    // sample.
+    ...[0.002, 0.003, 0.00402, 0.005, 0.011, 0.02, 0.03].map(
       gap =>
         [
-          `one buffer, then another ${gap * 1000} ms on`,
+          `one buffer, then another ${+(gap * 1000).toFixed(2)} ms on`,
           [
             [1.3314, 480],
             [1.3314 + gap, 480],
