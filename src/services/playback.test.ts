@@ -1,4 +1,4 @@
-import { Effect, Exit, Fiber } from 'effect'
+import { Deferred, Effect, Exit, Fiber } from 'effect'
 import { TestClock } from 'effect/testing'
 
 import { describe, expect, it } from '@effect/vitest'
@@ -13,10 +13,20 @@ import {
 } from './playback'
 
 // A stand-in audio element: it records what playback set and did, and
-// plays until the test ends or fails it.
-const fakeElement = (play: () => Promise<void> = () => Promise.resolve()) => {
+// plays until the test ends or fails it. `play` stands in for the
+// browser's, and may fire the element's events as a browser would.
+// `played` waits until playback has asked it to play, which it does only
+// once every listener is in place.
+const fakeElement = (
+  play: (dispatch: (type: string) => void) => Promise<void> = () =>
+    Promise.resolve(),
+) => {
   const target = new EventTarget()
   const did: Array<string> = []
+  const dispatch = (type: string): void => {
+    target.dispatchEvent(new Event(type))
+  }
+  const played = Deferred.makeUnsafe<void>()
   const element: MediaElement = {
     src: '',
     currentTime: 0,
@@ -27,7 +37,8 @@ const fakeElement = (play: () => Promise<void> = () => Promise.resolve()) => {
       did.push(
         `play ${element.src}${element.currentTime > 0 ? ` from ${element.currentTime}` : ''} at ${element.playbackRate}, pitch ${element.preservesPitch ? 'kept' : 'moved'}`,
       )
-      return play()
+      Deferred.doneUnsafe(played, Effect.void)
+      return play(dispatch)
     },
     pause: () => {
       did.push('pause')
@@ -44,13 +55,10 @@ const fakeElement = (play: () => Promise<void> = () => Promise.resolve()) => {
   return {
     element,
     did,
-    dispatch: (type: string) => target.dispatchEvent(new Event(type)),
+    dispatch,
+    played: Deferred.await(played),
   }
 }
-
-const settled = Effect.promise(
-  () => new Promise<void>(resolve => setTimeout(resolve, 0)),
-)
 
 describe('playing the line', () => {
   it.effect(
@@ -62,7 +70,7 @@ describe('playing the line', () => {
           '/line.wav',
           0.5,
         ).pipe(Effect.forkChild)
-        yield* settled
+        yield* fake.played
         expect(fake.did).toStrictEqual(['play /line.wav at 0.5, pitch kept'])
         expect(fake.element.defaultPlaybackRate).toBe(0.5)
         fake.dispatch('ended')
@@ -78,7 +86,7 @@ describe('playing the line', () => {
       const fiber = yield* playMedia(() => fake.element)('/line.wav', 1).pipe(
         Effect.forkChild,
       )
-      yield* settled
+      yield* fake.played
       yield* Fiber.interrupt(fiber)
       expect(fake.did).toStrictEqual([
         'play /line.wav at 1, pitch kept',
@@ -98,7 +106,7 @@ describe('playing the line', () => {
           from: 0.25,
           to: 0.65,
         }).pipe(Effect.forkChild)
-        yield* settled
+        yield* fake.played
         expect(fake.did).toStrictEqual([
           'play /line.wav from 0.25 at 0.5, pitch kept',
         ])
@@ -127,11 +135,10 @@ describe('playing the line', () => {
           { from: 2, to: 3 },
           seconds => heard.push(seconds),
         ).pipe(Effect.forkChild)
-        yield* settled
+        yield* fake.played
         yield* TestClock.adjust('200 millis')
         expect(heard).toStrictEqual([])
         fake.dispatch('playing')
-        yield* settled
         fake.element.currentTime = 2.05
         yield* TestClock.adjust('50 millis')
         fake.element.currentTime = 2.1
@@ -145,17 +152,50 @@ describe('playing the line', () => {
       }),
   )
 
+  it.effect(
+    'hears where it has got to when the sound starts the moment it is played',
+    () =>
+      Effect.gen(function* () {
+        // `playing` comes in the microtask after `play()`, before any
+        // task: under Effect's default scheduler, a fork that waits for
+        // the scheduler's next task would miss it.
+        const sentPlaying = Deferred.makeUnsafe<void>()
+        const fake = fakeElement(dispatch => {
+          void Promise.resolve().then(() => {
+            dispatch('playing')
+            Deferred.doneUnsafe(sentPlaying, Effect.void)
+          })
+          return Promise.resolve()
+        })
+        const heard: Array<number> = []
+        const fiber = yield* playMedia(() => fake.element)(
+          '/clip.wav',
+          1,
+          { from: 2, to: 3 },
+          seconds => heard.push(seconds),
+        ).pipe(Effect.forkChild)
+        yield* fake.played
+        yield* Deferred.await(sentPlaying)
+        expect(heard).toStrictEqual([2])
+        yield* Fiber.interrupt(fiber)
+      }),
+  )
+
   it.effect('ends a stretch early if the line itself ends first', () =>
     Effect.gen(function* () {
-      const fake = fakeElement()
-      const fiber = yield* playMedia(() => fake.element)('/line.wav', 1, {
+      // The line starts and ends the moment it is played, as a line
+      // shorter than the stretch's start does.
+      const fake = fakeElement(dispatch => {
+        void Promise.resolve().then(() => {
+          dispatch('playing')
+          dispatch('ended')
+        })
+        return Promise.resolve()
+      })
+      const exit = yield* playMedia(() => fake.element)('/line.wav', 1, {
         from: 1,
         to: 1.4,
-      }).pipe(Effect.forkChild)
-      yield* settled
-      fake.dispatch('playing')
-      fake.dispatch('ended')
-      const exit = yield* Fiber.await(fiber)
+      }).pipe(Effect.exit)
       expect(Exit.isSuccess(exit)).toBe(true)
     }),
   )
@@ -176,7 +216,7 @@ describe('playing the line', () => {
         '/gone.wav',
         1,
       ).pipe(Effect.flip, Effect.forkChild)
-      yield* settled
+      yield* missing.played
       missing.dispatch('error')
       expect((yield* Fiber.join(fiber)).reason).toBe('The line did not load.')
     }),
@@ -184,9 +224,11 @@ describe('playing the line', () => {
 })
 
 // A stand-in AudioContext, whose one source ends when the test says.
+// `started` waits until playback has started the source.
 const fakeContext = () => {
   const did: Array<string> = []
   const source = new EventTarget()
+  const started = Deferred.makeUnsafe<void>()
   const context: PlaybackContext = Object.assign(Object.create(null), {
     destination: {},
     createBuffer: (channels: number, length: number, sampleRate: number) => {
@@ -201,7 +243,10 @@ const fakeContext = () => {
         buffer: null,
         connect: () => did.push('connect'),
         disconnect: () => did.push('disconnect'),
-        start: () => did.push('start'),
+        start: () => {
+          did.push('start')
+          Deferred.doneUnsafe(started, Effect.void)
+        },
       }),
     resume: () => Promise.resolve(),
     close: () => {
@@ -209,7 +254,12 @@ const fakeContext = () => {
       return Promise.resolve()
     },
   })
-  return { context, did, end: () => source.dispatchEvent(new Event('ended')) }
+  return {
+    context,
+    did,
+    started: Deferred.await(started),
+    end: () => source.dispatchEvent(new Event('ended')),
+  }
 }
 
 describe('playing the take', () => {
@@ -220,7 +270,7 @@ describe('playing the take', () => {
         new Float32Array(480),
         48_000,
       ).pipe(Effect.forkChild)
-      yield* settled
+      yield* fake.started
       expect(fake.did).toStrictEqual([
         'buffer 1x480 at 48000',
         'copy 480',
@@ -241,7 +291,7 @@ describe('playing the take', () => {
         48_000,
         { from: 0.25, to: 0.65 },
       ).pipe(Effect.forkChild)
-      yield* settled
+      yield* fake.started
       expect(fake.did.slice(0, 2)).toStrictEqual([
         'buffer 1x19200 at 48000',
         'copy 19200',
@@ -258,7 +308,7 @@ describe('playing the take', () => {
         new Float32Array(480),
         48_000,
       ).pipe(Effect.forkChild)
-      yield* settled
+      yield* fake.started
       yield* Fiber.interrupt(fiber)
       expect(fake.did.slice(-2)).toStrictEqual(['disconnect', 'close'])
     }),
