@@ -41,7 +41,7 @@ const voiceStartSeconds = 0.5
 // 0.11 and a largest of 0.14, every frame drawn.
 // The allowance above that is for a slip of the fake microphone, which
 // moves the rest of a take 10 ms, up to 0.4 semitones on the fastest glide
-// and two frames lost near it (docs/fake-microphone.md).
+// and the frames near it lost (docs/fake-microphone.md).
 const tolerance = { medianSemitones: 0.1, p95Semitones: 0.45, coverage: 0.95 }
 
 const wavOf = (name: VoiceName): string => join(fixtures, `${name}.wav`)
