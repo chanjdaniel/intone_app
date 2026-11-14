@@ -15,7 +15,7 @@ import {
   lazyChunkSizes,
   readBudget,
 } from '../../build/bundle-budget.ts'
-import { productionBuild } from '../support/build'
+import { buildTimeout, productionBuild } from '../support/build'
 import { root, run } from '../support/run'
 
 // The bundle budget, read with the budget script's own reader from a real
@@ -26,7 +26,7 @@ let dist = ''
 beforeAll(async () => {
   dist = mkdtempSync(join(tmpdir(), 'bundle-budget-'))
   await productionBuild({ build: { outDir: dist, emptyOutDir: true } })
-})
+}, buildTimeout)
 
 afterAll(() => {
   rmSync(dist, { recursive: true, force: true })

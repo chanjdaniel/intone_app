@@ -22,7 +22,7 @@ import {
   onnxRuntimeFiles,
   onnxRuntimeVersion,
 } from '../../build/onnx-runtime.ts'
-import { productionBuild } from '../support/build'
+import { buildTimeout, productionBuild } from '../support/build'
 import { root } from '../support/run'
 
 // The two local servers, by HTTP, with the project's own config: the dev
@@ -80,7 +80,7 @@ beforeAll(async () => {
     dev: originOf(devServer.httpServer?.address()),
     preview: originOf(listening.httpServer.address()),
   }
-})
+}, buildTimeout)
 
 afterAll(async () => {
   await devServer?.close()

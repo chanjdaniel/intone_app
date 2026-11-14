@@ -29,6 +29,13 @@ const replacing = (
         : plugin,
   )
 
+// How long a hook that runs a production build is given: the tooling
+// project's test timeout (vitest.config.ts), which a test that builds
+// already has, since Vitest gives a hook only 10 s. A build is the same
+// work every run, slower only by the machine's load: 4.4 s in `npm test`
+// at a load average of 22, and past 10 s at 45.
+export const buildTimeout = 180_000
+
 // A real production build with the project's own vite.config.ts, as
 // `vite build` runs it. Vitest runs under NODE_ENV=test, which Vite does
 // not read as production, so NODE_ENV is production for the build's
