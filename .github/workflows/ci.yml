@@ -12,17 +12,21 @@ on:
 permissions:
   contents: read
 
-# A new push to a pull request cancels its older run; every push to dev
-# keeps its own, so each commit on dev has a result.
+# A new push to a pull request cancels its older run. Each push to dev
+# gets a group of its own, by its commit: a group holds one running run
+# and one pending, and a third run cancels the pending one, which would
+# leave that commit on dev with no result.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
     runs-on: ubuntu-24.04
-    # About 6 minutes, most of it Vitest (run 43463149824).
-    timeout-minutes: 15
+    # check took 7.4 minutes and e2e 6.0 in run 43592154312, with the
+    # models cached; both jobs get the same limit, which leaves room for
+    # a run whose cache misses to fetch all 314 MB of them first.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -35,8 +39,8 @@ jobs:
 
       # Model files listed in models.json, whisper-small's 149.5 MiB decoder
       # among them: the tooling tests run the tracker, the cut and the
-      # tokeniser on them, and build the app. The cache is content-addressed, so an older one is a safe
-      # start: only a file it lacks is fetched.
+      # tokeniser on them, and build the app. The cache is content-addressed,
+      # so an older one is a safe start: only a file it lacks is fetched.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .cache/models
@@ -66,7 +70,9 @@ jobs:
 
   e2e:
     runs-on: ubuntu-24.04
-    # About 6 minutes, most of it Playwright (run 43463149824).
+    # check took 7.4 minutes and e2e 6.0 in run 43592154312, with the
+    # models cached; both jobs get the same limit, which leaves room for
+    # a run whose cache misses to fetch all 314 MB of them first.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
