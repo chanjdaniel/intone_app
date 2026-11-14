@@ -14,6 +14,16 @@ const threshold = 0.15
 // second harmonic's dip at half the period from reading an octave high.
 const nearDeepest = 0.02
 
+// The samples one frame reads, centred on its instant: two windows up to
+// the longest lag apart.
+export const frameSpanSeconds = windowSeconds + 1 / minimumHz
+
+// The most frames, `frameHz` apart, whose span can reach the samples a slip
+// of `seconds` added, read at the earlier delay before the slip and at the
+// later one after it: all the slip can leave with no pitch.
+export const framesReaching = (seconds: number, frameHz: number): number =>
+  Math.floor((frameSpanSeconds + seconds) * frameHz) + 1
+
 export const estimatePitch = (
   samples: Float32Array,
   sampleRate: number,

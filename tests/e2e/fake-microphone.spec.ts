@@ -21,7 +21,12 @@ import {
   compareWithSource,
   lowPass,
 } from '../support/audio-compare.ts'
-import { type PitchError, estimatePitch, pitchError } from '../support/pitch.ts'
+import {
+  type PitchError,
+  estimatePitch,
+  framesReaching,
+  pitchError,
+} from '../support/pitch.ts'
 import {
   type SyntheticVoiceLabels,
   type VoiceName,
@@ -74,6 +79,14 @@ type Measurement = Comparison &
     // gets wrong.
     sourcePitch: PitchError
     batchLengths: ReadonlyArray<number>
+    // How long the worklet's first batch is, after which the probe asks
+    // for the microphone.
+    firstBatchSeconds: number
+    // Where the source's last sample landed, after every slip.
+    endSeconds: number
+    // The frames whose span reaches what the slips added: all the slips
+    // can leave with no pitch.
+    slipFrames: number
   }>
 
 // The capture against its source, the samples compared below `belowHz`
@@ -110,6 +123,15 @@ const measure = (
       frames,
     ),
     batchLengths: [...new Set(capture.batchLengths)],
+    firstBatchSeconds: (capture.batchLengths[0] ?? 0) / capture.sampleRate,
+    slipFrames: comparison.slips.reduce(
+      (sum, slip) => sum + framesReaching(slip.bySeconds, frameHz),
+      0,
+    ),
+    endSeconds:
+      comparison.delaySeconds +
+      comparison.slips.reduce((sum, slip) => sum + slip.bySeconds, 0) +
+      source.samples.length / source.sampleRate,
   }
 }
 
@@ -200,28 +222,47 @@ const report = async (
   })
 }
 
+// Each slip adds a whole number of the device's 10 ms buffers: one,
+// mostly, and up to four at once on a loaded machine.
+const expectWholeBuffers = (slips: Comparison['slips']): void => {
+  for (const slip of slips) {
+    const buffers = Math.round(slip.bySeconds / 0.01)
+    expect(buffers).toBeGreaterThanOrEqual(1)
+    expect(slip.bySeconds).toBeCloseTo(buffers * 0.01, 4)
+  }
+}
+
 // What the fake microphone delivers from a 16-bit source, slips aside:
-// the source's own gain, nothing added beyond 16-bit quantisation and
-// resampling between slips, each slip a whole number of the device's 10 ms
-// buffers added (one, mostly; two seen under load), and a pitch
-// estimate as close to the known curve as the source's own, but for the
-// frames a slip falls in.
+// the whole voice, at the source's own gain, nothing added beyond 16-bit
+// quantisation and resampling between slips, each slip a whole number of
+// the device's 10 ms buffers added, and a pitch estimate as close to the
+// known curve as the source's own, but for the frames whose span reaches
+// what a slip added.
 const expectFaithful = (measurement: Measurement | null): void => {
   expect(measurement).not.toBeNull()
   if (measurement === null) {
     return
   }
+  // The device plays its file from getUserMedia on, and the probe asks for
+  // it only once the worklet has posted its first batch, as the app should,
+  // so the file's first sample lands after that batch: asked for before the
+  // worklet ran, the file loses its start and lands before it. How long
+  // getUserMedia and the connection then take is the machine's, and what
+  // of the file's leading silence plays before the source is connected is
+  // lost (docs/fake-microphone.md, "When does the voice start?").
+  expect(measurement.delaySeconds).toBeGreaterThan(
+    measurement.firstBatchSeconds,
+  )
+  expect(measurement.endSeconds).toBeLessThan(captureSeconds)
   expect(measurement.gain).toBeGreaterThan(0.999)
   expect(measurement.gain).toBeLessThan(1.001)
   expect(measurement.snrDb).toBeGreaterThan(70)
-  for (const slip of measurement.slips) {
-    const buffers = Math.round(slip.bySeconds / 0.01)
-    expect(buffers).toBeGreaterThanOrEqual(1)
-    expect(slip.bySeconds).toBeCloseTo(buffers * 0.01, 4)
-  }
+  expectWholeBuffers(measurement.slips)
   const slips = measurement.slips.length
+  // Each slip costs no more frames than the estimate's span lets it,
+  // however many slips the machine's load brings.
   expect(measurement.pitch.missing).toBeLessThanOrEqual(
-    measurement.sourcePitch.missing + 2 * slips,
+    measurement.sourcePitch.missing + measurement.slipFrames,
   )
   expect(measurement.pitch.medianCents).toBeLessThan(
     measurement.sourcePitch.medianCents + 0.5,
@@ -319,12 +360,6 @@ test.describe('the fake microphone', () => {
         noiseSuppression: false,
         autoGainControl: false,
       })
-      // The device's file starts at getUserMedia, after the worklet runs:
-      // the probe waits for its first batch, as the app should, so none of
-      // the file is lost. 32 to 53 ms seen; the bound allows a loaded
-      // machine four times that.
-      expect(measurement?.delaySeconds).toBeGreaterThan(0)
-      expect(measurement?.delaySeconds).toBeLessThan(0.2)
     })
   }
 
@@ -374,8 +409,11 @@ test.describe('the fake microphone', () => {
     expect(variation.pitchMedianCents.range).toBeLessThan(0.5)
     expect(unslipped.length).toBeGreaterThan(0)
     expect(variation.pitchMaxCents.range).toBeLessThan(2)
-    // The start moves in whole 10 ms device buffers.
-    expect(variation.delaySeconds.range).toBeLessThan(0.035)
+    // The start's spread is reported, not bounded: expectFaithful holds each
+    // start to the probe's order, and the rest of it is the device's buffers
+    // and how long the main thread took to open and connect the microphone,
+    // which grows with the machine's load (docs/fake-microphone.md, "When
+    // does the voice start?").
   })
 
   test('alters the audio when the browser processing is left on', async ({
@@ -479,9 +517,7 @@ test.describe('the fake microphone', () => {
           expect(measurement.gain).toBeLessThan(1.01)
           // 8-bit quantisation's own noise is about 40 dB down.
           expect(measurement.snrDb).toBeGreaterThan(35)
-          for (const slip of measurement.slips) {
-            expect(slip.bySeconds).toBeCloseTo(0.01, 4)
-          }
+          expectWholeBuffers(measurement.slips)
           // The estimate reads a voice sampled at 8 kHz worse than the
           // device's band-cut copy of it, so this bound is the estimate's
           // own on the 48 kHz voice, not the source's.

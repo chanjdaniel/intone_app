@@ -39,9 +39,11 @@ const voiceStartSeconds = 0.5
 // drawn. Read off the live canvas at 4 s, as now, two runs each at a load
 // average of 3: a median of 0.017 to 0.055, a 95th percentile of 0.05 to
 // 0.11 and a largest of 0.14, every frame drawn.
-// The allowance above that is for a slip of the fake microphone, which
-// moves the rest of a take 10 ms, up to 0.4 semitones on the fastest glide
-// and two frames lost near it (docs/fake-microphone.md).
+// The allowance above that is for one slip of one 10 ms buffer of the
+// fake microphone, which moves the rest of a take 10 ms (up to 0.4
+// semitones on the fastest glide) and loses the frames near it
+// (docs/fake-microphone.md); a slip of several buffers, which comes only
+// under load, moves it as many times as far, and was not measured here.
 const tolerance = { medianSemitones: 0.1, p95Semitones: 0.45, coverage: 0.95 }
 
 const wavOf = (name: VoiceName): string => join(fixtures, `${name}.wav`)
@@ -137,7 +139,8 @@ const quantile = (values: ReadonlyArray<number>, q: number): number =>
 // The drawn curve against the known F0 at each voiced frame away from the
 // edges, with the curve's start allowed to sit a few frames from the
 // file's voice start: the tracker's onset frame, and the fake
-// microphone's start, which lands on whole 10 ms device buffers.
+// microphone's start, which moves by its 10 ms device buffers and by how
+// long a busy main thread takes to open it.
 const compareWithLabels = (
   points: ReadonlyArray<Readonly<{ seconds: number; semitones: number }>>,
   labels: SyntheticVoiceLabels,
