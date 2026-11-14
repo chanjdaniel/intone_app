@@ -79,6 +79,11 @@ const tracked = (): ReadonlyArray<string> =>
 
 const read = (path: string): string => readFileSync(join(project, path), 'utf8')
 
+const pinFile = 'scripts/vendor-foldkit.pin'
+
+const tagCommit = (version: string): string =>
+  git(upstream, 'rev-parse', `foldkit@${version}^{commit}`)
+
 beforeEach(() => {
   scratch = mkdtempSync(join(tmpdir(), 'vendor-foldkit-'))
   upstream = join(scratch, 'foldkit')
@@ -155,6 +160,40 @@ describe('vendoring Foldkit', () => {
     expect(git(project, 'log', '--format=%s')).toContain('foldkit@1.0.0')
   })
 
+  test("pins the release tag's commit beside the script", () => {
+    const result = vendor()
+
+    expect(result.status, result.output).toBe(0)
+    expect(read(pinFile)).toBe(`foldkit@1.0.0 ${tagCommit('1.0.0')}\n`)
+    expect(git(project, 'show', '--format=%b', '--no-patch')).toContain(
+      tagCommit('1.0.0'),
+    )
+  })
+
+  test('refuses a release tag that names another commit than its pin', () => {
+    expect(vendor().status).toBe(0)
+    const pinned = tagCommit('1.0.0')
+    const head = git(project, 'rev-parse', 'HEAD')
+    // Upstream moves the tag onto another tree.
+    write(upstream, {
+      'examples/counter/src/main.ts': 'export const count = 9\n',
+    })
+    git(upstream, 'commit', '--quiet', '--all', '--message', 'retag')
+    git(upstream, 'tag', '--force', 'foldkit@1.0.0')
+    const moved = tagCommit('1.0.0')
+
+    const result = vendor()
+
+    expect(result.status).not.toBe(0)
+    expect(result.output).toContain(pinned)
+    expect(result.output).toContain(moved)
+    expect(git(project, 'rev-parse', 'HEAD')).toBe(head)
+    expect(git(project, 'status', '--porcelain')).toBe('')
+    expect(read('repos/foldkit/examples/counter/src/main.ts')).toBe(
+      'export const count = 0\n',
+    )
+  })
+
   test('re-pins to a newer release, keeping the dropped files out', () => {
     expect(vendor().status).toBe(0)
     release('1.1.0', {
@@ -176,6 +215,7 @@ describe('vendoring Foldkit', () => {
     expect(read('FOLDKIT.md')).toBe('Foldkit conventions, 1.1.0.\n')
     expect(git(project, 'status', '--porcelain')).toBe('')
     expect(git(project, 'log', '--format=%s')).toContain('foldkit@1.1.0')
+    expect(read(pinFile)).toBe(`foldkit@1.1.0 ${tagCommit('1.1.0')}\n`)
   })
 
   test('re-pins after a squash merge flattened the subtree history', () => {
