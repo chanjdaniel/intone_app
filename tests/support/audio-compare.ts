@@ -548,11 +548,14 @@ export const compareWithSource = (
           },
         ]
   const guarded = clearOfSlips(stretches, captureRate)
-  // A stretch too short to place is left out of the fit, and sits from the
-  // one before it by its whole lag.
+  // A stretch past the first too short to place is left out of the fit,
+  // and sits from the one before it by its whole lag; the first, with none
+  // before it, keeps its samples.
   const shortest = Math.round(shortestPlacedSeconds * captureRate)
-  const fitted = guarded.map(range =>
-    range.to - range.from < shortest ? { ...range, to: range.from } : range,
+  const fitted = guarded.map((range, index) =>
+    index > 0 && range.to - range.from < shortest
+      ? { ...range, to: range.from }
+      : range,
   )
   const delays: Array<number> = []
   fitted.forEach((range, index) => {
